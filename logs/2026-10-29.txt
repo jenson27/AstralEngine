@@ -1,0 +1,6 @@
+[2026-10-29T14:39:23.525Z] [INFO] WebGPU ready. Canvas cleared. {"canvasWidth":1764,"canvasHeight":1288}
+[2026-10-29T14:39:24.432Z] [INFO] WebGPU ready. Canvas cleared. {"canvasWidth":1764,"canvasHeight":1288}
+[2026-10-29T14:44:39.723Z] [INFO] WebGPU ready. Canvas cleared. {"canvasWidth":1764,"canvasHeight":1288}
+[2026-10-29T15:02:17.839Z] [INFO] WebGPU ready. Canvas cleared. {"canvasWidth":1764,"canvasHeight":1288}
+[2026-10-29T15:15:20.193Z] [INFO] WebGPU ready. Canvas cleared. {"canvasWidth":1764,"canvasHeight":1288}
+[2026-10-29T15:15:21.010Z] [INFO] WebGPU ready. Canvas cleared. {"canvasWidth":1764,"canvasHeight":1288}
