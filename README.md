@@ -6,7 +6,7 @@ This repository contains the initial browser shell for AstralEngine.
 
 ### Start here
 
-- [Engine Documentation](docs/ENGINE_README.md) - Index to the engine guides.
+- [Engine Documentation](docs/SRC_README.md) - Index to the engine guides.
 
 ## Requirements
 

@@ -6,7 +6,7 @@ The browser shell starts AstralEngine, manages its canvas, and connects the brow
 
 ## Start here
 
-See the [Engine Documentation](ENGINE_README.md) for the documentation index. See the [project README](../README.md) for requirements and server commands.
+See the [Engine Documentation](SRC_README.md) for the documentation index. See the [project README](../README.md) for requirements and server commands.
 
 ## Main parts and responsibilities
 

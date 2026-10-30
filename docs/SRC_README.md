@@ -10,4 +10,4 @@ This page is the documentation index for AstralEngine. Start with the shell guid
 
 ## Diagnostics
 
-- [Logging](LOGGING_README.md) - Describes log levels, entry data, output sinks, and server log files.
+- [Logging](diagnostics/LOGGING_README.md) - Describes log levels, entry data, output sinks, and server log files.
