@@ -42,8 +42,10 @@
 
 ## Current scope
 
-- `Transform` is not registered in an ECS yet.
+- `Transform` can be stored on an entity by `EntityManager`.
 - Parent-child transform hierarchy is not implemented.
+- `AngularVelocitySystem` updates rotation for entities with both `Transform` and `AngularVelocity`.
+- `RenderSystem` uses `Transform` with `MeshRenderer` to build model matrices.
 - Camera view and projection matrices are handled by `Camera`.
 
 ## Source

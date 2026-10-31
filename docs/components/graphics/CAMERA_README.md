@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`Camera` stores perspective settings and creates view and projection matrices for rendering. It reads position and rotation from a caller-provided `Transform`; it does not own that transform, choose an active camera, or draw objects. See [Transform](../TRANSFORM_README.md) for the position and rotation data used by the camera.
+`Camera` stores perspective settings and creates view and projection matrices for rendering. It reads position and rotation from a caller-provided `Transform`; it does not own that transform, choose an active camera, or draw objects. `RenderSystem.Prepare()` uses the camera entity ID supplied by its caller. See [Transform](../TRANSFORM_README.md) and [Entity Manager](../../core/ENTITY_MANAGER_README.md) for related data and ECS context.
 
 ## Main parts and responsibilities
 
@@ -51,8 +51,8 @@
 
 ## Current scope
 
-- Active camera selection is not implemented.
-- Camera registration with an ECS is not implemented.
+- A `Camera` can be stored on an entity with `EntityManager`.
+- `RenderSystem.Prepare()` uses the camera entity ID supplied by its caller; automatic active-camera selection is not implemented.
 - The camera does not manage viewport size or render objects.
 
 ## Source

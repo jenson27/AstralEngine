@@ -85,12 +85,35 @@ export class AstralLogger {
     }
 
     static _SerializeDetails(details) {
-        if (details instanceof Error) {
+        if (details instanceof AggregateError) {
             return {
                 name: details.name,
                 message: details.message,
                 stack: details.stack,
+                errors: Array.from(details.errors, (error) =>
+                    AstralLogger._SerializeDetails(error),
+                ),
             };
+        }
+
+        if (details instanceof Error) {
+            const serializedError = {
+                name: details.name,
+                message: details.message,
+                stack: details.stack,
+            };
+
+            if (details.cause !== undefined) {
+                serializedError.cause = AstralLogger._SerializeDetails(
+                    details.cause,
+                );
+            }
+
+            if (details.command !== undefined) {
+                serializedError.command = details.command;
+            }
+
+            return serializedError;
         }
 
         try {

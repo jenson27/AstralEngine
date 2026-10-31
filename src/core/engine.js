@@ -5,7 +5,7 @@ import { AstralLogger } from "../diagnostics/logger.js";
 export class Engine {
     constructor(
         renderer,
-        updateCallback = () => {},
+        fixedUpdateCallback = () => {},
         prepareRenderCallback = () => {},
     ) {
         if (!renderer || typeof renderer.Render !== "function") {
@@ -14,8 +14,10 @@ export class Engine {
             );
         }
 
-        if (typeof updateCallback !== "function") {
-            throw new TypeError("Engine update callback must be a function.");
+        if (typeof fixedUpdateCallback !== "function") {
+            throw new TypeError(
+                "Engine fixed update callback must be a function.",
+            );
         }
 
         if (typeof prepareRenderCallback !== "function") {
@@ -25,12 +27,17 @@ export class Engine {
         }
 
         this._renderer = renderer;
-        this._updateCallback = updateCallback;
+        this._fixedUpdateCallback = fixedUpdateCallback;
         this._prepareRenderCallback = prepareRenderCallback;
         this._isRunning = false;
         this._animationFrameId = null;
         this._previousFrameTime = null;
         this._elapsedTime = 0;
+        this._fixedDeltaTime = 1 / 60;
+        this._maxFrameDeltaTime = 0.1;
+        this._maxFixedStepsPerFrame = 5;
+        this._accumulator = 0;
+        this._lastStepLimitWarningTime = -Infinity;
     }
 
     get IsRunning() {
@@ -44,6 +51,7 @@ export class Engine {
 
         this._isRunning = true;
         this._previousFrameTime = null;
+        this._accumulator = 0;
         this._ScheduleFrame();
     }
 
@@ -71,9 +79,10 @@ export class Engine {
 
         this._animationFrameId = null;
         this._previousFrameTime = null;
+        this._accumulator = 0;
     }
 
-    // Handle a single frame update, including time calculations, invoking the update callback, rendering, and error handling.
+    // Handle a frame, run fixed updates, prepare rendering, and handle errors.
     _Frame(timestamp) {
         this._animationFrameId = null;
 
@@ -82,22 +91,71 @@ export class Engine {
         }
 
         const currentTime = timestamp / 1000;
-        const deltaTime =
+        const frameDeltaTime =
             this._previousFrameTime === null
                 ? 0
-                : Math.min(currentTime - this._previousFrameTime, 0.1);
+                : Math.min(
+                      currentTime - this._previousFrameTime,
+                      this._maxFrameDeltaTime,
+                  );
 
         this._previousFrameTime = currentTime;
-        this._elapsedTime += deltaTime;
+        this._accumulator += frameDeltaTime;
 
         try {
-            this._updateCallback(deltaTime, this._elapsedTime);
+            let fixedStepCount = 0;
+
+            while (
+                this._accumulator >= this._fixedDeltaTime &&
+                fixedStepCount < this._maxFixedStepsPerFrame
+            ) {
+                this._elapsedTime += this._fixedDeltaTime;
+                this._fixedUpdateCallback(
+                    this._fixedDeltaTime,
+                    this._elapsedTime,
+                );
+
+                if (!this._isRunning) {
+                    return;
+                }
+
+                this._accumulator -= this._fixedDeltaTime;
+                fixedStepCount += 1;
+            }
+
+            if (
+                fixedStepCount === this._maxFixedStepsPerFrame &&
+                this._accumulator >= this._fixedDeltaTime
+            ) {
+                const currentTimeMs = performance.now();
+
+                if (currentTimeMs - this._lastStepLimitWarningTime >= 5000) {
+                    this._lastStepLimitWarningTime = currentTimeMs;
+
+                    const droppedTime =
+                        this._accumulator -
+                        (this._accumulator % this._fixedDeltaTime);
+
+                    AstralLogger.Warn(
+                        "Engine reached the fixed update step limit and dropped simulation time.",
+                        {
+                            fixedSteps: fixedStepCount,
+                            droppedTimeSeconds: droppedTime,
+                        },
+                    );
+                }
+
+                this._accumulator %= this._fixedDeltaTime;
+            }
 
             if (!this._isRunning) {
                 return;
             }
 
-            this._prepareRenderCallback();
+            const interpolationAlpha =
+                this._accumulator / this._fixedDeltaTime;
+
+            this._prepareRenderCallback(interpolationAlpha);
 
             if (!this._isRunning) {
                 return;

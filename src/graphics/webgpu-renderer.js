@@ -1,6 +1,7 @@
 // WebGPURenderer is a class that encapsulates the functionality of rendering graphics using the WebGPU API.
 // It initializes GPU resources, including a vertex buffer, and draws a mesh to the canvas.
 
+import { AstralLogger } from "../diagnostics/logger.js";
 import { Mesh } from "./mesh.js";
 
 export class WebGPURenderer {
@@ -10,11 +11,15 @@ export class WebGPURenderer {
         this._device = null;
         this._format = null;
         this._pipeline = null;
-        this._vertexBuffer = null;
-        this._vertexCount = 0;
+        this._meshResources = new Map();
+        this._drawItems = [];
+        this._transformBindGroupLayout = null;
         this._transformBuffer = null;
         this._transformBindGroup = null;
-        this._matrixData = new Float32Array(16 * 3);
+        this._matrixBlockSize = 16 * 3 * Float32Array.BYTES_PER_ELEMENT;
+        this._uniformStride = 0;
+        this._drawCapacity = 0;
+        this._matrixData = new Float32Array(0);
         this._depthTexture = null;
         this._depthView = null;
         this._depthWidth = 0;
@@ -35,6 +40,27 @@ export class WebGPURenderer {
         }
 
         this._device = await adapter.requestDevice();
+
+        const device = this._device;
+
+        device.lost.then((lostInfo) => {
+            if (lostInfo.reason === "destroyed") {
+                return;
+            }
+
+            AstralLogger.Error("WebGPU device lost.", {
+                reason: lostInfo.reason,
+                message: lostInfo.message,
+            });
+        });
+
+        device.addEventListener("uncapturederror", (event) => {
+            AstralLogger.Error("Uncaptured WebGPU error.", {
+                name: event.error.constructor.name,
+                message: event.error.message,
+            });
+        });
+
         this._context = this._canvas.getContext("webgpu");
 
         if (!this._context) {
@@ -66,8 +92,27 @@ export class WebGPURenderer {
             code: shaderCode,
         });
 
+        this._transformBindGroupLayout =
+            this._device.createBindGroupLayout({
+                entries: [
+                    {
+                        binding: 0,
+                        visibility: GPUShaderStage.VERTEX,
+                        buffer: {
+                            type: "uniform",
+                            hasDynamicOffset: true,
+                            minBindingSize: this._matrixBlockSize,
+                        },
+                    },
+                ],
+            });
+
+        const pipelineLayout = this._device.createPipelineLayout({
+            bindGroupLayouts: [this._transformBindGroupLayout],
+        });
+
         this._pipeline = this._device.createRenderPipeline({
-            layout: "auto",
+            layout: pipelineLayout,
             vertex: {
                 module: shaderModule,
                 entryPoint: "VertexMain",
@@ -99,38 +144,71 @@ export class WebGPURenderer {
             },
         });
 
-        this._transformBuffer = this._device.createBuffer({
-            size: this._matrixData.byteLength,
-            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-        });
-
-        this._transformBindGroup = this._device.createBindGroup({
-            layout: this._pipeline.getBindGroupLayout(0),
-            entries: [
-                {
-                    binding: 0,
-                    resource: { buffer: this._transformBuffer },
-                },
-            ],
-        });
-
-        const identityMatrix = new Float32Array([
-            1, 0, 0, 0,
-            0, 1, 0, 0,
-            0, 0, 1, 0,
-            0, 0, 0, 1,
-        ]);
-
-        this.SetMatrices(identityMatrix, identityMatrix, identityMatrix);
+        const alignment =
+            this._device.limits.minUniformBufferOffsetAlignment;
+        this._uniformStride =
+            Math.ceil(this._matrixBlockSize / alignment) * alignment;
+        this._EnsureTransformCapacity(1);
     }
 
-    SetMesh(mesh) {
-        if (!(mesh instanceof Mesh)) {
-            throw new TypeError("Renderer requires a Mesh.");
+    SetRenderItems(renderItems, viewMatrix, projectionMatrix) {
+        if (!Array.isArray(renderItems)) {
+            throw new TypeError("Render items must be an array.");
         }
 
-        if (!this._device) {
+        if (!this._device || !this._transformBuffer) {
             throw new Error("Renderer is not initialized.");
+        }
+
+        this._RequireMatrix(viewMatrix, "View matrix");
+        this._RequireMatrix(projectionMatrix, "Projection matrix");
+        this._EnsureTransformCapacity(renderItems.length);
+        this._drawItems.length = 0;
+
+        const floatsPerDraw =
+            this._uniformStride / Float32Array.BYTES_PER_ELEMENT;
+
+        for (let index = 0; index < renderItems.length; index += 1) {
+            const renderItem = renderItems[index];
+
+            if (!renderItem || typeof renderItem !== "object") {
+                throw new TypeError("Each render item must be an object.");
+            }
+
+            this._RequireMatrix(renderItem.modelMatrix, "Model matrix");
+            this._drawItems.push(this._GetMeshResource(renderItem.mesh));
+
+            const matrixOffset = index * floatsPerDraw;
+            this._matrixData.set(renderItem.modelMatrix, matrixOffset);
+            this._matrixData.set(viewMatrix, matrixOffset + 16);
+            this._matrixData.set(projectionMatrix, matrixOffset + 32);
+        }
+
+        if (renderItems.length > 0) {
+            const usedFloatCount = floatsPerDraw * renderItems.length;
+            this._device.queue.writeBuffer(
+                this._transformBuffer,
+                0,
+                this._matrixData.subarray(0, usedFloatCount),
+            );
+        }
+    }
+
+    _RequireMatrix(matrix, name) {
+        if (!(matrix instanceof Float32Array) || matrix.length !== 16) {
+            throw new TypeError(`${name} must contain 16 values.`);
+        }
+    }
+
+    _GetMeshResource(mesh) {
+        if (!(mesh instanceof Mesh)) {
+            throw new TypeError("Render item requires a Mesh.");
+        }
+
+        let meshResource = this._meshResources.get(mesh);
+
+        if (meshResource) {
+            return meshResource;
         }
 
         const positions = mesh.GetPositions();
@@ -141,39 +219,49 @@ export class WebGPURenderer {
 
         this._device.queue.writeBuffer(vertexBuffer, 0, positions);
 
-        this._vertexBuffer?.destroy();
-        this._vertexBuffer = vertexBuffer;
-        this._vertexCount = mesh.VertexCount;
+        meshResource = {
+            vertexBuffer,
+            vertexCount: mesh.VertexCount,
+        };
+        this._meshResources.set(mesh, meshResource);
+        return meshResource;
     }
 
-    // Updates the model, view, and projection matrices in the uniform buffer.
-    SetMatrices(modelMatrix, viewMatrix, projectionMatrix) {
-        if (
-            !(modelMatrix instanceof Float32Array) ||
-            modelMatrix.length !== 16 ||
-            !(viewMatrix instanceof Float32Array) ||
-            viewMatrix.length !== 16 ||
-            !(projectionMatrix instanceof Float32Array) ||
-            projectionMatrix.length !== 16
-        ) {
-            throw new TypeError(
-                "Model, view, and projection matrices must each contain 16 values.",
-            );
+    _EnsureTransformCapacity(requiredDrawCount) {
+        if (requiredDrawCount <= this._drawCapacity) {
+            return;
         }
 
-        if (!this._transformBuffer) {
-            throw new Error("Renderer is not initialized.");
+        let drawCapacity = Math.max(1, this._drawCapacity);
+        while (drawCapacity < requiredDrawCount) {
+            drawCapacity *= 2;
         }
 
-        this._matrixData.set(modelMatrix, 0);
-        this._matrixData.set(viewMatrix, 16);
-        this._matrixData.set(projectionMatrix, 32);
-
-        this._device.queue.writeBuffer(
-            this._transformBuffer,
-            0,
-            this._matrixData,
+        this._transformBuffer?.destroy();
+        this._drawCapacity = drawCapacity;
+        this._matrixData = new Float32Array(
+            (this._uniformStride / Float32Array.BYTES_PER_ELEMENT) *
+                drawCapacity,
         );
+
+        this._transformBuffer = this._device.createBuffer({
+            size: this._uniformStride * drawCapacity,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+
+        this._transformBindGroup = this._device.createBindGroup({
+            layout: this._transformBindGroupLayout,
+            entries: [
+                {
+                    binding: 0,
+                    resource: {
+                        buffer: this._transformBuffer,
+                        offset: 0,
+                        size: this._matrixBlockSize,
+                    },
+                },
+            ],
+        });
     }
 
     EnsureDepthTexture() {
@@ -201,7 +289,7 @@ export class WebGPURenderer {
         this._depthHeight = height;
     }
 
-    // Binds the vertex buffer, draws the mesh, and submits the commands to the GPU queue.
+    // Binds each mesh and its matrix data, then submits the frame to the GPU queue.
     Render() {
         this.EnsureDepthTexture();
 
@@ -226,9 +314,17 @@ export class WebGPURenderer {
         });
 
         renderPass.setPipeline(this._pipeline);
-        renderPass.setBindGroup(0, this._transformBindGroup);
-        renderPass.setVertexBuffer(0, this._vertexBuffer);
-        renderPass.draw(this._vertexCount);
+
+        for (let index = 0; index < this._drawItems.length; index += 1) {
+            const drawItem = this._drawItems[index];
+
+            renderPass.setBindGroup(0, this._transformBindGroup, [
+                index * this._uniformStride,
+            ]);
+            renderPass.setVertexBuffer(0, drawItem.vertexBuffer);
+            renderPass.draw(drawItem.vertexCount);
+        }
+
         renderPass.end();
 
         this._device.queue.submit([commandEncoder.finish()]);
@@ -236,7 +332,13 @@ export class WebGPURenderer {
 
     Shutdown() {
         this._context?.unconfigure();
-        this._vertexBuffer?.destroy();
+
+        for (const meshResource of this._meshResources.values()) {
+            meshResource.vertexBuffer.destroy();
+        }
+
+        this._meshResources.clear();
+        this._drawItems.length = 0;
         this._transformBuffer?.destroy();
         this._depthTexture?.destroy();
         this._device?.destroy();
@@ -245,10 +347,12 @@ export class WebGPURenderer {
         this._device = null;
         this._format = null;
         this._pipeline = null;
-        this._vertexBuffer = null;
-        this._vertexCount = 0;
+        this._transformBindGroupLayout = null;
         this._transformBuffer = null;
         this._transformBindGroup = null;
+        this._uniformStride = 0;
+        this._drawCapacity = 0;
+        this._matrixData = new Float32Array(0);
         this._depthTexture = null;
         this._depthView = null;
         this._depthWidth = 0;
