@@ -3,7 +3,11 @@
 import { AstralLogger } from "../diagnostics/logger.js";
 
 export class Engine {
-    constructor(renderer, updateCallback = () => {}) {
+    constructor(
+        renderer,
+        updateCallback = () => {},
+        prepareRenderCallback = () => {},
+    ) {
         if (!renderer || typeof renderer.Render !== "function") {
             throw new TypeError(
                 "Engine requires a renderer with a Render method.",
@@ -14,8 +18,15 @@ export class Engine {
             throw new TypeError("Engine update callback must be a function.");
         }
 
+        if (typeof prepareRenderCallback !== "function") {
+            throw new TypeError(
+                "Engine render preparation callback must be a function.",
+            );
+        }
+
         this._renderer = renderer;
         this._updateCallback = updateCallback;
+        this._prepareRenderCallback = prepareRenderCallback;
         this._isRunning = false;
         this._animationFrameId = null;
         this._previousFrameTime = null;
@@ -81,6 +92,12 @@ export class Engine {
 
         try {
             this._updateCallback(deltaTime, this._elapsedTime);
+
+            if (!this._isRunning) {
+                return;
+            }
+
+            this._prepareRenderCallback();
 
             if (!this._isRunning) {
                 return;

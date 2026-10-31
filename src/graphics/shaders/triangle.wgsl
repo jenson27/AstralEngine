@@ -1,12 +1,14 @@
 struct TransformUniform {
     modelMatrix: mat4x4<f32>,
+    viewMatrix: mat4x4<f32>,
+    projectionMatrix: mat4x4<f32>,
 };
 
 @group(0) @binding(0)
 var<uniform> transform: TransformUniform;
 
 struct VertexInput {
-    @location(0) position: vec2f,
+    @location(0) position: vec3f,
 };
 
 struct VertexOutput {
@@ -17,7 +19,10 @@ struct VertexOutput {
 fn VertexMain(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
     output.position =
-        transform.modelMatrix * vec4f(input.position, 0.0, 1.0);
+        transform.projectionMatrix *
+        transform.viewMatrix *
+        transform.modelMatrix *
+        vec4f(input.position, 1.0);
     return output;
 }
 

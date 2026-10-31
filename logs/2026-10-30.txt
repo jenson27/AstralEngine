@@ -6,3 +6,4 @@
 [2026-10-30T14:25:02.848Z] [INFO] WebGPU ready. Canvas cleared. {"canvasWidth":2242,"canvasHeight":877}
 [2026-10-30T14:34:31.459Z] [INFO] WebGPU ready. Canvas cleared. {"canvasWidth":2242,"canvasHeight":877}
 [2026-10-30T14:34:50.799Z] [INFO] WebGPU ready. Canvas cleared. {"canvasWidth":2242,"canvasHeight":877}
+[2026-10-30T15:17:16.990Z] [INFO] WebGPU ready. Canvas cleared. {"canvasWidth":1118,"canvasHeight":877}
