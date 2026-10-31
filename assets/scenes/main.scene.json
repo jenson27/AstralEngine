@@ -1,0 +1,77 @@
+{
+    "format": "astral-scene",
+    "version": 1,
+    "name": "main",
+    "activeCameraEntityId": 4,
+    "entities": [
+        {
+            "id": 1,
+            "components": {
+                "transform": {
+                    "position": [-0.8, 0, 0],
+                    "rotation": [0, 0, 0],
+                    "scale": [1, 1, 1]
+                },
+                "angularVelocity": {
+                    "x": 0.6,
+                    "y": 1,
+                    "z": 0
+                },
+                "meshRenderer": {
+                    "meshAssetId": "builtin:cube"
+                }
+            }
+        },
+        {
+            "id": 2,
+            "components": {
+                "transform": {
+                    "position": [0.8, 0, 0],
+                    "rotation": [0, 0, 0],
+                    "scale": [1, 1, 1]
+                },
+                "angularVelocity": {
+                    "x": -0.4,
+                    "y": -0.8,
+                    "z": 0
+                },
+                "meshRenderer": {
+                    "meshAssetId": "builtin:cube"
+                }
+            }
+        },
+        {
+            "id": 3,
+            "components": {
+                "transform": {
+                    "position": [0, -0.8, 0],
+                    "rotation": [0, 0, 0],
+                    "scale": [0.5, 0.5, 0.5]
+                },
+                "angularVelocity": {
+                    "x": -0.4,
+                    "y": -0.8,
+                    "z": 0
+                },
+                "meshRenderer": {
+                    "meshAssetId": "builtin:cube"
+                }
+            }
+        },
+        {
+            "id": 4,
+            "components": {
+                "transform": {
+                    "position": [0, 0, 3],
+                    "rotation": [0, 0, 0],
+                    "scale": [1, 1, 1]
+                },
+                "camera": {
+                    "fieldOfView": 1.0471975511965976,
+                    "nearPlane": 0.1,
+                    "farPlane": 100
+                }
+            }
+        }
+    ]
+}

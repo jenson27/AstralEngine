@@ -22,6 +22,10 @@ function ConsoleLogSink(logEntry) {
 }
 
 function FileLogSink(logEntry) {
+    if (typeof window === "undefined") {
+        return;
+    }
+
     fetch("/api/logs", {
         method: "POST",
         headers: {

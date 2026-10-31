@@ -2,9 +2,11 @@ export class CommandBuffer {
     constructor() {
         this._commands = [];
         this._pendingDestroyEntities = new Set();
+        this._isDisposed = false;
     }
 
     AddComponent(entityId, componentType, component) {
+        this._RequireActive();
         this._RequireNotPendingDestroy(entityId);
         this._commands.push({
             type: "add-component",
@@ -15,6 +17,7 @@ export class CommandBuffer {
     }
 
     RemoveComponent(entityId, componentType) {
+        this._RequireActive();
         this._RequireNotPendingDestroy(entityId);
         this._commands.push({
             type: "remove-component",
@@ -24,6 +27,7 @@ export class CommandBuffer {
     }
 
     DestroyEntity(entityId) {
+        this._RequireActive();
         if (this._pendingDestroyEntities.has(entityId)) {
             return false;
         }
@@ -37,6 +41,7 @@ export class CommandBuffer {
     }
 
     Flush(entityManager) {
+        this._RequireActive();
         const commands = this._commands;
         this._commands = [];
         const errors = [];
@@ -93,6 +98,22 @@ export class CommandBuffer {
                 errors,
                 `Failed to apply ${errors.length} ECS command(s).`,
             );
+        }
+    }
+
+    Dispose() {
+        if (this._isDisposed) {
+            return;
+        }
+
+        this._commands.length = 0;
+        this._pendingDestroyEntities.clear();
+        this._isDisposed = true;
+    }
+
+    _RequireActive() {
+        if (this._isDisposed) {
+            throw new Error("Command buffer has been disposed.");
         }
     }
 

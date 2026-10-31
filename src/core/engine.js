@@ -91,13 +91,12 @@ export class Engine {
         }
 
         const currentTime = timestamp / 1000;
-        const frameDeltaTime =
+        const measuredFrameDeltaTime =
             this._previousFrameTime === null
                 ? 0
-                : Math.min(
-                      currentTime - this._previousFrameTime,
-                      this._maxFrameDeltaTime,
-                  );
+                : Math.max(0, currentTime - this._previousFrameTime);
+        const frameDeltaTime =
+            Math.min(measuredFrameDeltaTime, this._maxFrameDeltaTime);
 
         this._previousFrameTime = currentTime;
         this._accumulator += frameDeltaTime;
@@ -132,15 +131,33 @@ export class Engine {
                 if (currentTimeMs - this._lastStepLimitWarningTime >= 5000) {
                     this._lastStepLimitWarningTime = currentTimeMs;
 
-                    const droppedTime =
-                        this._accumulator -
-                        (this._accumulator % this._fixedDeltaTime);
+                    const accumulatorBeforeDropSeconds = this._accumulator;
+                    const accumulatorAfterDropSeconds =
+                        accumulatorBeforeDropSeconds % this._fixedDeltaTime;
+                    const droppedTimeSeconds =
+                        accumulatorBeforeDropSeconds -
+                        accumulatorAfterDropSeconds;
+                    const droppedSteps = Math.round(
+                        droppedTimeSeconds / this._fixedDeltaTime,
+                    );
 
                     AstralLogger.Warn(
-                        "Engine reached the fixed update step limit and dropped simulation time.",
+                        "Engine dropped simulation time after reaching the fixed update step limit.",
                         {
+                            measuredFrameDeltaTimeSeconds:
+                                measuredFrameDeltaTime,
+                            appliedFrameDeltaTimeSeconds: frameDeltaTime,
+                            frameDeltaWasClamped:
+                                measuredFrameDeltaTime > frameDeltaTime,
                             fixedSteps: fixedStepCount,
-                            droppedTimeSeconds: droppedTime,
+                            maxFixedStepsPerFrame:
+                                this._maxFixedStepsPerFrame,
+                            fixedDeltaTimeSeconds: this._fixedDeltaTime,
+                            accumulatorBeforeDropSeconds,
+                            droppedSteps,
+                            droppedTimeSeconds,
+                            accumulatorAfterDropSeconds,
+                            elapsedTimeSeconds: this._elapsedTime,
                         },
                     );
                 }

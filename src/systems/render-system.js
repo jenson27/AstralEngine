@@ -15,7 +15,9 @@ export class RenderSystem {
         this._renderer = renderer;
     }
 
-    Prepare(entityManager, cameraEntity, aspectRatio) {
+    PrepareRender(scene, { aspectRatio }) {
+        const entityManager = scene.EntityManager;
+        const cameraEntity = scene.ActiveCameraEntityId;
         const camera = entityManager.GetComponent(cameraEntity, Camera);
         const cameraTransform = entityManager.GetComponent(
             cameraEntity,

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Engine } from "../src/core/engine.js";
+import { AstralLogger } from "../src/diagnostics/logger.js";
 
 function InstallAnimationFrameMock(testContext) {
     const callbacks = new Map();
@@ -55,6 +56,15 @@ function InstallAnimationFrameMock(testContext) {
 test("updates and renders each frame with a capped delta time", (testContext) => {
     const animationFrame = InstallAnimationFrameMock(testContext);
     const calls = [];
+    const originalWarn = AstralLogger.Warn;
+    const warnings = [];
+
+    AstralLogger.Warn = (message, details) => {
+        warnings.push({ message, details });
+    };
+    testContext.after(() => {
+        AstralLogger.Warn = originalWarn;
+    });
 
     const engine = new Engine(
         {
@@ -72,6 +82,10 @@ test("updates and renders each frame with a capped delta time", (testContext) =>
 
     animationFrame.RunNext(1000);
     animationFrame.RunNext(1500);
+
+    assert.equal(warnings.length, 1);
+    assert.match(warnings[0].message, /dropped simulation time/);
+    assert.equal(warnings[0].details.droppedSteps, 1);
 
     assert.deepEqual(calls, [
         ["prepare"],

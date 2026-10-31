@@ -9,6 +9,7 @@ This page is the documentation index for AstralEngine. Start with the shell guid
 - [Shell Documentation](SHELL_README.md) - Describes the browser page, platform setup, WebGPU renderer, and first triangle.
 - [Engine](core/ENGINE_README.md) - Describes the frame loop, fixed updates, and render callbacks.
 - [Entity Manager](core/ENTITY_MANAGER_README.md) - Describes entities, component storage, queries, removal handlers, and deferred changes.
+- [Scene Management](core/SCENE_MANAGEMENT_README.md) - Describes scene loading, system phases, updates, and disposal.
 
 ## Components
 
@@ -16,6 +17,10 @@ This page is the documentation index for AstralEngine. Start with the shell guid
 - [Camera](components/graphics/CAMERA_README.md) - Describes camera settings and view/projection matrices.
 - [Angular Velocity](components/ANGULAR_VELOCITY_README.md) - Describes angular-rate data and its update system.
 - [Mesh Renderer](components/graphics/MESH_RENDERER_README.md) - Describes the mesh reference used for entity rendering.
+
+## Serialization
+
+- [Serialization](serialization/SERIALIZATION_README.md) - Describes type and component codecs, JSON rules, and scene documents.
 
 ## Diagnostics
 

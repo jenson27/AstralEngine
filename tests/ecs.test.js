@@ -34,6 +34,22 @@ test("creates entities and stores components by type", () => {
     );
 });
 
+test("reports when automatic entity ID allocation is exhausted", () => {
+    const entityManager = new EntityManager();
+
+    entityManager.CreateEntity(Number.MAX_SAFE_INTEGER);
+
+    assert.throws(
+        () => entityManager.CreateEntity(),
+        /No automatic entity IDs remain/,
+    );
+    assert.equal(entityManager.CreateEntity(1), 1);
+    assert.throws(
+        () => entityManager.CreateEntity(),
+        /No automatic entity IDs remain/,
+    );
+});
+
 test("queries component intersections and keeps packed storage valid after removal", () => {
     const entityManager = new EntityManager();
     const firstEntity = entityManager.CreateEntity();

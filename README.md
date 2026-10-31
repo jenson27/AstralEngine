@@ -63,4 +63,10 @@ pm2 stop astral-engine
 
 ## Tests
 
-An automated test suite is not configured yet. The current `npm test` command is a placeholder and does not run tests.
+Run the tests from the repository root:
+
+```powershell
+npm test
+```
+
+This runs Node.js's built-in test runner with the test files under `tests/`.

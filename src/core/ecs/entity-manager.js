@@ -1,7 +1,14 @@
 import { ComponentStorage } from "./component-storage.js";
 
 export class EntityManager {
-    constructor() {
+    constructor(beforeStructuralChange = () => {}) {
+        if (typeof beforeStructuralChange !== "function") {
+            throw new TypeError(
+                "EntityManager change guard must be a function.",
+            );
+        }
+
+        this._beforeStructuralChange = beforeStructuralChange;
         this._nextEntityId = 1;
         this._entities = new Set();
         this._componentStores = new Map();
@@ -10,19 +17,34 @@ export class EntityManager {
         this._pendingComponentRemovals = [];
     }
 
-    CreateEntity() {
-        if (!Number.isSafeInteger(this._nextEntityId)) {
-            throw new RangeError("Entity ID limit reached.");
+    CreateEntity(entityId = this._nextEntityId) {
+        if (entityId === null) {
+            throw new RangeError("No automatic entity IDs remain.");
         }
 
-        const entityId = this._nextEntityId++;
+        if (!Number.isSafeInteger(entityId) || entityId <= 0) {
+            throw new RangeError("Entity ID must be a positive safe integer.");
+        }
+
+        if (this._entities.has(entityId)) {
+            throw new Error("Entity ID already exists: " + entityId);
+        }
+
+        this._beforeStructuralChange({ type: "create-entity", entityId });
         this._entities.add(entityId);
+        if (this._nextEntityId !== null && entityId >= this._nextEntityId) {
+            this._nextEntityId =
+                entityId === Number.MAX_SAFE_INTEGER
+                    ? null
+                    : entityId + 1;
+        }
         return entityId;
     }
 
     DestroyEntity(entityId) {
         this._RequireEntity(entityId);
         this._RequireNoActiveQueries();
+        this._beforeStructuralChange({ type: "destroy-entity", entityId });
         this._entities.delete(entityId);
 
         for (const [componentType, storage] of this._componentStores) {
@@ -34,6 +56,35 @@ export class EntityManager {
             storage.Remove(entityId);
             this._QueueComponentRemoval(entityId, componentType, component);
         }
+    }
+
+    DestroyAllEntities() {
+        this._RequireNoActiveQueries();
+        this._beforeStructuralChange({ type: "destroy-all-entities" });
+
+        for (const entityId of [...this._entities]) {
+            this.DestroyEntity(entityId);
+        }
+    }
+
+    GetEntityIds() {
+        return [...this._entities];
+    }
+
+    GetComponentEntries(entityId) {
+        this._RequireEntity(entityId);
+
+        const components = [];
+        for (const [componentType, storage] of this._componentStores) {
+            if (storage.Has(entityId)) {
+                components.push({
+                    componentType,
+                    component: storage.Get(entityId),
+                });
+            }
+        }
+
+        return components;
     }
 
     AddComponent(entityId, componentType, component) {
@@ -51,6 +102,11 @@ export class EntityManager {
         }
 
         this._RequireNoActiveQueries();
+        this._beforeStructuralChange({
+            type: "add-component",
+            entityId,
+            componentType,
+        });
 
         const storage = this._GetOrCreateStorage(componentType);
         storage.Add(entityId, component);
@@ -80,10 +136,16 @@ export class EntityManager {
         }
 
         const component = storage.Get(entityId);
-        if (!storage.Remove(entityId)) {
+        if (component === undefined) {
             return false;
         }
 
+        this._beforeStructuralChange({
+            type: "remove-component",
+            entityId,
+            componentType,
+        });
+        storage.Remove(entityId);
         this._QueueComponentRemoval(entityId, componentType, component);
         return true;
     }
