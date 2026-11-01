@@ -72,17 +72,17 @@ A serialized type record has this shape:
 
 ## Scene document
 
-`EcsDocumentAdapter.Serialize()` produces a version 2 scene document:
+`EcsDocumentAdapter.Serialize()` produces a version 1 scene document:
 
 ```json
 {
   "format": "astral-scene",
-  "version": 2,
+  "version": 1,
   "name": "level-name",
-  "activeCameraEntityId": 1,
+  "activeCameraEntityId": "6475b38a-9cc8-43c6-93f5-28017a3d2cf1",
   "entities": [
     {
-      "id": 1,
+      "id": "6475b38a-9cc8-43c6-93f5-28017a3d2cf1",
       "components": [
         {
           "typeId": "transform",
@@ -109,10 +109,11 @@ A serialized type record has this shape:
 ```
 
 - The adapter requires a scene with a name and an entity manager that can list entity IDs and component entries.
-- The active camera ID must identify an entity with both `Camera` and `Transform`.
+- Version 1 entity IDs and the active camera ID are lowercase UUID strings. The active camera ID must identify an entity with both `Camera` and `Transform`.
 - Each entity record contains its ID and serialized components.
 - The adapter does not serialize systems or arbitrary scene services.
-- `SceneLoader` also accepts version 1 documents, where `components` is an object keyed by component type ID. It converts those entries to version 1 component records while loading.
+- `SceneLoader` accepts only scene document version 1. It requires UUID entity IDs and a list of typed component records.
+- Legacy scene layouts that used numeric entity IDs or component maps are not supported.
 - Scene document version and individual component record versions are separate values.
 
 ## JSON format rules
@@ -125,12 +126,12 @@ A serialized type record has this shape:
 
 ## Built-in scene component registrations
 
-`CreateSceneComponentRegistry()` registers these version 1 component codecs:
+`CreateSceneComponentRegistry()` registers the built-in component codecs:
 
-- `transform` - Stores finite three-value position, rotation, and scale arrays.
-- `angularVelocity` - Stores finite `x`, `y`, and `z` rates.
-- `camera` - Stores field of view and near and far planes after validating their ranges.
-- `meshRenderer` - Stores a mesh asset ID. Serialization requires `GetMeshAssetId`; deserialization requires `ResolveMesh`.
+- `transform` (version 1) - Stores finite three-value position, rotation, and scale arrays.
+- `angularVelocity` (version 1) - Stores finite `x`, `y`, and `z` rates.
+- `camera` (version 1) - Stores field of view and near and far planes after validating their ranges.
+- `meshRenderer` (version 1) - Stores a mesh asset ID and material IDs by mesh slot, or one default material ID.
 
 ## Current scope
 

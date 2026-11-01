@@ -56,8 +56,9 @@
 
 - `SceneLoader.Load()` fetches the URL, rejects non-success HTTP responses, parses the response as JSON, and passes the data to `LoadData()`.
 - Load errors are wrapped with the failing stage and URL. Invalid JSON is reported as a scene-response parse error with the parse error as its cause.
-- `LoadData()` accepts `astral-scene` document versions 1 and 2. It checks the scene name, entity list, unique positive entity IDs, active camera ID, and component records.
-- Version 1 component maps are converted to version 1 component records. Version 2 requires a list of records with unique non-empty type IDs, positive versions, and a `data` field.
+- `LoadData()` accepts only `astral-scene` document version 1. Entity IDs and the active camera ID must be lowercase UUID strings.
+- Scene version 1 requires a list of component records with unique non-empty type IDs, positive component versions, and a `data` field.
+- Legacy scene layouts that used numeric entity IDs or component maps are not supported.
 - The loader registers supplied systems, creates entities and components, sets the active camera, and initializes the scene.
 - If building or initializing the scene fails, the loader disposes the partial scene. If cleanup also fails, it throws an `AggregateError` containing both errors.
 - See [Serialization](../serialization/SERIALIZATION_README.md) for the scene document shape and component record details.
@@ -78,7 +79,7 @@
 
 ## Active camera
 
-- `SetActiveCameraEntity(entityId)` requires a positive safe integer ID for an existing entity with both `Camera` and `Transform`.
+- `SetActiveCameraEntity(entityId)` requires a lowercase UUID for an existing entity with both `Camera` and `Transform`.
 - The entity manager's structural-change guard prevents destroying the active camera or removing either required component before another camera is selected.
 - During scene disposal, the scene clears entities and the active camera through its disposal path.
 

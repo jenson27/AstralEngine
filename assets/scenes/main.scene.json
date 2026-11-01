@@ -1,6 +1,6 @@
 {
     "format": "astral-scene",
-    "version": 2,
+    "version": 1,
     "name": "main",
     "assets": [
         "builtin:cube",
@@ -8,10 +8,10 @@
         "material:grass-top",
         "material:dirt"
     ],
-    "activeCameraEntityId": 4,
+    "activeCameraEntityId": "6475b38a-9cc8-43c6-93f5-28017a3d2cf1",
     "entities": [
         {
-            "id": 1,
+            "id": "82ca44b3-f3b9-44d6-a26b-e33f75fa291e",
             "components": [
                 {
                     "typeId": "transform",
@@ -33,7 +33,7 @@
                 },
                 {
                     "typeId": "meshRenderer",
-                    "version": 2,
+                    "version": 1,
                     "data": {
                         "meshAssetId": "builtin:cube",
                         "materialsBySlot": {
@@ -46,7 +46,7 @@
             ]
         },
         {
-            "id": 2,
+            "id": "e37f20db-58fd-4ac3-8f77-a8b31f5b2047",
             "components": [
                 {
                     "typeId": "transform",
@@ -68,7 +68,7 @@
                 },
                 {
                     "typeId": "meshRenderer",
-                    "version": 2,
+                    "version": 1,
                     "data": {
                         "meshAssetId": "builtin:cube",
                         "materialsBySlot": {
@@ -81,7 +81,7 @@
             ]
         },
         {
-            "id": 3,
+            "id": "d1a2bb77-239e-4ea3-a184-55a6a204a8bc",
             "components": [
                 {
                     "typeId": "transform",
@@ -103,7 +103,7 @@
                 },
                 {
                     "typeId": "meshRenderer",
-                    "version": 2,
+                    "version": 1,
                     "data": {
                         "meshAssetId": "builtin:cube",
                         "materialsBySlot": {
@@ -116,7 +116,7 @@
             ]
         },
         {
-            "id": 4,
+            "id": "6475b38a-9cc8-43c6-93f5-28017a3d2cf1",
             "components": [
                 {
                     "typeId": "transform",

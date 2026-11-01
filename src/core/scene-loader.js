@@ -3,6 +3,7 @@ import { AstralLogger } from "../diagnostics/logger.js";
 import { JsonFormat } from "../serialization/json-format.js";
 import { Camera } from "../components/graphics/camera.js";
 import { Transform } from "../components/transform.js";
+import { IsEntityId } from "./ecs/entity-id.js";
 
 export class SceneLoader {
     constructor(
@@ -157,28 +158,11 @@ export class SceneLoader {
         }
     }
 
-    _GetComponentRecords(entityData, version) {
-        return version === 1
-            ? Object.entries(entityData.components).map(
-                  ([typeId, componentData]) => ({
-                      typeId,
-                      version: 1,
-                      data: componentData,
-                  }),
-              )
-            : entityData.components;
-    }
-
     _LoadEntities(scene, data, services) {
         for (const entityData of data.entities) {
             const entityId = scene.EntityManager.CreateEntity(entityData.id);
 
-            const componentRecords = this._GetComponentRecords(
-                entityData,
-                data.version,
-            );
-
-            for (const componentRecord of componentRecords) {
+            for (const componentRecord of entityData.components) {
                 const { typeId } = componentRecord;
 
                 try {
@@ -229,7 +213,7 @@ export class SceneLoader {
 
         if (
             data.format !== "astral-scene" ||
-            (data.version !== 1 && data.version !== 2)
+            data.version !== 1
         ) {
             throw new Error("Unsupported scene format or version.");
         }
@@ -244,16 +228,15 @@ export class SceneLoader {
 
         this._ValidateSceneAssetIds(data.assets);
 
-        if (
-            !Number.isSafeInteger(data.activeCameraEntityId) ||
-            data.activeCameraEntityId <= 0
-        ) {
-            throw new TypeError("Scene must define a valid active camera ID.");
+        if (!IsEntityId(data.activeCameraEntityId)) {
+            throw new TypeError(
+                "Scene must define a valid active camera UUID.",
+            );
         }
 
         const entityIds = new Set();
         for (const entityData of data.entities) {
-            this._ValidateEntityData(entityData, data.version, entityIds);
+            this._ValidateEntityData(entityData, entityIds);
         }
 
         this._ValidateSceneAssetReferences(data);
@@ -297,12 +280,7 @@ export class SceneLoader {
         const declaredAssetIds = new Set(data.assets);
 
         for (const entityData of data.entities) {
-            const componentRecords = this._GetComponentRecords(
-                entityData,
-                data.version,
-            );
-
-            for (const componentRecord of componentRecords) {
+            for (const componentRecord of entityData.components) {
                 if (componentRecord.typeId !== "meshRenderer") {
                     continue;
                 }
@@ -312,14 +290,7 @@ export class SceneLoader {
                     ["meshAssetId", componentData?.meshAssetId],
                 ];
 
-                if (componentRecord.version === 1) {
-                    assetReferences.push([
-                        "materialAssetId",
-                        componentData?.materialAssetId,
-                    ]);
-                } else if (
-                    componentData?.defaultMaterialAssetId !== undefined
-                ) {
+                if (componentData?.defaultMaterialAssetId !== undefined) {
                     assetReferences.push([
                         "defaultMaterialAssetId",
                         componentData.defaultMaterialAssetId,
@@ -379,13 +350,13 @@ export class SceneLoader {
         }
     }
 
-    _ValidateEntityData(entityData, version, entityIds) {
+    _ValidateEntityData(entityData, entityIds) {
         if (!entityData || typeof entityData !== "object") {
             throw new TypeError("Each scene entity must be an object.");
         }
 
-        if (!Number.isSafeInteger(entityData.id) || entityData.id <= 0) {
-            throw new TypeError("Entity IDs must be positive integers.");
+        if (!IsEntityId(entityData.id)) {
+            throw new TypeError("Entity IDs must be lowercase UUID strings.");
         }
 
         if (entityIds.has(entityData.id)) {
@@ -394,37 +365,16 @@ export class SceneLoader {
 
         entityIds.add(entityData.id);
 
-        if (version === 1) {
-            if (
-                !entityData.components ||
-                typeof entityData.components !== "object" ||
-                Array.isArray(entityData.components)
-            ) {
-                throw new TypeError(
-                    "Version 1 entity components must be an object keyed by type ID.",
-                );
-            }
-
-            const componentTypeIds = Object.keys(entityData.components);
-            if (componentTypeIds.some((typeId) => typeId.trim() === "")) {
-                throw new TypeError(
-                    "Version 1 component type IDs must be non-empty strings.",
-                );
-            }
-
-            return;
-        }
-
         if (!Array.isArray(entityData.components)) {
             throw new TypeError(
-                "Version 2 entity components must be an array of typed records.",
+                "Scene entity components must be an array of typed records.",
             );
         }
 
-        this._ValidateVersion2ComponentRecords(entityData.components);
+        this._ValidateComponentRecords(entityData.components);
     }
 
-    _ValidateVersion2ComponentRecords(components) {
+    _ValidateComponentRecords(components) {
         const componentTypeIds = new Set();
 
         for (const componentRecord of components) {

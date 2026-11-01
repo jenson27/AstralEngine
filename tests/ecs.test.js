@@ -34,19 +34,20 @@ test("creates entities and stores components by type", () => {
     );
 });
 
-test("reports when automatic entity ID allocation is exhausted", () => {
+test("uses UUIDs for generated and explicit entity IDs", () => {
     const entityManager = new EntityManager();
+    const generatedEntity = entityManager.CreateEntity();
+    const explicitEntity = "00000000-0000-4000-8000-000000000001";
 
-    entityManager.CreateEntity(Number.MAX_SAFE_INTEGER);
-
-    assert.throws(
-        () => entityManager.CreateEntity(),
-        /No automatic entity IDs remain/,
+    assert.match(
+        generatedEntity,
+        /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
     );
-    assert.equal(entityManager.CreateEntity(1), 1);
+    assert.equal(entityManager.CreateEntity(explicitEntity), explicitEntity);
+    assert.throws(() => entityManager.CreateEntity(1), /lowercase UUID/);
     assert.throws(
-        () => entityManager.CreateEntity(),
-        /No automatic entity IDs remain/,
+        () => entityManager.CreateEntity(explicitEntity),
+        /already exists/,
     );
 });
 
@@ -63,8 +64,8 @@ test("queries component intersections and keeps packed storage valid after remov
     entityManager.AddComponent(thirdEntity, Velocity, new Velocity(3));
 
     assert.deepEqual(
-        [...entityManager.Query(Position, Velocity)].sort((a, b) => a - b),
-        [firstEntity, thirdEntity].sort((a, b) => a - b),
+        [...entityManager.Query(Position, Velocity)].sort(),
+        [firstEntity, thirdEntity].sort(),
     );
 
     entityManager.RemoveComponent(firstEntity, Position);

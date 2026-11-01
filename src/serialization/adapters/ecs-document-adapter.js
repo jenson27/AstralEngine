@@ -2,6 +2,7 @@
 
 import { Camera } from "../../components/graphics/camera.js";
 import { Transform } from "../../components/transform.js";
+import { IsEntityId } from "../../core/ecs/entity-id.js";
 
 export class EcsDocumentAdapter {
     constructor(componentRegistry) {
@@ -29,11 +30,8 @@ export class EcsDocumentAdapter {
         }
 
         const activeCameraEntityId = scene.ActiveCameraEntityId;
-        if (
-            !Number.isSafeInteger(activeCameraEntityId) ||
-            activeCameraEntityId <= 0
-        ) {
-            throw new TypeError("Scene must have a valid active camera ID.");
+        if (!IsEntityId(activeCameraEntityId)) {
+            throw new TypeError("Scene must have a valid active camera UUID.");
         }
 
         const entityManager = scene.EntityManager;
@@ -85,7 +83,7 @@ export class EcsDocumentAdapter {
 
         return {
             format: "astral-scene",
-            version: 2,
+            version: 1,
             name: scene.Name,
             activeCameraEntityId,
             assets: [...assetIds].sort(),

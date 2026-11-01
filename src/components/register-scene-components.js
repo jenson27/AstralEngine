@@ -167,19 +167,7 @@ export function CreateSceneComponentRegistry() {
             return new MeshRenderer(meshHandle, materialHandlesBySlot);
         },
         {
-            Version: 2,
-            Migrate: (data, fromVersion) => {
-                if (fromVersion !== 1) {
-                    throw new Error(
-                        "Unsupported mesh renderer component version.",
-                    );
-                }
-
-                return {
-                    meshAssetId: data.meshAssetId,
-                    defaultMaterialAssetId: data.materialAssetId,
-                };
-            },
+            Version: 1,
             Serialize: (meshRenderer) => {
                 const meshAssetId = meshRenderer.MeshHandle.AssetId;
 

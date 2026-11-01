@@ -46,7 +46,9 @@ test("serializes and loads ECS data through registered component codecs", async 
     };
     const scene = new Scene("serializer-check");
 
-    const cameraEntityId = scene.EntityManager.CreateEntity(3);
+    const cameraEntityId = scene.EntityManager.CreateEntity(
+        "10203040-aaaa-4aaa-8aaa-102030405060",
+    );
     const cameraTransform = new Transform();
     cameraTransform.position = [0, 1, 4];
     scene.EntityManager.AddComponent(
@@ -57,7 +59,9 @@ test("serializes and loads ECS data through registered component codecs", async 
     scene.EntityManager.AddComponent(cameraEntityId, Camera, new Camera());
     scene.SetActiveCameraEntity(cameraEntityId);
 
-    const meshEntityId = scene.EntityManager.CreateEntity(8);
+    const meshEntityId = scene.EntityManager.CreateEntity(
+        "20304050-bbbb-4bbb-9bbb-203040506070",
+    );
     const meshTransform = new Transform();
     meshTransform.position = [2, 0, 0];
     scene.EntityManager.AddComponent(meshEntityId, Transform, meshTransform);
@@ -78,7 +82,7 @@ test("serializes and loads ECS data through registered component codecs", async 
     const acquiredAssetIds = [];
 
     assert.equal(document.format, "astral-scene");
-    assert.equal(document.version, 2);
+    assert.equal(document.version, 1);
     assert.deepEqual(document.assets, ["builtin:cube", "material:grass"]);
     assert.deepEqual(
         document.entities.map((entity) => entity.id),
@@ -125,7 +129,7 @@ test("serializes and loads ECS data through registered component codecs", async 
     scene.Dispose();
 });
 
-test("loads version 2 mesh renderers with a default material asset", async () => {
+test("loads version 1 meshRenderer components with a default material asset", async () => {
     const componentRegistry = CreateSceneComponentRegistry();
     const mesh = CreateCubeMesh();
     const material = new Material({ bitmap: {} });
@@ -136,13 +140,13 @@ test("loads version 2 mesh renderers with a default material asset", async () =>
     );
     const document = {
         format: "astral-scene",
-        version: 2,
+        version: 1,
         name: "default-material-check",
         assets: ["builtin:cube", "material:grass"],
-        activeCameraEntityId: 1,
+        activeCameraEntityId: "10203040-aaaa-4aaa-8aaa-102030405060",
         entities: [
             {
-                id: 1,
+                id: "10203040-aaaa-4aaa-8aaa-102030405060",
                 components: [
                     {
                         typeId: "transform",
@@ -165,7 +169,7 @@ test("loads version 2 mesh renderers with a default material asset", async () =>
                 ],
             },
             {
-                id: 2,
+                id: "20304050-bbbb-4bbb-9bbb-203040506070",
                 components: [
                     {
                         typeId: "transform",
@@ -178,7 +182,7 @@ test("loads version 2 mesh renderers with a default material asset", async () =>
                     },
                     {
                         typeId: "meshRenderer",
-                        version: 2,
+                        version: 1,
                         data: {
                             meshAssetId: "builtin:cube",
                             defaultMaterialAssetId: "material:grass",
@@ -200,11 +204,12 @@ test("loads version 2 mesh renderers with a default material asset", async () =>
             },
         },
     );
+    const [meshEntityId] = [...scene.EntityManager.Query(MeshRenderer)];
 
     for (const { materialSlot } of mesh.Submeshes) {
         assert.strictEqual(
             scene.EntityManager
-                .GetComponent(2, MeshRenderer)
+                .GetComponent(meshEntityId, MeshRenderer)
                 .GetMaterialForSlot(materialSlot),
             material,
         );
@@ -213,16 +218,16 @@ test("loads version 2 mesh renderers with a default material asset", async () =>
     scene.Dispose();
 });
 
-test("continues to load version 1 component maps", () => {
+test("rejects the old version 1 scene layout", () => {
     const componentRegistry = CreateSceneComponentRegistry();
-    const legacyDocument = {
+    const oldDocument = {
         format: "astral-scene",
         version: 1,
-        name: "legacy-level",
-        activeCameraEntityId: 1,
+        name: "old-level",
+        activeCameraEntityId: "10203040-aaaa-4aaa-8aaa-102030405060",
         entities: [
             {
-                id: 1,
+                id: "10203040-aaaa-4aaa-8aaa-102030405060",
                 components: {
                     transform: {
                         position: [0, 0, 3],
@@ -239,11 +244,8 @@ test("continues to load version 1 component maps", () => {
         ],
     };
 
-    const scene = new SceneLoader(componentRegistry).LoadData(legacyDocument);
-    const transform = scene.EntityManager.GetComponent(1, Transform);
-
-    assert.equal(scene.Name, "legacy-level");
-    assert.deepEqual(transform.position, [0, 0, 3]);
-
-    scene.Dispose();
+    assert.throws(
+        () => new SceneLoader(componentRegistry).LoadData(oldDocument),
+        /Scene entity components must be an array of typed records\./,
+    );
 });

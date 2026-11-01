@@ -1,5 +1,6 @@
 import { CommandBuffer } from "./ecs/command-buffer.js";
 import { EntityManager } from "./ecs/entity-manager.js";
+import { IsEntityId } from "./ecs/entity-id.js";
 import { SystemPhase, SystemScheduler } from "./system-scheduler.js";
 import { Camera } from "../components/graphics/camera.js";
 import { Transform } from "../components/transform.js";
@@ -46,9 +47,9 @@ export class Scene {
     }
 
     SetActiveCameraEntity(entityId) {
-        if (!Number.isSafeInteger(entityId) || entityId <= 0) {
+        if (!IsEntityId(entityId)) {
             throw new TypeError(
-                "Active camera entity ID must be a positive integer.",
+                "Active camera entity ID must be a lowercase UUID.",
             );
         }
 

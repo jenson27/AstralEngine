@@ -9,7 +9,7 @@
 | Part | Responsibility |
 | --- | --- |
 | `EntityManager` | Owns entity IDs, component stores, query state, and component-removal handlers. |
-| `EntityManager.constructor()` | Initializes the entity ID counter and empty ECS stores. |
+| `EntityManager.constructor()` | Initializes the empty ECS stores. |
 | `CreateEntity()` | Creates and returns a new entity ID. |
 | `DestroyEntity()` | Removes an entity and all its components. |
 | `AddComponent()` | Stores a component under the supplied component type. |
@@ -37,14 +37,16 @@
 
 ## Entity and component data
 
-- Entity IDs start at `1` and increase. Destroyed IDs are not reused.
+- `CreateEntity()` generates a lowercase UUID with `crypto.randomUUID()`. Callers can also supply a lowercase UUID.
+- In browsers, `crypto.randomUUID()` requires a secure context such as HTTPS or localhost.
+- Destroyed IDs are not reused.
 - Component stores are keyed by the component type supplied to `AddComponent()`.
 - A component-removal record contains `entityId`, `componentType`, and `component`.
 - Add-component commands contain an entity ID, a component type, and a component instance.
 
 ## Entity and component changes
 
-- `CreateEntity()` adds a new ID to the entity set. It throws a `RangeError` when the next ID is not a safe integer.
+- `CreateEntity()` adds a lowercase UUID to the entity set. It throws a `TypeError` for an invalid UUID and an `Error` for a duplicate ID.
 - Operations that require an existing entity throw a `RangeError` for an unknown ID.
 - `AddComponent()` requires a component type and an instance of that type. It throws if the instance does not match the type or the entity already has that component type.
 - `GetComponent()` returns `undefined` when the entity has no component of that type.
@@ -87,12 +89,13 @@
 
 ## Current scope
 
-- Entity and component data are not serialized to JSON.
+- `EntityManager` does not serialize data. `EcsDocumentAdapter` serializes scene entities and components to JSON.
 - The entity manager does not provide parent-child hierarchies or automatic system updates.
 - Component stores use arrays and swap removal; iteration order is not stable.
 
 ## Source
 
 - `src/core/ecs/entity-manager.js`
+- `src/core/ecs/entity-id.js`
 - `src/core/ecs/component-storage.js`
 - `src/core/ecs/command-buffer.js`

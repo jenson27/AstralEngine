@@ -1,4 +1,5 @@
 import { ComponentStorage } from "./component-storage.js";
+import { CreateEntityId, IsEntityId } from "./entity-id.js";
 
 export class EntityManager {
     constructor(beforeStructuralChange = () => {}) {
@@ -9,7 +10,6 @@ export class EntityManager {
         }
 
         this._beforeStructuralChange = beforeStructuralChange;
-        this._nextEntityId = 1;
         this._entities = new Set();
         this._componentStores = new Map();
         this._activeQueryCount = 0;
@@ -17,13 +17,9 @@ export class EntityManager {
         this._pendingComponentRemovals = [];
     }
 
-    CreateEntity(entityId = this._nextEntityId) {
-        if (entityId === null) {
-            throw new RangeError("No automatic entity IDs remain.");
-        }
-
-        if (!Number.isSafeInteger(entityId) || entityId <= 0) {
-            throw new RangeError("Entity ID must be a positive safe integer.");
+    CreateEntity(entityId = CreateEntityId()) {
+        if (!IsEntityId(entityId)) {
+            throw new TypeError("Entity ID must be a lowercase UUID.");
         }
 
         if (this._entities.has(entityId)) {
@@ -32,12 +28,6 @@ export class EntityManager {
 
         this._beforeStructuralChange({ type: "create-entity", entityId });
         this._entities.add(entityId);
-        if (this._nextEntityId !== null && entityId >= this._nextEntityId) {
-            this._nextEntityId =
-                entityId === Number.MAX_SAFE_INTEGER
-                    ? null
-                    : entityId + 1;
-        }
         return entityId;
     }
 
