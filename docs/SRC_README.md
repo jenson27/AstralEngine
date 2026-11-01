@@ -11,12 +11,21 @@ This page is the documentation index for AstralEngine. Start with the shell guid
 - [Entity Manager](core/ENTITY_MANAGER_README.md) - Describes entities, component storage, queries, removal handlers, and deferred changes.
 - [Scene Management](core/SCENE_MANAGEMENT_README.md) - Describes scene loading, system phases, updates, and disposal.
 
+## Assets
+
+- [Asset Registry](core/ASSET_REGISTRY_README.md) - Stores asset descriptors and maps loader IDs to loaders.
+- [Asset Manager](core/ASSET_MANAGER_README.md) - Loads assets and manages dependencies, leases, and scopes.
+
 ## Components
 
 - [Transform](components/TRANSFORM_README.md) - Describes local transform data and model-matrix generation.
 - [Camera](components/graphics/CAMERA_README.md) - Describes camera settings and view/projection matrices.
 - [Angular Velocity](components/ANGULAR_VELOCITY_README.md) - Describes angular-rate data and its update system.
 - [Mesh Renderer](components/graphics/MESH_RENDERER_README.md) - Describes the mesh reference used for entity rendering.
+
+## Graphics
+
+- [Graphics](graphics/GRAPHICS_README.md) - Describes meshes, materials, graphics loaders, render preparation, and WebGPU resource lifetime.
 
 ## Serialization
 

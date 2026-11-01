@@ -45,6 +45,7 @@ export class RenderSystem {
 
             renderItems.push({
                 mesh: meshRenderer.mesh,
+                materialsBySlot: meshRenderer.MaterialsBySlot,
                 modelMatrix: transform.GetModelMatrix(),
             });
         }

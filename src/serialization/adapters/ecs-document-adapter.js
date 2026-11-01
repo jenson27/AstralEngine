@@ -1,3 +1,5 @@
+// EcsDocumentAdapter converts a live ECS scene into a plain JSON-ready scene document.
+
 import { Camera } from "../../components/graphics/camera.js";
 import { Transform } from "../../components/transform.js";
 
@@ -38,7 +40,9 @@ export class EcsDocumentAdapter {
         const entityIds = entityManager.GetEntityIds();
 
         if (!entityIds.includes(activeCameraEntityId)) {
-            throw new Error("Active camera entity does not exist in the scene.");
+            throw new Error(
+                "Active camera entity does not exist in the scene.",
+            );
         }
 
         if (
@@ -50,22 +54,42 @@ export class EcsDocumentAdapter {
             );
         }
 
+        const assetIds = new Set();
+        const entities = entityIds.map((entityId) => ({
+            id: entityId,
+            components: entityManager
+                .GetComponentEntries(entityId)
+                .map(({ component }) =>
+                    this._componentRegistry.SerializeComponent(
+                        component,
+                        context,
+                    ),
+                ),
+        }));
+
+        for (const entity of entities) {
+            for (const component of entity.components) {
+                if (component.typeId !== "meshRenderer") {
+                    continue;
+                }
+
+                assetIds.add(component.data.meshAssetId);
+
+                for (const materialAssetId of Object.values(
+                    component.data.materialsBySlot,
+                )) {
+                    assetIds.add(materialAssetId);
+                }
+            }
+        }
+
         return {
             format: "astral-scene",
             version: 2,
             name: scene.Name,
             activeCameraEntityId,
-            entities: entityIds.map((entityId) => ({
-                id: entityId,
-                components: entityManager
-                    .GetComponentEntries(entityId)
-                    .map(({ component }) =>
-                        this._componentRegistry.SerializeComponent(
-                            component,
-                            context,
-                        ),
-                    ),
-            })),
+            assets: [...assetIds].sort(),
+            entities,
         };
     }
 }

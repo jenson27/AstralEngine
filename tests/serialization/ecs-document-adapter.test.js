@@ -3,6 +3,7 @@ import test from "node:test";
 import { CreateCubeMesh } from "../../src/graphics/primitives/cube.js";
 import { Camera } from "../../src/components/graphics/camera.js";
 import { MeshRenderer } from "../../src/components/graphics/mesh-renderer.js";
+import { Material } from "../../src/graphics/material.js";
 import { AngularVelocity } from "../../src/components/angular-velocity.js";
 import { Transform } from "../../src/components/transform.js";
 import { CreateSceneComponentRegistry } from "../../src/components/register-scene-components.js";
@@ -11,9 +12,10 @@ import { Scene } from "../../src/core/scene.js";
 import { EcsDocumentAdapter } from "../../src/serialization/adapters/ecs-document-adapter.js";
 import { JsonFormat } from "../../src/serialization/json-format.js";
 
-test("serializes and loads ECS data through registered component codecs", () => {
+test("serializes and loads ECS data through registered component codecs", async () => {
     const componentRegistry = CreateSceneComponentRegistry();
     const mesh = CreateCubeMesh();
+    const material = new Material({ bitmap: {} });
     const services = {
         ResolveMesh(assetId) {
             assert.equal(assetId, "builtin:cube");
@@ -22,6 +24,14 @@ test("serializes and loads ECS data through registered component codecs", () => 
         GetMeshAssetId(resolvedMesh) {
             assert.strictEqual(resolvedMesh, mesh);
             return "builtin:cube";
+        },
+        ResolveMaterial(assetId) {
+            assert.equal(assetId, "material:grass");
+            return material;
+        },
+        GetMaterialAssetId(resolvedMaterial) {
+            assert.strictEqual(resolvedMaterial, material);
+            return "material:grass";
         },
     };
     const scene = new Scene("serializer-check");
@@ -49,23 +59,34 @@ test("serializes and loads ECS data through registered component codecs", () => 
     scene.EntityManager.AddComponent(
         meshEntityId,
         MeshRenderer,
-        new MeshRenderer(mesh),
+        new MeshRenderer(mesh, material),
     );
 
     const adapter = new EcsDocumentAdapter(componentRegistry);
     const json = JsonFormat.Stringify(adapter.Serialize(scene, services));
     const document = JsonFormat.Parse(json);
+    const acquiredAssetIds = [];
 
     assert.equal(document.format, "astral-scene");
     assert.equal(document.version, 2);
+    assert.deepEqual(document.assets, ["builtin:cube", "material:grass"]);
     assert.deepEqual(
         document.entities.map((entity) => entity.id),
         [cameraEntityId, meshEntityId],
     );
 
-    const loadedScene = new SceneLoader(componentRegistry).LoadData(document, {
+    const loadedScene = await new SceneLoader(
+        componentRegistry,
+    ).LoadDataAsync(document, {
+        assetScope: {
+            Acquire(assetId) {
+                acquiredAssetIds.push(assetId);
+                return Promise.resolve();
+            },
+        },
         services,
     });
+    assert.deepEqual(acquiredAssetIds, document.assets);
     const loadedTransform = loadedScene.EntityManager.GetComponent(
         meshEntityId,
         Transform,
@@ -83,7 +104,97 @@ test("serializes and loads ECS data through registered component codecs", () => 
     assert.equal(loadedAngularVelocity.y, 1);
     assert.strictEqual(loadedMeshRenderer.mesh, mesh);
 
+    for (const { materialSlot } of mesh.Submeshes) {
+        assert.strictEqual(
+            loadedMeshRenderer.GetMaterialForSlot(materialSlot),
+            material,
+        );
+    }
+
     loadedScene.Dispose();
+    scene.Dispose();
+});
+
+test("loads version 2 mesh renderers with a default material asset", async () => {
+    const componentRegistry = CreateSceneComponentRegistry();
+    const mesh = CreateCubeMesh();
+    const material = new Material({ bitmap: {} });
+    const document = {
+        format: "astral-scene",
+        version: 2,
+        name: "default-material-check",
+        assets: ["builtin:cube", "material:grass"],
+        activeCameraEntityId: 1,
+        entities: [
+            {
+                id: 1,
+                components: [
+                    {
+                        typeId: "transform",
+                        version: 1,
+                        data: {
+                            position: [0, 0, 3],
+                            rotation: [0, 0, 0],
+                            scale: [1, 1, 1],
+                        },
+                    },
+                    {
+                        typeId: "camera",
+                        version: 1,
+                        data: {
+                            fieldOfView: Math.PI / 3,
+                            nearPlane: 0.1,
+                            farPlane: 100,
+                        },
+                    },
+                ],
+            },
+            {
+                id: 2,
+                components: [
+                    {
+                        typeId: "transform",
+                        version: 1,
+                        data: {
+                            position: [0, 0, 0],
+                            rotation: [0, 0, 0],
+                            scale: [1, 1, 1],
+                        },
+                    },
+                    {
+                        typeId: "meshRenderer",
+                        version: 2,
+                        data: {
+                            meshAssetId: "builtin:cube",
+                            defaultMaterialAssetId: "material:grass",
+                        },
+                    },
+                ],
+            },
+        ],
+    };
+    const scene = await new SceneLoader(componentRegistry).LoadDataAsync(
+        document,
+        {
+            assetScope: {
+                async Acquire() {},
+            },
+            services: {
+                ResolveMesh: () => mesh,
+                ResolveMaterial: () => material,
+            },
+        },
+    );
+
+    for (const { materialSlot } of mesh.Submeshes) {
+        assert.strictEqual(
+            scene.EntityManager
+                .GetComponent(2, MeshRenderer)
+                .GetMaterialForSlot(materialSlot),
+            material,
+        );
+    }
+
     scene.Dispose();
 });
 

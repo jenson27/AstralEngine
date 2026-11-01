@@ -1,0 +1,83 @@
+{
+  "format": "astral-assets",
+  "version": 1,
+  "assets": [
+    {
+      "id": "builtin:cube",
+      "typeId": "mesh",
+      "loaderId": "builtin:mesh",
+      "source": {
+        "kind": "primitive",
+        "name": "cube"
+      },
+      "version": 1,
+      "dependencies": []
+    },
+    {
+      "id": "texture:grass",
+      "typeId": "texture",
+      "loaderId": "image:texture",
+      "source": {
+        "kind": "image",
+        "url": "/assets/textures/grass.jpg"
+      },
+      "version": 1,
+      "dependencies": []
+    },
+    {
+      "id": "material:grass",
+      "typeId": "material",
+      "loaderId": "basic:material",
+      "source": {
+        "kind": "material",
+        "baseColorTextureAssetId": "texture:grass"
+      },
+      "version": 1,
+      "dependencies": ["texture:grass"]
+    },
+    {
+      "id": "texture:grass-top",
+      "typeId": "texture",
+      "loaderId": "image:texture",
+      "source": {
+        "kind": "image",
+        "url": "/assets/textures/grass_top.jpg"
+      },
+      "version": 1,
+      "dependencies": []
+    },
+    {
+      "id": "texture:dirt",
+      "typeId": "texture",
+      "loaderId": "image:texture",
+      "source": {
+        "kind": "image",
+        "url": "/assets/textures/dirt.jpg"
+      },
+      "version": 1,
+      "dependencies": []
+    },
+    {
+      "id": "material:grass-top",
+      "typeId": "material",
+      "loaderId": "basic:material",
+      "source": {
+        "kind": "material",
+        "baseColorTextureAssetId": "texture:grass-top"
+      },
+      "version": 1,
+      "dependencies": ["texture:grass-top"]
+    },
+    {
+      "id": "material:dirt",
+      "typeId": "material",
+      "loaderId": "basic:material",
+      "source": {
+        "kind": "material",
+        "baseColorTextureAssetId": "texture:dirt"
+      },
+      "version": 1,
+      "dependencies": ["texture:dirt"]
+    }
+  ]
+}

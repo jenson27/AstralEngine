@@ -3,6 +3,7 @@
 
 import { AstralLogger } from "../diagnostics/logger.js";
 import { Mesh } from "./mesh.js";
+import { Material } from "./material.js";
 
 const shaderUrl = new URL("./shaders/triangle.wgsl", import.meta.url);
 
@@ -14,8 +15,12 @@ export class WebGPURenderer {
         this._format = null;
         this._pipeline = null;
         this._meshResources = new Map();
+        this._textureResources = new Map();
+        this._materialBindGroups = new Map();
         this._drawItems = [];
         this._transformBindGroupLayout = null;
+        this._materialBindGroupLayout = null;
+        this._textureSampler = null;
         this._transformBuffer = null;
         this._transformBindGroup = null;
         this._matrixBlockSize = 16 * 3 * Float32Array.BYTES_PER_ELEMENT;
@@ -38,6 +43,12 @@ export class WebGPURenderer {
         const shaderCode = await this._LoadShader();
 
         this._pipeline = await this._CreatePipeline(shaderCode);
+        this._textureSampler = this._device.createSampler({
+            addressModeU: "repeat",
+            addressModeV: "repeat",
+            magFilter: "linear",
+            minFilter: "linear",
+        });
         this._InitializeTransformResources();
     }
 
@@ -127,8 +138,32 @@ export class WebGPURenderer {
                 ],
             });
 
+        this._materialBindGroupLayout =
+            this._device.createBindGroupLayout({
+                entries: [
+                    {
+                        binding: 0,
+                        visibility: GPUShaderStage.FRAGMENT,
+                        texture: {
+                            sampleType: "float",
+                            viewDimension: "2d",
+                        },
+                    },
+                    {
+                        binding: 1,
+                        visibility: GPUShaderStage.FRAGMENT,
+                        sampler: {
+                            type: "filtering",
+                        },
+                    },
+                ],
+            });
+
         const pipelineLayout = this._device.createPipelineLayout({
-            bindGroupLayouts: [this._transformBindGroupLayout],
+            bindGroupLayouts: [
+                this._transformBindGroupLayout,
+                this._materialBindGroupLayout,
+            ],
         });
 
         return this._device.createRenderPipelineAsync({
@@ -138,12 +173,17 @@ export class WebGPURenderer {
                 entryPoint: "VertexMain",
                 buffers: [
                     {
-                        arrayStride: 12,
+                        arrayStride: 20,
                         attributes: [
                             {
                                 format: "float32x3",
                                 offset: 0,
                                 shaderLocation: 0,
+                            },
+                            {
+                                format: "float32x2",
+                                offset: 12,
+                                shaderLocation: 1,
                             },
                         ],
                     },
@@ -186,6 +226,8 @@ export class WebGPURenderer {
         this._RequireMatrix(projectionMatrix, "Projection matrix");
         this._EnsureTransformCapacity(renderItems.length);
         this._drawItems.length = 0;
+        const activeMeshes = new Set();
+        const activeMaterials = new Set();
 
         const floatsPerDraw =
             this._uniformStride / Float32Array.BYTES_PER_ELEMENT;
@@ -198,7 +240,30 @@ export class WebGPURenderer {
             }
 
             this._RequireMatrix(renderItem.modelMatrix, "Model matrix");
-            this._drawItems.push(this._GetMeshResource(renderItem.mesh));
+            activeMeshes.add(renderItem.mesh);
+            const meshResource = this._GetMeshResource(renderItem.mesh);
+            const transformOffset = index * this._uniformStride;
+
+            for (const submesh of meshResource.submeshes) {
+                const material =
+                    renderItem.materialsBySlot?.[submesh.materialSlot];
+
+                if (!(material instanceof Material)) {
+                    throw new TypeError(
+                        `Render item has no Material for slot "${submesh.materialSlot}".`,
+                    );
+                }
+
+                activeMaterials.add(material);
+                this._drawItems.push({
+                    vertexBuffer: meshResource.vertexBuffer,
+                    firstVertex: submesh.firstVertex,
+                    vertexCount: submesh.vertexCount,
+                    transformOffset,
+                    materialBindGroup:
+                        this._GetMaterialBindGroup(material),
+                });
+            }
 
             const matrixOffset = index * floatsPerDraw;
             this._matrixData.set(renderItem.modelMatrix, matrixOffset);
@@ -214,6 +279,9 @@ export class WebGPURenderer {
                 this._matrixData.subarray(0, usedFloatCount),
             );
         }
+
+        this._PruneMeshResources(activeMeshes);
+        this._PruneMaterialResources(activeMaterials);
     }
 
     _RequireMatrix(matrix, name) {
@@ -234,19 +302,139 @@ export class WebGPURenderer {
         }
 
         const positions = mesh.GetPositions();
+        const uvs = mesh.GetUVs();
+        const vertexData = new Float32Array(mesh.VertexCount * 5);
+
+        for (let index = 0; index < mesh.VertexCount; index += 1) {
+            vertexData.set(
+                positions.subarray(index * 3, index * 3 + 3),
+                index * 5,
+            );
+            vertexData.set(
+                uvs.subarray(index * 2, index * 2 + 2),
+                index * 5 + 3,
+            );
+        }
+
         const vertexBuffer = this._device.createBuffer({
-            size: positions.byteLength,
+            size: vertexData.byteLength,
             usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
         });
 
-        this._device.queue.writeBuffer(vertexBuffer, 0, positions);
+        this._device.queue.writeBuffer(vertexBuffer, 0, vertexData);
 
         meshResource = {
             vertexBuffer,
             vertexCount: mesh.VertexCount,
+            submeshes: mesh.Submeshes,
         };
         this._meshResources.set(mesh, meshResource);
         return meshResource;
+    }
+
+    _GetTextureResource(imageAsset) {
+        let textureResource = this._textureResources.get(imageAsset);
+
+        if (textureResource) {
+            return textureResource;
+        }
+
+        if (
+            !imageAsset?.bitmap ||
+            !Number.isSafeInteger(imageAsset.width) ||
+            imageAsset.width <= 0 ||
+            !Number.isSafeInteger(imageAsset.height) ||
+            imageAsset.height <= 0
+        ) {
+            throw new TypeError("Material has an invalid image asset.");
+        }
+
+        const texture = this._device.createTexture({
+            size: [imageAsset.width, imageAsset.height, 1],
+            format: "rgba8unorm-srgb",
+            usage:
+                GPUTextureUsage.TEXTURE_BINDING |
+                GPUTextureUsage.COPY_DST |
+                GPUTextureUsage.RENDER_ATTACHMENT,
+        });
+
+        try {
+            this._device.queue.copyExternalImageToTexture(
+                { source: imageAsset.bitmap },
+                { texture },
+                [imageAsset.width, imageAsset.height, 1],
+            );
+        } catch (error) {
+            texture.destroy();
+            throw error;
+        }
+
+        textureResource = {
+            texture,
+            view: texture.createView(),
+        };
+        this._textureResources.set(imageAsset, textureResource);
+
+        return textureResource;
+    }
+
+    _GetMaterialBindGroup(material) {
+        let bindGroup = this._materialBindGroups.get(material);
+
+        if (bindGroup) {
+            return bindGroup;
+        }
+
+        const textureResource = this._GetTextureResource(
+            material.BaseColorTexture,
+        );
+
+        bindGroup = this._device.createBindGroup({
+            layout: this._materialBindGroupLayout,
+            entries: [
+                {
+                    binding: 0,
+                    resource: textureResource.view,
+                },
+                {
+                    binding: 1,
+                    resource: this._textureSampler,
+                },
+            ],
+        });
+
+        this._materialBindGroups.set(material, bindGroup);
+        return bindGroup;
+    }
+
+    _PruneMeshResources(activeMeshes) {
+        for (const [mesh, meshResource] of this._meshResources) {
+            if (!activeMeshes.has(mesh)) {
+                meshResource.vertexBuffer.destroy();
+                this._meshResources.delete(mesh);
+            }
+        }
+    }
+
+    _PruneMaterialResources(activeMaterials) {
+        const activeTextures = new Set();
+
+        for (const material of activeMaterials) {
+            activeTextures.add(material.BaseColorTexture);
+        }
+
+        for (const material of this._materialBindGroups.keys()) {
+            if (!activeMaterials.has(material)) {
+                this._materialBindGroups.delete(material);
+            }
+        }
+
+        for (const [imageAsset, textureResource] of this._textureResources) {
+            if (!activeTextures.has(imageAsset)) {
+                textureResource.texture.destroy();
+                this._textureResources.delete(imageAsset);
+            }
+        }
     }
 
     _EnsureTransformCapacity(requiredDrawCount) {
@@ -343,14 +531,17 @@ export class WebGPURenderer {
 
         renderPass.setPipeline(this._pipeline);
 
-        for (let index = 0; index < this._drawItems.length; index += 1) {
-            const drawItem = this._drawItems[index];
-
+        for (const drawItem of this._drawItems) {
             renderPass.setBindGroup(0, this._transformBindGroup, [
-                index * this._uniformStride,
+                drawItem.transformOffset,
             ]);
+            renderPass.setBindGroup(1, drawItem.materialBindGroup);
             renderPass.setVertexBuffer(0, drawItem.vertexBuffer);
-            renderPass.draw(drawItem.vertexCount);
+            renderPass.draw(
+                drawItem.vertexCount,
+                1,
+                drawItem.firstVertex,
+            );
         }
 
         renderPass.end();
@@ -365,7 +556,13 @@ export class WebGPURenderer {
             meshResource.vertexBuffer.destroy();
         }
 
+        for (const textureResource of this._textureResources.values()) {
+            textureResource.texture.destroy();
+        }
+
         this._meshResources.clear();
+        this._textureResources.clear();
+        this._materialBindGroups.clear();
         this._drawItems.length = 0;
         this._transformBuffer?.destroy();
         this._depthTexture?.destroy();
@@ -376,6 +573,8 @@ export class WebGPURenderer {
         this._format = null;
         this._pipeline = null;
         this._transformBindGroupLayout = null;
+        this._materialBindGroupLayout = null;
+        this._textureSampler = null;
         this._transformBuffer = null;
         this._transformBindGroup = null;
         this._uniformStride = 0;

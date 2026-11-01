@@ -5,13 +5,19 @@ import { BrowserPlatform } from "./platform/browser-platform.js";
 import { WebGPURenderer } from "./graphics/webgpu-renderer.js";
 import { Engine } from "./core/engine.js";
 import { AstralLogger } from "./diagnostics/logger.js";
-import { CreateCubeMesh } from "./graphics/primitives/cube.js";
 import { AngularVelocitySystem } from "./systems/angular-velocity-system.js";
 import { RenderSystem } from "./systems/render-system.js";
 import { SceneLoader } from "./core/scene-loader.js";
 import { SceneManager } from "./core/scene-manager.js";
 import { SystemPhase } from "./core/system-scheduler.js";
 import { CreateSceneComponentRegistry } from "./components/register-scene-components.js";
+import { AssetCatalog } from "./core/assets/asset-catalog.js";
+import { AssetLoaderRegistry } from "./core/assets/asset-loader-registry.js";
+import { AssetManager } from "./core/assets/asset-manager.js";
+import { AssetScope } from "./core/assets/asset-scope.js";
+import { BuiltinMeshLoader } from "./graphics/assets/builtin-mesh-loader.js";
+import { ImageTextureLoader } from "./graphics/assets/image-texture-loader.js";
+import { MaterialLoader } from "./graphics/assets/material-loader.js";
 
 const canvas = document.getElementById("game-canvas");
 const status = document.getElementById("engine-status");
@@ -29,32 +35,64 @@ async function StartApplication() {
         renderer = new WebGPURenderer(platform.Canvas);
         await renderer.Initialize();
 
-        const cubeMesh = CreateCubeMesh();
-        const meshes = new Map([["builtin:cube", cubeMesh]]);
+        const manifestResponse = await fetch(
+            "/assets/asset-manifest.json",
+        );
+
+        if (!manifestResponse.ok) {
+            throw new Error(
+                "Could not load asset manifest. HTTP " +
+                    manifestResponse.status +
+                    ".",
+            );
+        }
+
+        const assetCatalog = new AssetCatalog();
+        assetCatalog.RegisterManifest(await manifestResponse.json());
+
+        const assetLoaderRegistry = new AssetLoaderRegistry();
+        assetLoaderRegistry.Register(
+            "builtin:mesh",
+            new BuiltinMeshLoader(),
+        );
+        assetLoaderRegistry.Register(
+            "image:texture",
+            new ImageTextureLoader(),
+        );
+        assetLoaderRegistry.Register(
+            "basic:material",
+            new MaterialLoader(),
+        );
+
+        const assetManager = new AssetManager(
+            assetCatalog,
+            assetLoaderRegistry,
+        );
         const componentRegistry = CreateSceneComponentRegistry();
         const sceneLoader = new SceneLoader(componentRegistry);
-        const resolveMesh = (meshAssetId) => {
-            const mesh = meshes.get(meshAssetId);
-            if (!mesh) {
-                throw new Error("Unknown mesh asset: " + meshAssetId);
-            }
 
-            return mesh;
-        };
-
-        sceneManager = new SceneManager(sceneLoader, () => ({
-            systems: [
-                {
-                    phase: SystemPhase.FixedUpdate,
-                    system: new AngularVelocitySystem(),
+        sceneManager = new SceneManager(
+            sceneLoader,
+            (url, assetScope) => ({
+                systems: [
+                    {
+                        phase: SystemPhase.FixedUpdate,
+                        system: new AngularVelocitySystem(),
+                    },
+                    {
+                        phase: SystemPhase.PrepareRender,
+                        system: new RenderSystem(renderer),
+                    },
+                ],
+                services: {
+                    ResolveMesh: (meshAssetId) =>
+                        assetScope.GetRequired(meshAssetId),
+                    ResolveMaterial: (materialAssetId) =>
+                        assetScope.GetRequired(materialAssetId),
                 },
-                {
-                    phase: SystemPhase.PrepareRender,
-                    system: new RenderSystem(renderer),
-                },
-            ],
-            services: { ResolveMesh: resolveMesh },
-        }));
+            }),
+            () => new AssetScope(assetManager),
+        );
 
         await sceneManager.LoadScene("/assets/scenes/main.scene.json");
 
@@ -83,7 +121,7 @@ async function StartApplication() {
         engine?.Stop();
 
         try {
-            sceneManager?.Dispose();
+            await sceneManager?.Dispose();
         } catch (cleanupError) {
             AstralLogger.Error("Scene cleanup failed.", cleanupError);
         }

@@ -13,7 +13,11 @@ function IsSceneCandidate(scene) {
 }
 
 export class SceneManager {
-    constructor(sceneLoader, createLoadOptions = () => ({})) {
+    constructor(
+        sceneLoader,
+        createLoadOptions = () => ({}),
+        createAssetScope = null,
+    ) {
         if (!sceneLoader || typeof sceneLoader.Load !== "function") {
             throw new TypeError(
                 "SceneManager requires a scene loader with a Load method.",
@@ -26,11 +30,24 @@ export class SceneManager {
             );
         }
 
+        if (
+            createAssetScope !== null &&
+            typeof createAssetScope !== "function"
+        ) {
+            throw new TypeError(
+                "SceneManager asset scope factory must be a function.",
+            );
+        }
+
         this._sceneLoader = sceneLoader;
         this._createLoadOptions = createLoadOptions;
+        this._createAssetScope = createAssetScope;
         this._activeScene = null;
+        this._activeAssetScope = null;
         this._isLoading = false;
+        this._loadCompletion = null;
         this._isDisposed = false;
+        this._disposePromise = null;
     }
 
     get ActiveScene() {
@@ -45,18 +62,49 @@ export class SceneManager {
         }
 
         this._isLoading = true;
+        let resolveLoadCompletion;
+        this._loadCompletion = new Promise((resolve) => {
+            resolveLoadCompletion = resolve;
+        });
+
         let pendingScene = null;
+        let pendingAssetScope = null;
 
         try {
-            const loadOptions = this._createLoadOptions(url);
-            pendingScene = await this._sceneLoader.Load(url, loadOptions);
+            pendingAssetScope = this._CreateAssetScope();
+
+            const loadOptions = this._createLoadOptions(
+                url,
+                pendingAssetScope,
+            );
+
+            if (
+                !loadOptions ||
+                typeof loadOptions !== "object" ||
+                Array.isArray(loadOptions)
+            ) {
+                throw new TypeError(
+                    "Scene load options must be an object.",
+                );
+            }
+
+            const sceneLoadOptions = pendingAssetScope
+                ? { ...loadOptions, assetScope: pendingAssetScope }
+                : loadOptions;
+
+            pendingScene = await this._sceneLoader.Load(
+                url,
+                sceneLoadOptions,
+            );
 
             this._RequireNotDisposed();
 
             const previousScene = this._activeScene;
 
             if (!IsSceneCandidate(pendingScene)) {
-                throw new TypeError("Scene loader returned an invalid scene.");
+                throw new TypeError(
+                    "Scene loader returned an invalid scene.",
+                );
             }
 
             if (pendingScene === previousScene) {
@@ -64,14 +112,34 @@ export class SceneManager {
                 return previousScene;
             }
 
+            const previousAssetScope = this._activeAssetScope;
+
             this._activeScene = pendingScene;
+            this._activeAssetScope = pendingAssetScope;
             pendingScene = null;
+            pendingAssetScope = null;
 
             this._DisposePreviousScene(previousScene);
+            await this._ReleaseAssetScope(
+                previousAssetScope,
+                "Previous scene assets failed to release.",
+            );
+
+            this._RequireNotDisposed();
             return this._activeScene;
         } finally {
-            this._isLoading = false;
-            this._DisposeUnactivatedScene(pendingScene);
+            try {
+                this._DisposeUnactivatedScene(pendingScene);
+
+                await this._ReleaseAssetScope(
+                    pendingAssetScope,
+                    "Unactivated scene assets failed to release.",
+                );
+            } finally {
+                this._isLoading = false;
+                resolveLoadCompletion();
+                this._loadCompletion = null;
+            }
         }
     }
 
@@ -87,15 +155,79 @@ export class SceneManager {
     }
 
     Dispose() {
+        if (this._disposePromise) {
+            return this._disposePromise;
+        }
+
         if (this._isDisposed) {
-            return;
+            return Promise.resolve();
         }
 
         this._isDisposed = true;
 
         const activeScene = this._activeScene;
+        const activeAssetScope = this._activeAssetScope;
+        const pendingLoadCompletion = this._loadCompletion;
+
         this._activeScene = null;
-        activeScene?.Dispose();
+        this._activeAssetScope = null;
+
+        let resolveDispose;
+        let rejectDispose;
+
+        this._disposePromise = new Promise((resolve, reject) => {
+            resolveDispose = resolve;
+            rejectDispose = reject;
+        });
+
+        const errors = [];
+
+        try {
+            activeScene?.Dispose();
+        } catch (error) {
+            errors.push(error);
+        }
+
+        Promise.resolve()
+            .then(async () => {
+                try {
+                    await activeAssetScope?.ReleaseAll();
+                } catch (error) {
+                    errors.push(error);
+                }
+
+                await pendingLoadCompletion;
+
+                if (errors.length > 0) {
+                    throw new AggregateError(
+                        errors,
+                        "Scene manager disposal failed.",
+                    );
+                }
+            })
+            .then(resolveDispose, rejectDispose);
+
+        return this._disposePromise;
+    }
+
+    _CreateAssetScope() {
+        if (!this._createAssetScope) {
+            return null;
+        }
+
+        const assetScope = this._createAssetScope();
+
+        if (
+            !assetScope ||
+            typeof assetScope.Acquire !== "function" ||
+            typeof assetScope.ReleaseAll !== "function"
+        ) {
+            throw new TypeError(
+                "Asset scope factory returned an invalid scope.",
+            );
+        }
+
+        return assetScope;
     }
 
     _DisposePreviousScene(scene) {
@@ -119,7 +251,22 @@ export class SceneManager {
                 scene.Dispose();
             }
         } catch (error) {
-            AstralLogger.Error("Unactivated scene cleanup failed.", error);
+            AstralLogger.Error(
+                "Unactivated scene cleanup failed.",
+                error,
+            );
+        }
+    }
+
+    async _ReleaseAssetScope(assetScope, message) {
+        if (!assetScope) {
+            return;
+        }
+
+        try {
+            await assetScope.ReleaseAll();
+        } catch (error) {
+            AstralLogger.Error(message, error);
         }
     }
 

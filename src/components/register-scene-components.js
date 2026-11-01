@@ -124,13 +124,66 @@ export function CreateSceneComponentRegistry() {
         MeshRenderer,
         (data, context) => {
             const resolveMesh = context.RequireService("ResolveMesh");
-            return new MeshRenderer(resolveMesh(data.meshAssetId));
+            const resolveMaterial =
+                context.RequireService("ResolveMaterial");
+            const mesh = resolveMesh(data.meshAssetId);
+            let materialsBySlot;
+
+            if (data.defaultMaterialAssetId !== undefined) {
+                const defaultMaterial = resolveMaterial(
+                    data.defaultMaterialAssetId,
+                );
+                materialsBySlot = Object.fromEntries(
+                    mesh.Submeshes.map(({ materialSlot }) => [
+                        materialSlot,
+                        defaultMaterial,
+                    ]),
+                );
+            } else {
+                if (
+                    !data.materialsBySlot ||
+                    typeof data.materialsBySlot !== "object" ||
+                    Array.isArray(data.materialsBySlot)
+                ) {
+                    throw new TypeError(
+                        "Mesh renderer data must define materialsBySlot.",
+                    );
+                }
+
+                materialsBySlot = Object.fromEntries(
+                    Object.entries(data.materialsBySlot).map(
+                        ([materialSlot, materialAssetId]) => [
+                            materialSlot,
+                            resolveMaterial(materialAssetId),
+                        ],
+                    ),
+                );
+            }
+
+            return new MeshRenderer(
+                mesh,
+                materialsBySlot,
+            );
         },
         {
-            Version: 1,
+            Version: 2,
+            Migrate: (data, fromVersion) => {
+                if (fromVersion !== 1) {
+                    throw new Error(
+                        "Unsupported mesh renderer component version.",
+                    );
+                }
+
+                return {
+                    meshAssetId: data.meshAssetId,
+                    defaultMaterialAssetId: data.materialAssetId,
+                };
+            },
             Serialize: (meshRenderer, context) => {
                 const getMeshAssetId =
                     context.RequireService("GetMeshAssetId");
+                const getMaterialAssetId =
+                    context.RequireService("GetMaterialAssetId");
                 const meshAssetId = getMeshAssetId(meshRenderer.mesh);
 
                 if (
@@ -142,7 +195,26 @@ export function CreateSceneComponentRegistry() {
                     );
                 }
 
-                return { meshAssetId };
+                const materialsBySlot = {};
+
+                for (const { materialSlot } of meshRenderer.mesh.Submeshes) {
+                    const materialAssetId = getMaterialAssetId(
+                        meshRenderer.GetMaterialForSlot(materialSlot),
+                    );
+
+                    if (
+                        typeof materialAssetId !== "string" ||
+                        materialAssetId.trim() === ""
+                    ) {
+                        throw new TypeError(
+                            "Material asset serializer must return a non-empty ID.",
+                        );
+                    }
+
+                    materialsBySlot[materialSlot] = materialAssetId;
+                }
+
+                return { meshAssetId, materialsBySlot };
             },
         },
     );

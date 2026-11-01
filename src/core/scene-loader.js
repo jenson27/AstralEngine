@@ -64,7 +64,7 @@ export class SceneLoader {
             }
 
             stage = "build scene";
-            const scene = this.LoadData(data, options);
+            const scene = await this.LoadDataAsync(data, options);
 
             AstralLogger.Info("Scene loaded.", {
                 url,
@@ -81,8 +81,45 @@ export class SceneLoader {
         }
     }
 
-    LoadData(data, { systems = [], services = {} } = {}) {
+    LoadData(data, options = {}) {
         const entityIds = this._ValidateSceneData(data);
+
+        if ((data.assets?.length ?? 0) > 0 && !options.assetScope) {
+            throw new Error(
+                "Scene data with assets requires an asset scope or LoadDataAsync().",
+            );
+        }
+
+        return this._BuildScene(data, options, entityIds);
+    }
+
+    async LoadDataAsync(data, options = {}) {
+        const entityIds = this._ValidateSceneData(data);
+        await this._LoadSceneAssets(
+            data.assets ?? [],
+            options.assetScope,
+        );
+
+        return this._BuildScene(data, options, entityIds);
+    }
+
+    async _LoadSceneAssets(assetIds, assetScope) {
+        if (assetIds.length === 0) {
+            return;
+        }
+
+        if (!assetScope || typeof assetScope.Acquire !== "function") {
+            throw new TypeError(
+                "Loading scene assets requires an asset scope.",
+            );
+        }
+
+        await Promise.all(
+            assetIds.map((assetId) => assetScope.Acquire(assetId)),
+        );
+    }
+
+    _BuildScene(data, { systems = [], services = {} } = {}, entityIds) {
         const scene = new Scene(data.name);
 
         try {
@@ -120,20 +157,26 @@ export class SceneLoader {
         }
     }
 
+    _GetComponentRecords(entityData, version) {
+        return version === 1
+            ? Object.entries(entityData.components).map(
+                  ([typeId, componentData]) => ({
+                      typeId,
+                      version: 1,
+                      data: componentData,
+                  }),
+              )
+            : entityData.components;
+    }
+
     _LoadEntities(scene, data, services) {
         for (const entityData of data.entities) {
             const entityId = scene.EntityManager.CreateEntity(entityData.id);
 
-            const componentRecords =
-                data.version === 1
-                    ? Object.entries(entityData.components).map(
-                          ([typeId, componentData]) => ({
-                              typeId,
-                              version: 1,
-                              data: componentData,
-                          }),
-                      )
-                    : entityData.components;
+            const componentRecords = this._GetComponentRecords(
+                entityData,
+                data.version,
+            );
 
             for (const componentRecord of componentRecords) {
                 const { typeId } = componentRecord;
@@ -199,6 +242,8 @@ export class SceneLoader {
             throw new TypeError("Scene entities must be an array.");
         }
 
+        this._ValidateSceneAssetIds(data.assets);
+
         if (
             !Number.isSafeInteger(data.activeCameraEntityId) ||
             data.activeCameraEntityId <= 0
@@ -211,7 +256,127 @@ export class SceneLoader {
             this._ValidateEntityData(entityData, data.version, entityIds);
         }
 
+        this._ValidateSceneAssetReferences(data);
+
         return entityIds;
+    }
+
+    _ValidateSceneAssetIds(assetIds) {
+        if (assetIds === undefined) {
+            return;
+        }
+
+        if (!Array.isArray(assetIds)) {
+            throw new TypeError("Scene assets must be an array.");
+        }
+
+        const seenAssetIds = new Set();
+
+        for (const assetId of assetIds) {
+            if (typeof assetId !== "string" || assetId.trim() === "") {
+                throw new TypeError(
+                    "Scene asset IDs must be non-empty strings.",
+                );
+            }
+
+            if (seenAssetIds.has(assetId)) {
+                throw new Error(
+                    "Duplicate scene asset ID: " + assetId,
+                );
+            }
+
+            seenAssetIds.add(assetId);
+        }
+    }
+
+    _ValidateSceneAssetReferences(data) {
+        if (data.assets === undefined) {
+            return;
+        }
+
+        const declaredAssetIds = new Set(data.assets);
+
+        for (const entityData of data.entities) {
+            const componentRecords = this._GetComponentRecords(
+                entityData,
+                data.version,
+            );
+
+            for (const componentRecord of componentRecords) {
+                if (componentRecord.typeId !== "meshRenderer") {
+                    continue;
+                }
+
+                const componentData = componentRecord.data;
+                const assetReferences = [
+                    ["meshAssetId", componentData?.meshAssetId],
+                ];
+
+                if (componentRecord.version === 1) {
+                    assetReferences.push([
+                        "materialAssetId",
+                        componentData?.materialAssetId,
+                    ]);
+                } else if (
+                    componentData?.defaultMaterialAssetId !== undefined
+                ) {
+                    assetReferences.push([
+                        "defaultMaterialAssetId",
+                        componentData.defaultMaterialAssetId,
+                    ]);
+                } else {
+                    const materialsBySlot = componentData?.materialsBySlot;
+
+                    if (
+                        !materialsBySlot ||
+                        typeof materialsBySlot !== "object" ||
+                        Array.isArray(materialsBySlot)
+                    ) {
+                        throw new TypeError(
+                            "MeshRenderer materialsBySlot must be an object.",
+                        );
+                    }
+
+                    const materialEntries = Object.entries(materialsBySlot);
+
+                    if (materialEntries.length === 0) {
+                        throw new TypeError(
+                            "MeshRenderer must define at least one material slot.",
+                        );
+                    }
+
+                    for (const [materialSlot, assetId] of materialEntries) {
+                        if (materialSlot.trim() === "") {
+                            throw new TypeError(
+                                "MeshRenderer material slot names must not be empty.",
+                            );
+                        }
+
+                        assetReferences.push([
+                            `materialsBySlot.${materialSlot}`,
+                            assetId,
+                        ]);
+                    }
+                }
+
+                for (const [field, assetId] of assetReferences) {
+                    if (
+                        typeof assetId !== "string" ||
+                        assetId.trim() === ""
+                    ) {
+                        throw new TypeError(
+                            `MeshRenderer ${field} must be a non-empty asset ID.`,
+                        );
+                    }
+
+                    if (!declaredAssetIds.has(assetId)) {
+                        throw new Error(
+                            `MeshRenderer asset "${assetId}" is not listed in scene assets.`,
+                        );
+                    }
+                }
+            }
+        }
     }
 
     _ValidateEntityData(entityData, version, entityIds) {
