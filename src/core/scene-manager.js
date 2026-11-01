@@ -67,31 +67,11 @@ export class SceneManager {
             this._activeScene = pendingScene;
             pendingScene = null;
 
-            try {
-                previousScene?.Dispose();
-            } catch (error) {
-                AstralLogger.Error(
-                    "Previous scene failed to dispose after scene replacement.",
-                    error,
-                );
-            }
-
+            this._DisposePreviousScene(previousScene);
             return this._activeScene;
         } finally {
             this._isLoading = false;
-
-            if (pendingScene) {
-                try {
-                    if (typeof pendingScene.Dispose === "function") {
-                        pendingScene.Dispose();
-                    }
-                } catch (error) {
-                    AstralLogger.Error(
-                        "Unactivated scene cleanup failed.",
-                        error,
-                    );
-                }
-            }
+            this._DisposeUnactivatedScene(pendingScene);
         }
     }
 
@@ -116,6 +96,31 @@ export class SceneManager {
         const activeScene = this._activeScene;
         this._activeScene = null;
         activeScene?.Dispose();
+    }
+
+    _DisposePreviousScene(scene) {
+        try {
+            scene?.Dispose();
+        } catch (error) {
+            AstralLogger.Error(
+                "Previous scene failed to dispose after scene replacement.",
+                error,
+            );
+        }
+    }
+
+    _DisposeUnactivatedScene(scene) {
+        if (!scene) {
+            return;
+        }
+
+        try {
+            if (typeof scene.Dispose === "function") {
+                scene.Dispose();
+            }
+        } catch (error) {
+            AstralLogger.Error("Unactivated scene cleanup failed.", error);
+        }
     }
 
     _RequireActiveScene() {

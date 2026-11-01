@@ -42,6 +42,25 @@ function FileLogSink(logEntry) {
 
 const logSinks = new Set([ConsoleLogSink, FileLogSink]);
 
+function GetLocalIsoTimestamp(date = new Date()) {
+    const offsetMinutes = -date.getTimezoneOffset();
+    const offsetSign = offsetMinutes >= 0 ? "+" : "-";
+    const offsetHours = String(
+        Math.floor(Math.abs(offsetMinutes) / 60),
+    ).padStart(2, "0");
+    const offsetRemainderMinutes = String(
+        Math.abs(offsetMinutes) % 60,
+    ).padStart(2, "0");
+
+    const localDateTime = new Date(
+        date.getTime() - date.getTimezoneOffset() * 60_000,
+    )
+        .toISOString()
+        .slice(0, -1);
+
+    return `${localDateTime}${offsetSign}${offsetHours}:${offsetRemainderMinutes}`;
+}
+
 export class AstralLogger {
     static Debug(message, details) {
         AstralLogger._Write("DEBUG", message, details);
@@ -70,7 +89,7 @@ export class AstralLogger {
 
     static _Write(level, message, details) {
         const logEntry = {
-            timestamp: new Date().toISOString(),
+            timestamp: GetLocalIsoTimestamp(),
             level,
             message: String(message),
         };

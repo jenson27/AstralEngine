@@ -38,6 +38,7 @@ export class Engine {
         this._maxFixedStepsPerFrame = 5;
         this._accumulator = 0;
         this._lastStepLimitWarningTime = -Infinity;
+        this._runGeneration = 0;
     }
 
     get IsRunning() {
@@ -50,6 +51,7 @@ export class Engine {
         }
 
         this._isRunning = true;
+        this._runGeneration += 1;
         this._previousFrameTime = null;
         this._accumulator = 0;
         this._ScheduleFrame();
@@ -61,8 +63,9 @@ export class Engine {
             return;
         }
 
+        const runGeneration = this._runGeneration;
         this._animationFrameId = requestAnimationFrame((timestamp) =>
-            this._Frame(timestamp),
+            this._Frame(timestamp, runGeneration),
         );
     }
 
@@ -72,6 +75,7 @@ export class Engine {
         }
 
         this._isRunning = false;
+        this._runGeneration += 1;
 
         if (this._animationFrameId !== null) {
             cancelAnimationFrame(this._animationFrameId);
@@ -83,12 +87,15 @@ export class Engine {
     }
 
     // Handle a frame, run fixed updates, prepare rendering, and handle errors.
-    _Frame(timestamp) {
-        this._animationFrameId = null;
-
-        if (!this._isRunning) {
+    _Frame(timestamp, runGeneration) {
+        if (
+            !this._isRunning ||
+            runGeneration !== this._runGeneration
+        ) {
             return;
         }
+
+        this._animationFrameId = null;
 
         const currentTime = timestamp / 1000;
         const measuredFrameDeltaTime =
@@ -102,83 +109,19 @@ export class Engine {
         this._accumulator += frameDeltaTime;
 
         try {
-            let fixedStepCount = 0;
-
-            while (
-                this._accumulator >= this._fixedDeltaTime &&
-                fixedStepCount < this._maxFixedStepsPerFrame
-            ) {
-                this._elapsedTime += this._fixedDeltaTime;
-                this._fixedUpdateCallback(
-                    this._fixedDeltaTime,
-                    this._elapsedTime,
-                );
-
-                if (!this._isRunning) {
-                    return;
-                }
-
-                this._accumulator -= this._fixedDeltaTime;
-                fixedStepCount += 1;
-            }
-
             if (
-                fixedStepCount === this._maxFixedStepsPerFrame &&
-                this._accumulator >= this._fixedDeltaTime
+                !this._RunFixedUpdates(
+                    measuredFrameDeltaTime,
+                    frameDeltaTime,
+                    runGeneration,
+                )
             ) {
-                const currentTimeMs = performance.now();
-
-                if (currentTimeMs - this._lastStepLimitWarningTime >= 5000) {
-                    this._lastStepLimitWarningTime = currentTimeMs;
-
-                    const accumulatorBeforeDropSeconds = this._accumulator;
-                    const accumulatorAfterDropSeconds =
-                        accumulatorBeforeDropSeconds % this._fixedDeltaTime;
-                    const droppedTimeSeconds =
-                        accumulatorBeforeDropSeconds -
-                        accumulatorAfterDropSeconds;
-                    const droppedSteps = Math.round(
-                        droppedTimeSeconds / this._fixedDeltaTime,
-                    );
-
-                    AstralLogger.Warn(
-                        "Engine dropped simulation time after reaching the fixed update step limit.",
-                        {
-                            measuredFrameDeltaTimeSeconds:
-                                measuredFrameDeltaTime,
-                            appliedFrameDeltaTimeSeconds: frameDeltaTime,
-                            frameDeltaWasClamped:
-                                measuredFrameDeltaTime > frameDeltaTime,
-                            fixedSteps: fixedStepCount,
-                            maxFixedStepsPerFrame:
-                                this._maxFixedStepsPerFrame,
-                            fixedDeltaTimeSeconds: this._fixedDeltaTime,
-                            accumulatorBeforeDropSeconds,
-                            droppedSteps,
-                            droppedTimeSeconds,
-                            accumulatorAfterDropSeconds,
-                            elapsedTimeSeconds: this._elapsedTime,
-                        },
-                    );
-                }
-
-                this._accumulator %= this._fixedDeltaTime;
-            }
-
-            if (!this._isRunning) {
                 return;
             }
 
-            const interpolationAlpha =
-                this._accumulator / this._fixedDeltaTime;
-
-            this._prepareRenderCallback(interpolationAlpha);
-
-            if (!this._isRunning) {
+            if (!this._PrepareAndRender(runGeneration)) {
                 return;
             }
-
-            this._renderer.Render();
         } catch (error) {
             this.Stop();
             AstralLogger.Error("Engine frame failed.", error);
@@ -186,5 +129,120 @@ export class Engine {
         }
 
         this._ScheduleFrame();
+    }
+
+    _RunFixedUpdates(
+        measuredFrameDeltaTime,
+        frameDeltaTime,
+        runGeneration,
+    ) {
+        let fixedStepCount = 0;
+
+        while (
+            this._accumulator >= this._fixedDeltaTime &&
+            fixedStepCount < this._maxFixedStepsPerFrame
+        ) {
+            this._elapsedTime += this._fixedDeltaTime;
+            this._fixedUpdateCallback(
+                this._fixedDeltaTime,
+                this._elapsedTime,
+            );
+
+            if (
+                !this._isRunning ||
+                runGeneration !== this._runGeneration
+            ) {
+                return false;
+            }
+
+            this._accumulator -= this._fixedDeltaTime;
+            fixedStepCount += 1;
+        }
+
+        if (
+            fixedStepCount === this._maxFixedStepsPerFrame &&
+            this._accumulator >= this._fixedDeltaTime
+        ) {
+            this._WarnAboutDroppedTime(
+                fixedStepCount,
+                measuredFrameDeltaTime,
+                frameDeltaTime,
+            );
+
+            if (
+                !this._isRunning ||
+                runGeneration !== this._runGeneration
+            ) {
+                return false;
+            }
+
+            this._accumulator %= this._fixedDeltaTime;
+        }
+
+        return (
+            this._isRunning &&
+            runGeneration === this._runGeneration
+        );
+    }
+
+    _WarnAboutDroppedTime(
+        fixedStepCount,
+        measuredFrameDeltaTime,
+        frameDeltaTime,
+    ) {
+        const currentTimeMs = performance.now();
+
+        if (currentTimeMs - this._lastStepLimitWarningTime < 5000) {
+            return;
+        }
+
+        this._lastStepLimitWarningTime = currentTimeMs;
+
+        const accumulatorBeforeDropSeconds = this._accumulator;
+        const accumulatorAfterDropSeconds =
+            accumulatorBeforeDropSeconds % this._fixedDeltaTime;
+        const droppedTimeSeconds =
+            accumulatorBeforeDropSeconds - accumulatorAfterDropSeconds;
+        const droppedSteps = Math.round(
+            droppedTimeSeconds / this._fixedDeltaTime,
+        );
+
+        AstralLogger.Warn(
+            "Engine dropped simulation time after reaching the fixed update step limit.",
+            {
+                measuredFrameDeltaTimeSeconds: measuredFrameDeltaTime,
+                appliedFrameDeltaTimeSeconds: frameDeltaTime,
+                frameDeltaWasClamped:
+                    measuredFrameDeltaTime > frameDeltaTime,
+                fixedSteps: fixedStepCount,
+                maxFixedStepsPerFrame: this._maxFixedStepsPerFrame,
+                fixedDeltaTimeSeconds: this._fixedDeltaTime,
+                accumulatorBeforeDropSeconds,
+                droppedSteps,
+                droppedTimeSeconds,
+                accumulatorAfterDropSeconds,
+                elapsedTimeSeconds: this._elapsedTime,
+            },
+        );
+    }
+
+    _PrepareAndRender(runGeneration) {
+        const interpolationAlpha =
+            this._accumulator / this._fixedDeltaTime;
+
+        this._prepareRenderCallback(interpolationAlpha);
+
+        if (
+            !this._isRunning ||
+            runGeneration !== this._runGeneration
+        ) {
+            return false;
+        }
+
+        this._renderer.Render();
+        return (
+            this._isRunning &&
+            runGeneration === this._runGeneration
+        );
     }
 }

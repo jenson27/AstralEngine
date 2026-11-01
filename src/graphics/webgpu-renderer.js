@@ -4,6 +4,8 @@
 import { AstralLogger } from "../diagnostics/logger.js";
 import { Mesh } from "./mesh.js";
 
+const shaderUrl = new URL("./shaders/triangle.wgsl", import.meta.url);
+
 export class WebGPURenderer {
     constructor(canvas) {
         this._canvas = canvas;
@@ -25,10 +27,21 @@ export class WebGPURenderer {
         this._depthWidth = 0;
         this._depthHeight = 0;
         this._depthFormat = "depth24plus";
+        this._deviceLostInfo = null;
     }
 
     // Initialize the WebGPU renderer by requesting a GPU adapter and device, and configuring the canvas context.
     async Initialize() {
+        await this._InitializeDevice();
+        this._ConfigureCanvasContext();
+
+        const shaderCode = await this._LoadShader();
+
+        this._pipeline = await this._CreatePipeline(shaderCode);
+        this._InitializeTransformResources();
+    }
+
+    async _InitializeDevice() {
         if (!navigator.gpu) {
             throw new Error("WebGPU is not available in this browser.");
         }
@@ -40,6 +53,7 @@ export class WebGPURenderer {
         }
 
         this._device = await adapter.requestDevice();
+        this._deviceLostInfo = null;
 
         const device = this._device;
 
@@ -48,6 +62,7 @@ export class WebGPURenderer {
                 return;
             }
 
+            this._deviceLostInfo = lostInfo;
             AstralLogger.Error("WebGPU device lost.", {
                 reason: lostInfo.reason,
                 message: lostInfo.message,
@@ -60,7 +75,9 @@ export class WebGPURenderer {
                 message: event.error.message,
             });
         });
+    }
 
+    _ConfigureCanvasContext() {
         this._context = this._canvas.getContext("webgpu");
 
         if (!this._context) {
@@ -76,10 +93,10 @@ export class WebGPURenderer {
         });
 
         this.EnsureDepthTexture();
+    }
 
-        const shaderResponse = await fetch(
-            "/src/graphics/shaders/triangle.wgsl",
-        );
+    async _LoadShader() {
+        const shaderResponse = await fetch(shaderUrl);
 
         if (!shaderResponse.ok) {
             throw new Error(
@@ -87,7 +104,10 @@ export class WebGPURenderer {
             );
         }
 
-        const shaderCode = await shaderResponse.text();
+        return shaderResponse.text();
+    }
+
+    async _CreatePipeline(shaderCode) {
         const shaderModule = this._device.createShaderModule({
             code: shaderCode,
         });
@@ -111,7 +131,7 @@ export class WebGPURenderer {
             bindGroupLayouts: [this._transformBindGroupLayout],
         });
 
-        this._pipeline = this._device.createRenderPipeline({
+        return this._device.createRenderPipelineAsync({
             layout: pipelineLayout,
             vertex: {
                 module: shaderModule,
@@ -143,7 +163,9 @@ export class WebGPURenderer {
                 depthCompare: "less",
             },
         });
+    }
 
+    _InitializeTransformResources() {
         const alignment =
             this._device.limits.minUniformBufferOffsetAlignment;
         this._uniformStride =
@@ -291,6 +313,12 @@ export class WebGPURenderer {
 
     // Binds each mesh and its matrix data, then submits the frame to the GPU queue.
     Render() {
+        if (this._deviceLostInfo) {
+            throw new Error(
+                `Cannot render because the WebGPU device was lost: ${this._deviceLostInfo.message}`,
+            );
+        }
+
         this.EnsureDepthTexture();
 
         const commandEncoder = this._device.createCommandEncoder();
@@ -357,5 +385,6 @@ export class WebGPURenderer {
         this._depthView = null;
         this._depthWidth = 0;
         this._depthHeight = 0;
+        this._deviceLostInfo = null;
     }
 }

@@ -565,3 +565,17 @@
 [2026-10-31T15:51:39.044Z] [DEBUG] Scene response received. {"url":"/assets/scenes/main.scene.json","status":200,"ok":true}
 [2026-10-31T15:51:39.046Z] [INFO] Scene loaded. {"url":"/assets/scenes/main.scene.json","sceneName":"main","entityCount":4}
 [2026-10-31T15:51:39.046Z] [INFO] Scene loaded and WebGPU ready. {"sceneName":"main","canvasWidth":1089,"canvasHeight":877}
+[2026-10-31T15:54:16.532Z] [INFO] Loading scene. {"url":"/assets/scenes/main.scene.json"}
+[2026-10-31T15:54:16.535Z] [DEBUG] Scene response received. {"url":"/assets/scenes/main.scene.json","status":200,"ok":true}
+[2026-10-31T15:54:16.538Z] [INFO] Scene loaded and WebGPU ready. {"sceneName":"main","canvasWidth":2184,"canvasHeight":877}
+[2026-10-31T15:54:16.537Z] [INFO] Scene loaded. {"url":"/assets/scenes/main.scene.json","sceneName":"main","entityCount":4}
+[2026-10-31T15:54:46.514Z] [INFO] Loading scene. {"url":"/assets/scenes/main.scene.json"}
+[2026-10-31T15:54:46.517Z] [DEBUG] Scene response received. {"url":"/assets/scenes/main.scene.json","status":200,"ok":true}
+[2026-10-31T15:54:46.518Z] [INFO] Scene loaded. {"url":"/assets/scenes/main.scene.json","sceneName":"main","entityCount":4}
+[2026-10-31T15:54:46.519Z] [INFO] Scene loaded and WebGPU ready. {"sceneName":"main","canvasWidth":2184,"canvasHeight":877}
+[2026-10-31T15:54:53.626Z] [INFO] Loading scene. {"url":"/assets/scenes/main.scene.json"}
+[2026-10-31T15:54:53.629Z] [DEBUG] Scene response received. {"url":"/assets/scenes/main.scene.json","status":200,"ok":true}
+[2026-10-31T15:54:53.630Z] [INFO] Scene loaded. {"url":"/assets/scenes/main.scene.json","sceneName":"main","entityCount":4}
+[2026-10-31T15:54:53.630Z] [INFO] Scene loaded and WebGPU ready. {"sceneName":"main","canvasWidth":2560,"canvasHeight":1288}
+[2026-10-31T15:55:49.477Z] [WARN] Engine dropped simulation time after reaching the fixed update step limit. {"measuredFrameDeltaTimeSeconds":15.118000000000002,"appliedFrameDeltaTimeSeconds":0.1,"frameDeltaWasClamped":true,"fixedSteps":5,"maxFixedStepsPerFrame":5,"fixedDeltaTimeSeconds":0.016666666666666666,"accumulatorBeforeDropSeconds":0.028202000000001722,"droppedSteps":1,"droppedTimeSeconds":0.016666666666666666,"accumulatorAfterDropSeconds":0.011535333333335056,"elapsedTimeSeconds":40.79999999999897}
+[2026-10-31T15:56:00.093Z] [WARN] Engine dropped simulation time after reaching the fixed update step limit. {"measuredFrameDeltaTimeSeconds":8.194399999999995,"appliedFrameDeltaTimeSeconds":0.1,"frameDeltaWasClamped":true,"fixedSteps":5,"maxFixedStepsPerFrame":5,"fixedDeltaTimeSeconds":0.016666666666666666,"accumulatorBeforeDropSeconds":0.028235333333333845,"droppedSteps":1,"droppedTimeSeconds":0.016666666666666666,"accumulatorAfterDropSeconds":0.011568666666667178,"elapsedTimeSeconds":43.299999999998825}

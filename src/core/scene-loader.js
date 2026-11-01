@@ -9,6 +9,7 @@ export class SceneLoader {
         componentRegistry,
         fetcher = globalThis.fetch?.bind(globalThis),
     ) {
+        // Validate that the component registry has a DeserializeComponent method, otherwise throw an error.
         if (
             !componentRegistry ||
             typeof componentRegistry.DeserializeComponent !== "function"
@@ -18,14 +19,17 @@ export class SceneLoader {
             );
         }
 
+        // Validate that the fetcher is a function if provided, otherwise throw an error.
         if (typeof fetcher !== "function") {
             throw new TypeError("SceneLoader requires a fetch function.");
         }
 
+        // Store the component registry and fetcher for later use.
         this._componentRegistry = componentRegistry;
         this._fetcher = fetcher;
     }
 
+    // Load a scene from a URL, returning a Promise that resolves to the loaded Scene object.
     async Load(url, options = {}) {
         let stage = "fetch scene";
         AstralLogger.Info("Loading scene.", { url });
@@ -82,68 +86,14 @@ export class SceneLoader {
         const scene = new Scene(data.name);
 
         try {
-            for (const registration of systems) {
-                if (!registration || typeof registration !== "object") {
-                    throw new TypeError("System registration must be an object.");
-                }
+            this._RegisterSystems(scene, systems);
+            this._LoadEntities(scene, data, services);
+            this._SetActiveCamera(
+                scene,
+                data.activeCameraEntityId,
+                entityIds,
+            );
 
-                scene.AddSystem(registration.phase, registration.system);
-            }
-
-            for (const entityData of data.entities) {
-                const entityId = scene.EntityManager.CreateEntity(entityData.id);
-
-                const componentRecords =
-                    data.version === 1
-                        ? Object.entries(entityData.components).map(
-                              ([typeId, componentData]) => ({
-                                  typeId,
-                                  version: 1,
-                                  data: componentData,
-                              }),
-                          )
-                        : entityData.components;
-
-                for (const componentRecord of componentRecords) {
-                    const { typeId } = componentRecord;
-                    try {
-                        const { componentType, component } =
-                            this._componentRegistry.DeserializeComponent(
-                                componentRecord,
-                                services,
-                            );
-                        scene.EntityManager.AddComponent(
-                            entityId,
-                            componentType,
-                            component,
-                        );
-                    } catch (error) {
-                        throw new Error(
-                            `Failed to load component "${typeId}" for entity ${entityId}.`,
-                            { cause: error },
-                        );
-                    }
-                }
-            }
-
-            const cameraEntityId = data.activeCameraEntityId;
-
-            if (!entityIds.has(cameraEntityId)) {
-                throw new Error(
-                    "Active camera entity does not exist in the scene.",
-                );
-            }
-
-            if (
-                !scene.EntityManager.HasComponent(cameraEntityId, Camera) ||
-                !scene.EntityManager.HasComponent(cameraEntityId, Transform)
-            ) {
-                throw new Error(
-                    "Active camera entity must have Camera and Transform components.",
-                );
-            }
-
-            scene.SetActiveCameraEntity(cameraEntityId);
             scene.Initialize(services);
             return scene;
         } catch (error) {
@@ -158,6 +108,75 @@ export class SceneLoader {
 
             throw error;
         }
+    }
+
+    _RegisterSystems(scene, systems) {
+        for (const registration of systems) {
+            if (!registration || typeof registration !== "object") {
+                throw new TypeError("System registration must be an object.");
+            }
+
+            scene.AddSystem(registration.phase, registration.system);
+        }
+    }
+
+    _LoadEntities(scene, data, services) {
+        for (const entityData of data.entities) {
+            const entityId = scene.EntityManager.CreateEntity(entityData.id);
+
+            const componentRecords =
+                data.version === 1
+                    ? Object.entries(entityData.components).map(
+                          ([typeId, componentData]) => ({
+                              typeId,
+                              version: 1,
+                              data: componentData,
+                          }),
+                      )
+                    : entityData.components;
+
+            for (const componentRecord of componentRecords) {
+                const { typeId } = componentRecord;
+
+                try {
+                    const { componentType, component } =
+                        this._componentRegistry.DeserializeComponent(
+                            componentRecord,
+                            services,
+                        );
+
+                    scene.EntityManager.AddComponent(
+                        entityId,
+                        componentType,
+                        component,
+                    );
+                } catch (error) {
+                    throw new Error(
+                        `Failed to load component "${typeId}" for entity ${entityId}.`,
+                        { cause: error },
+                    );
+                }
+            }
+        }
+    }
+
+    _SetActiveCamera(scene, cameraEntityId, entityIds) {
+        if (!entityIds.has(cameraEntityId)) {
+            throw new Error(
+                "Active camera entity does not exist in the scene.",
+            );
+        }
+
+        if (
+            !scene.EntityManager.HasComponent(cameraEntityId, Camera) ||
+            !scene.EntityManager.HasComponent(cameraEntityId, Transform)
+        ) {
+            throw new Error(
+                "Active camera entity must have Camera and Transform components.",
+            );
+        }
+
+        scene.SetActiveCameraEntity(cameraEntityId);
     }
 
     _ValidateSceneData(data) {
@@ -189,82 +208,93 @@ export class SceneLoader {
 
         const entityIds = new Set();
         for (const entityData of data.entities) {
-            if (!entityData || typeof entityData !== "object") {
-                throw new TypeError("Each scene entity must be an object.");
-            }
-
-            if (
-                !Number.isSafeInteger(entityData.id) ||
-                entityData.id <= 0
-            ) {
-                throw new TypeError("Entity IDs must be positive integers.");
-            }
-
-            if (entityIds.has(entityData.id)) {
-                throw new Error("Duplicate scene entity ID: " + entityData.id);
-            }
-            entityIds.add(entityData.id);
-
-            if (data.version === 1) {
-                if (
-                    !entityData.components ||
-                    typeof entityData.components !== "object" ||
-                    Array.isArray(entityData.components)
-                ) {
-                    throw new TypeError(
-                        "Version 1 entity components must be an object keyed by type ID.",
-                    );
-                }
-                continue;
-            }
-
-            if (!Array.isArray(entityData.components)) {
-                throw new TypeError(
-                    "Version 2 entity components must be an array of typed records.",
-                );
-            }
-
-            const componentTypeIds = new Set();
-            for (const componentRecord of entityData.components) {
-                if (
-                    !componentRecord ||
-                    typeof componentRecord !== "object" ||
-                    Array.isArray(componentRecord)
-                ) {
-                    throw new TypeError(
-                        "Each component record must be an object.",
-                    );
-                }
-
-                if (
-                    typeof componentRecord.typeId !== "string" ||
-                    componentRecord.typeId.trim() === ""
-                ) {
-                    throw new TypeError(
-                        "Component records must have a type ID.",
-                    );
-                }
-
-                if (componentTypeIds.has(componentRecord.typeId)) {
-                    throw new Error(
-                        "Duplicate component type ID: " +
-                            componentRecord.typeId,
-                    );
-                }
-                componentTypeIds.add(componentRecord.typeId);
-
-                if (
-                    !Number.isSafeInteger(componentRecord.version) ||
-                    componentRecord.version <= 0 ||
-                    !Object.hasOwn(componentRecord, "data")
-                ) {
-                    throw new TypeError(
-                        "Component record must define a positive version and data.",
-                    );
-                }
-            }
+            this._ValidateEntityData(entityData, data.version, entityIds);
         }
 
         return entityIds;
+    }
+
+    _ValidateEntityData(entityData, version, entityIds) {
+        if (!entityData || typeof entityData !== "object") {
+            throw new TypeError("Each scene entity must be an object.");
+        }
+
+        if (!Number.isSafeInteger(entityData.id) || entityData.id <= 0) {
+            throw new TypeError("Entity IDs must be positive integers.");
+        }
+
+        if (entityIds.has(entityData.id)) {
+            throw new Error("Duplicate scene entity ID: " + entityData.id);
+        }
+
+        entityIds.add(entityData.id);
+
+        if (version === 1) {
+            if (
+                !entityData.components ||
+                typeof entityData.components !== "object" ||
+                Array.isArray(entityData.components)
+            ) {
+                throw new TypeError(
+                    "Version 1 entity components must be an object keyed by type ID.",
+                );
+            }
+
+            const componentTypeIds = Object.keys(entityData.components);
+            if (componentTypeIds.some((typeId) => typeId.trim() === "")) {
+                throw new TypeError(
+                    "Version 1 component type IDs must be non-empty strings.",
+                );
+            }
+
+            return;
+        }
+
+        if (!Array.isArray(entityData.components)) {
+            throw new TypeError(
+                "Version 2 entity components must be an array of typed records.",
+            );
+        }
+
+        this._ValidateVersion2ComponentRecords(entityData.components);
+    }
+
+    _ValidateVersion2ComponentRecords(components) {
+        const componentTypeIds = new Set();
+
+        for (const componentRecord of components) {
+            if (
+                !componentRecord ||
+                typeof componentRecord !== "object" ||
+                Array.isArray(componentRecord)
+            ) {
+                throw new TypeError("Each component record must be an object.");
+            }
+
+            if (
+                typeof componentRecord.typeId !== "string" ||
+                componentRecord.typeId.trim() === ""
+            ) {
+                throw new TypeError("Component records must have a type ID.");
+            }
+
+            if (componentTypeIds.has(componentRecord.typeId)) {
+                throw new Error(
+                    "Duplicate component type ID: " + componentRecord.typeId,
+                );
+            }
+
+            componentTypeIds.add(componentRecord.typeId);
+
+            if (
+                !Number.isSafeInteger(componentRecord.version) ||
+                componentRecord.version <= 0 ||
+                !Object.hasOwn(componentRecord, "data")
+            ) {
+                throw new TypeError(
+                    "Component record must define a positive version and data.",
+                );
+            }
+        }
     }
 }
