@@ -57,6 +57,7 @@
 - `SceneLoader.Load()` fetches the URL, rejects non-success HTTP responses, parses the response as JSON, and passes the data to `LoadData()`.
 - Load errors are wrapped with the failing stage and URL. Invalid JSON is reported as a scene-response parse error with the parse error as its cause.
 - `LoadData()` accepts only `astral-scene` document version 1. Entity IDs and the active camera ID must be lowercase UUID strings.
+- Each entity can have an optional non-empty `name`. Entities without a name load as `Entity`.
 - Scene version 1 requires a list of component records with unique non-empty type IDs, positive component versions, and a `data` field.
 - Legacy scene layouts that used numeric entity IDs or component maps are not supported.
 - The loader registers supplied systems, creates entities and components, sets the active camera, and initializes the scene.

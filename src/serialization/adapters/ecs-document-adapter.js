@@ -24,7 +24,8 @@ export class EcsDocumentAdapter {
             typeof scene.Name !== "string" ||
             !scene.EntityManager ||
             typeof scene.EntityManager.GetEntityIds !== "function" ||
-            typeof scene.EntityManager.GetComponentEntries !== "function"
+            typeof scene.EntityManager.GetComponentEntries !== "function" ||
+            typeof scene.EntityManager.GetEntityName !== "function"
         ) {
             throw new TypeError("ECS document requires a valid scene.");
         }
@@ -54,6 +55,7 @@ export class EcsDocumentAdapter {
 
         const assetIds = new Set();
         const entities = entityIds.map((entityId) => ({
+            name: entityManager.GetEntityName(entityId),
             id: entityId,
             components: entityManager
                 .GetComponentEntries(entityId)

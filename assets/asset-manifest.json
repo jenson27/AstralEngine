@@ -8,7 +8,77 @@
       "loaderId": "builtin:mesh",
       "source": {
         "kind": "primitive",
-        "name": "cube"
+        "name": "cube",
+        "size": 1
+      },
+      "version": 1,
+      "dependencies": []
+    },
+    {
+      "id": "builtin:capsule",
+      "typeId": "mesh",
+      "loaderId": "builtin:mesh",
+      "source": {
+        "kind": "primitive",
+        "name": "capsule",
+        "radius": 0.25,
+        "height": 1,
+        "radialSegments": 24,
+        "hemisphereRings": 8
+      },
+      "version": 1,
+      "dependencies": []
+    },
+    {
+      "id": "builtin:cone",
+      "typeId": "mesh",
+      "loaderId": "builtin:mesh",
+      "source": {
+        "kind": "primitive",
+        "name": "cone",
+        "radius": 0.5,
+        "height": 1,
+        "radialSegments": 24
+      },
+      "version": 1,
+      "dependencies": []
+    },
+    {
+      "id": "builtin:cylinder",
+      "typeId": "mesh",
+      "loaderId": "builtin:mesh",
+      "source": {
+        "kind": "primitive",
+        "name": "cylinder",
+        "radius": 0.5,
+        "height": 1,
+        "radialSegments": 24
+      },
+      "version": 1,
+      "dependencies": []
+    },
+    {
+      "id": "builtin:plane",
+      "typeId": "mesh",
+      "loaderId": "builtin:mesh",
+      "source": {
+        "kind": "primitive",
+        "name": "plane",
+        "size": 1
+      },
+      "version": 1,
+      "dependencies": []
+    },
+    {
+      "id": "builtin:sphere",
+      "typeId": "mesh",
+      "loaderId": "builtin:mesh",
+      "source": {
+        "kind": "primitive",
+        "name": "sphere",
+        "radius": 0.5,
+        "latitudeBands": 16,
+        "longitudeSegments": 24
       },
       "version": 1,
       "dependencies": []

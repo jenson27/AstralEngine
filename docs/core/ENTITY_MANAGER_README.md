@@ -8,9 +8,10 @@
 
 | Part | Responsibility |
 | --- | --- |
-| `EntityManager` | Owns entity IDs, component stores, query state, and component-removal handlers. |
+| `EntityManager` | Owns entity IDs, names, component stores, query state, and component-removal handlers. |
 | `EntityManager.constructor()` | Initializes the empty ECS stores. |
-| `CreateEntity()` | Creates and returns a new entity ID. |
+| `CreateEntity()` | Creates an entity with an ID and name, then returns its ID. |
+| `GetEntityName()` / `SetEntityName()` | Reads or changes an entity name. |
 | `DestroyEntity()` | Removes an entity and all its components. |
 | `AddComponent()` | Stores a component under the supplied component type. |
 | `GetComponent()` / `HasComponent()` | Reads or checks a component for an entity. |
@@ -29,7 +30,8 @@
 
 ## Ownership
 
-- `EntityManager` owns the entity `Set`, the component-store `Map`, and each `ComponentStorage`.
+- `EntityManager` owns the entity `Set`, the entity-name `Map`, the component-store `Map`, and each `ComponentStorage`.
+- The entity-name `Map` uses entity UUIDs as keys and names as values.
 - Each `ComponentStorage` owns arrays of entity IDs and component references, plus an index `Map`.
 - Component objects are stored by reference. The manager does not clone them.
 - A `CommandBuffer` owns its queued commands and pending-destruction set. The caller creates it and passes it to `Flush()`.
@@ -38,6 +40,8 @@
 ## Entity and component data
 
 - `CreateEntity()` generates a lowercase UUID with `crypto.randomUUID()`. Callers can also supply a lowercase UUID.
+- `CreateEntity()` uses the name `Entity` when no name is supplied. Names are trimmed and do not need to be unique.
+- `GetEntityName()` and `SetEntityName()` read and change names without changing component membership.
 - In browsers, `crypto.randomUUID()` requires a secure context such as HTTPS or localhost.
 - Destroyed IDs are not reused.
 - Component stores are keyed by the component type supplied to `AddComponent()`.
@@ -46,13 +50,15 @@
 
 ## Entity and component changes
 
-- `CreateEntity()` adds a lowercase UUID to the entity set. It throws a `TypeError` for an invalid UUID and an `Error` for a duplicate ID.
+- `CreateEntity()` adds a lowercase UUID and a non-empty name. It throws a `TypeError` for an invalid UUID or name and an `Error` for a duplicate ID.
+- `GetEntityName()` and `SetEntityName()` throw a `RangeError` when the entity does not exist. `SetEntityName()` throws a `TypeError` for an empty or non-string name.
 - Operations that require an existing entity throw a `RangeError` for an unknown ID.
 - `AddComponent()` requires a component type and an instance of that type. It throws if the instance does not match the type or the entity already has that component type.
 - `GetComponent()` returns `undefined` when the entity has no component of that type.
 - `HasComponent()` returns `false` when no store or component exists for that type.
 - `RemoveComponent()` returns `false` when the component is absent. Otherwise, it removes the component and returns `true`.
 - `DestroyEntity()` removes the entity and all its components. It does not return a value.
+- `DestroyEntity()` also removes the entity's name.
 - Component type arguments must be class constructors. Invalid types cause a `TypeError`.
 - `RegisterComponentRemovalHandler()` throws a `TypeError` if the handler is not a function.
 
@@ -89,7 +95,7 @@
 
 ## Current scope
 
-- `EntityManager` does not serialize data. `EcsDocumentAdapter` serializes scene entities and components to JSON.
+- `EntityManager` does not serialize data. `EcsDocumentAdapter` serializes scene entities, names, and components to JSON.
 - The entity manager does not provide parent-child hierarchies or automatic system updates.
 - Component stores use arrays and swap removal; iteration order is not stable.
 

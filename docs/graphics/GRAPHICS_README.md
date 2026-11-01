@@ -13,8 +13,16 @@ The graphics system turns mesh and material data into WebGPU draw calls. `Render
 | `Mesh.GetPositions()` / `GetUVs()` | Returns copies of the vertex position and UV arrays. |
 | `Material.constructor()` | Stores a decoded base-color image asset. |
 | `Material.BaseColorTexture` | Returns the material's image asset. |
-| `CreateCubeMesh()` / `CreateTriangleMesh()` | Creates built-in mesh data. |
-| `BuiltinMeshLoader.Load()` | Loads the supported built-in cube or triangle mesh. |
+| `CreateCubeMesh()` / `CreateTriangleMesh()` | Creates built-in cube or triangle mesh data. |
+| `CreatePlaneMesh()` | Creates a horizontal plane mesh. |
+| `CreateSphereMesh()` | Creates a UV sphere mesh. |
+| `CreateCylinderMesh()` | Creates a capped cylinder mesh. |
+| `CreateConeMesh()` | Creates a cone mesh with a capped base. |
+| `CreateCapsuleMesh()` | Creates a capsule mesh with rounded ends. |
+| `RequirePositiveNumber()` / `RequireSegmentCount()` | Validates primitive dimensions and tessellation settings. |
+| `PushTriangle()` / `AddRadialSurface()` / `AddHorizontalCap()` | Appends triangle vertex data for primitive surfaces. |
+| `CreatePrimitiveMesh()` | Creates a `Mesh` from primitive position and UV data. |
+| `BuiltinMeshLoader.Load()` | Loads a built-in mesh from its primitive name and source settings. |
 | `ImageTextureLoader.constructor()` | Stores fetch and bitmap-decoding functions. |
 | `ImageTextureLoader.Load()` / `Release()` | Fetches, decodes, and closes image bitmaps. |
 | `MaterialLoader.Load()` | Creates a material from a declared texture dependency. |
@@ -47,7 +55,8 @@ The graphics system turns mesh and material data into WebGPU draw calls. `Render
 
 ## Asset loaders
 
-- `BuiltinMeshLoader.Load()` accepts primitive sources named `cube` or `triangle`.
+- `BuiltinMeshLoader.Load()` accepts primitive sources named `cube`, `triangle`, `plane`, `sphere`, `cylinder`, `cone`, or `capsule`.
+- The asset manifest defines the default dimensions and segment counts for built-in primitives. A primitive source can override these values.
 - `ImageTextureLoader.Load()` accepts an image source with a non-empty URL.
 - The image loader checks the HTTP response, reads its blob, and decodes it with `createImageBitmap()`.
 - The returned image asset contains `bitmap`, `width`, and `height`.
@@ -67,6 +76,18 @@ The graphics system turns mesh and material data into WebGPU draw calls. `Render
 
 - Rendering fails if the active camera or its transform is missing.
 - Mesh and material asset IDs are resolved while the scene loads. The render system uses the resulting runtime objects.
+
+## Built-in primitive meshes
+
+- `CreatePlaneMesh(size)` creates a plane on the XZ axes. Its front faces up.
+- `CreateSphereMesh(radius, latitudeBands, longitudeSegments)` creates a sphere centered at the origin.
+- `CreateCylinderMesh(radius, height, radialSegments)` creates a capped cylinder aligned to the Y axis.
+- `CreateConeMesh(radius, height, radialSegments)` creates a cone aligned to the Y axis, with its point at the top.
+- `CreateCapsuleMesh(radius, height, radialSegments, hemisphereRings)` creates a capsule aligned to the Y axis. `height` includes both rounded ends and must be at least twice `radius`.
+- Defaults are size `1` for the plane; radius `0.5` for the sphere; radius `0.5` and height `1` for the cylinder and cone; radius `0.25` and height `1` for the capsule.
+- Radial and longitude segments default to `24`. Sphere latitude bands default to `16`. Capsule hemisphere rings default to `8`.
+- Size and radius values must be finite and positive. Segment counts must be integers at or above their minimum.
+- These meshes contain positions and UVs, but no normals. The current renderer does not use lighting.
 
 ## WebGPU setup and frame rendering
 
@@ -109,6 +130,12 @@ The graphics system turns mesh and material data into WebGPU draw calls. `Render
 - `src/graphics/shaders/triangle.wgsl`
 - `src/graphics/primitives/cube.js`
 - `src/graphics/primitives/triangle.js`
+- `src/graphics/primitives/primitive-utils.js`
+- `src/graphics/primitives/plane.js`
+- `src/graphics/primitives/sphere.js`
+- `src/graphics/primitives/cylinder.js`
+- `src/graphics/primitives/cone.js`
+- `src/graphics/primitives/capsule.js`
 - `src/graphics/assets/builtin-mesh-loader.js`
 - `src/graphics/assets/image-texture-loader.js`
 - `src/graphics/assets/material-loader.js`

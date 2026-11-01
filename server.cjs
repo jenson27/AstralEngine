@@ -256,8 +256,15 @@ async function WriteLogEntry(request, response) {
             logEntry.details === undefined
                 ? ""
                 : ` ${JSON.stringify(logEntry.details)}`;
+        const readableTimestamp = new Intl.DateTimeFormat(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+        }).format(new Date(logEntry.timestamp));
         const logLine =
-            `[${logEntry.timestamp}] [${logEntry.level}] ` +
+            `[${readableTimestamp}] [${logEntry.level}] ` +
             `${logEntry.message}${details}\n`;
 
         await fs.promises.mkdir(logDirectory, { recursive: true });

@@ -9,8 +9,12 @@ const logMethods = {
 };
 
 function ConsoleLogSink(logEntry) {
+    const displayTimestamp = new Intl.DateTimeFormat(undefined, {
+        dateStyle: "medium",
+        timeStyle: "medium",
+    }).format(new Date(logEntry.timestamp));
     const logMessage =
-        `[AstralEngine] [${logEntry.timestamp}] ` +
+        `[AstralEngine] [${displayTimestamp}] ` +
         `[${logEntry.level}] ${logEntry.message}`;
     const writeLog = logMethods[logEntry.level] ?? logMethods.INFO;
 

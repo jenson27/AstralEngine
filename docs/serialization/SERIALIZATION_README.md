@@ -82,6 +82,7 @@ A serialized type record has this shape:
   "activeCameraEntityId": "6475b38a-9cc8-43c6-93f5-28017a3d2cf1",
   "entities": [
     {
+      "name": "Main Camera",
       "id": "6475b38a-9cc8-43c6-93f5-28017a3d2cf1",
       "components": [
         {
@@ -108,9 +109,9 @@ A serialized type record has this shape:
 }
 ```
 
-- The adapter requires a scene with a name and an entity manager that can list entity IDs and component entries.
+- The adapter requires a scene with a name and an entity manager that can list entity IDs, entity names, and component entries.
 - Version 1 entity IDs and the active camera ID are lowercase UUID strings. The active camera ID must identify an entity with both `Camera` and `Transform`.
-- Each entity record contains its ID and serialized components.
+- Each entity record contains its name, ID, and serialized components. The loader accepts an omitted name and uses `Entity` as the default. Names can repeat; UUIDs identify entities.
 - The adapter does not serialize systems or arbitrary scene services.
 - `SceneLoader` accepts only scene document version 1. It requires UUID entity IDs and a list of typed component records.
 - Legacy scene layouts that used numeric entity IDs or component maps are not supported.

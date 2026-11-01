@@ -11,16 +11,19 @@ export class EntityManager {
 
         this._beforeStructuralChange = beforeStructuralChange;
         this._entities = new Set();
+        this._entityNames = new Map();
         this._componentStores = new Map();
         this._activeQueryCount = 0;
         this._componentRemovalHandlers = new Map();
         this._pendingComponentRemovals = [];
     }
 
-    CreateEntity(entityId = CreateEntityId()) {
+    CreateEntity(entityId = CreateEntityId(), name = "Entity") {
         if (!IsEntityId(entityId)) {
             throw new TypeError("Entity ID must be a lowercase UUID.");
         }
+
+        this._RequireEntityName(name);
 
         if (this._entities.has(entityId)) {
             throw new Error("Entity ID already exists: " + entityId);
@@ -28,6 +31,7 @@ export class EntityManager {
 
         this._beforeStructuralChange({ type: "create-entity", entityId });
         this._entities.add(entityId);
+        this._entityNames.set(entityId, name.trim());
         return entityId;
     }
 
@@ -36,6 +40,7 @@ export class EntityManager {
         this._RequireNoActiveQueries();
         this._beforeStructuralChange({ type: "destroy-entity", entityId });
         this._entities.delete(entityId);
+        this._entityNames.delete(entityId);
 
         for (const [componentType, storage] of this._componentStores) {
             if (!storage.Has(entityId)) {
@@ -59,6 +64,20 @@ export class EntityManager {
 
     GetEntityIds() {
         return [...this._entities];
+    }
+
+    GetEntityName(entityId) {
+        this._RequireEntity(entityId);
+        return this._entityNames.get(entityId);
+    }
+
+    SetEntityName(entityId, name) {
+        this._RequireEntity(entityId);
+        this._RequireEntityName(name);
+
+        const normalizedName = name.trim();
+        this._entityNames.set(entityId, normalizedName);
+        return normalizedName;
     }
 
     GetComponentEntries(entityId) {
@@ -245,6 +264,12 @@ export class EntityManager {
     _RequireEntity(entityId) {
         if (!this._entities.has(entityId)) {
             throw new RangeError(`Entity ${entityId} does not exist.`);
+        }
+    }
+
+    _RequireEntityName(name) {
+        if (typeof name !== "string" || name.trim() === "") {
+            throw new TypeError("Entity name must be a non-empty string.");
         }
     }
 

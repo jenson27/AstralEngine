@@ -160,7 +160,10 @@ export class SceneLoader {
 
     _LoadEntities(scene, data, services) {
         for (const entityData of data.entities) {
-            const entityId = scene.EntityManager.CreateEntity(entityData.id);
+            const entityId = scene.EntityManager.CreateEntity(
+                entityData.id,
+                entityData.name ?? "Entity",
+            );
 
             for (const componentRecord of entityData.components) {
                 const { typeId } = componentRecord;
@@ -353,6 +356,16 @@ export class SceneLoader {
     _ValidateEntityData(entityData, entityIds) {
         if (!entityData || typeof entityData !== "object") {
             throw new TypeError("Each scene entity must be an object.");
+        }
+
+        if (
+            entityData.name !== undefined &&
+            (typeof entityData.name !== "string" ||
+                entityData.name.trim() === "")
+        ) {
+            throw new TypeError(
+                "Entity name must be a non-empty string when provided.",
+            );
         }
 
         if (!IsEntityId(entityData.id)) {

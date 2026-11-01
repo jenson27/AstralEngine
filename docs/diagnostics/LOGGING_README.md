@@ -13,7 +13,7 @@
 | `AstralLogger.Warn()` | Records a warning. |
 | `AstralLogger.Error()` | Records an error. |
 | `AstralLogger.AddSink()` | Adds a custom output sink and returns a function that removes it. |
-| `ConsoleLogSink` | Writes each message to the matching browser console method. |
+| `ConsoleLogSink` | Formats the timestamp for readability and writes each message to the matching browser console method. |
 | `FileLogSink` | Sends each message to the server using `POST /api/logs`. |
 | `server.cjs` | Validates log requests and appends entries to date-based files in `logs/`. |
 
@@ -21,7 +21,8 @@
 
 Each entry contains:
 
-- `timestamp` - The time created in ISO format.
+- `timestamp` - The time created in ISO format. The browser console formats it with the browser locale. Server log files show the local date,
+  hour, and minute.
 - `level` - `DEBUG`, `INFO`, `WARN`, or `ERROR`.
 - `message` - The message converted to a string.
 - `details` - Optional extra data.

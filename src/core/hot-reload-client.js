@@ -8,7 +8,7 @@ export class HotReloadClient {
         sceneManager,
         {
             EventSourceClass = globalThis.EventSource,
-            fetchFunction = globalThis.fetch,
+            fetchFunction = globalThis.fetch?.bind(globalThis),
             endpoint = "/api/hot-reload",
             manifestUrl = "/assets/asset-manifest.json",
             logger = AstralLogger,

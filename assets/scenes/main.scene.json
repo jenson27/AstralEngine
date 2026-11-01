@@ -4,6 +4,11 @@
     "name": "main",
     "assets": [
         "builtin:cube",
+        "builtin:plane",
+        "builtin:sphere",
+        "builtin:cylinder",
+        "builtin:cone",
+        "builtin:capsule",
         "material:grass",
         "material:grass-top",
         "material:dirt"
@@ -11,6 +16,7 @@
     "activeCameraEntityId": "6475b38a-9cc8-43c6-93f5-28017a3d2cf1",
     "entities": [
         {
+            "name": "Cube 1",
             "id": "82ca44b3-f3b9-44d6-a26b-e33f75fa291e",
             "components": [
                 {
@@ -46,6 +52,7 @@
             ]
         },
         {
+            "name": "Cube 2",
             "id": "e37f20db-58fd-4ac3-8f77-a8b31f5b2047",
             "components": [
                 {
@@ -81,6 +88,7 @@
             ]
         },
         {
+            "name": "Cube 3",
             "id": "d1a2bb77-239e-4ea3-a184-55a6a204a8bc",
             "components": [
                 {
@@ -116,6 +124,177 @@
             ]
         },
         {
+            "name": "Plane",
+            "id": "a1100000-0000-4000-8000-000000000001",
+            "components": [
+                {
+                    "typeId": "transform",
+                    "version": 1,
+                    "data": {
+                        "position": [-1.6, 1.2, 0],
+                        "rotation": [0, 0, 0],
+                        "scale": [0.35, 0.35, 0.35]
+                    }
+                },
+                {
+                    "typeId": "angularVelocity",
+                    "version": 1,
+                    "data": {
+                        "x": 0.4,
+                        "y": 0.7,
+                        "z": 0.2
+                    }
+                },
+                {
+                    "typeId": "meshRenderer",
+                    "version": 1,
+                    "data": {
+                        "meshAssetId": "builtin:plane",
+                        "materialsBySlot": {
+                            "default": "material:grass"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Sphere",
+            "id": "a1100000-0000-4000-8000-000000000002",
+            "components": [
+                {
+                    "typeId": "transform",
+                    "version": 1,
+                    "data": {
+                        "position": [-0.8, 1.2, 0],
+                        "rotation": [0, 0, 0],
+                        "scale": [0.35, 0.35, 0.35]
+                    }
+                },
+                {
+                    "typeId": "angularVelocity",
+                    "version": 1,
+                    "data": {
+                        "x": 0.4,
+                        "y": 0.7,
+                        "z": 0.2
+                    }
+                },
+                {
+                    "typeId": "meshRenderer",
+                    "version": 1,
+                    "data": {
+                        "meshAssetId": "builtin:sphere",
+                        "materialsBySlot": {
+                            "default": "material:grass"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Cylinder",
+            "id": "a1100000-0000-4000-8000-000000000003",
+            "components": [
+                {
+                    "typeId": "transform",
+                    "version": 1,
+                    "data": {
+                        "position": [0, 1.2, 0],
+                        "rotation": [0, 0, 0],
+                        "scale": [0.35, 0.35, 0.35]
+                    }
+                },
+                {
+                    "typeId": "angularVelocity",
+                    "version": 1,
+                    "data": {
+                        "x": 0.4,
+                        "y": 0.7,
+                        "z": 0.2
+                    }
+                },
+                {
+                    "typeId": "meshRenderer",
+                    "version": 1,
+                    "data": {
+                        "meshAssetId": "builtin:cylinder",
+                        "materialsBySlot": {
+                            "default": "material:grass"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Cone",
+            "id": "a1100000-0000-4000-8000-000000000004",
+            "components": [
+                {
+                    "typeId": "transform",
+                    "version": 1,
+                    "data": {
+                        "position": [0.8, 1.2, 0],
+                        "rotation": [0, 0, 0],
+                        "scale": [0.35, 0.35, 0.35]
+                    }
+                },
+                {
+                    "typeId": "angularVelocity",
+                    "version": 1,
+                    "data": {
+                        "x": 0.4,
+                        "y": 0.7,
+                        "z": 0.2
+                    }
+                },
+                {
+                    "typeId": "meshRenderer",
+                    "version": 1,
+                    "data": {
+                        "meshAssetId": "builtin:cone",
+                        "materialsBySlot": {
+                            "default": "material:grass"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Capsule",
+            "id": "a1100000-0000-4000-8000-000000000005",
+            "components": [
+                {
+                    "typeId": "transform",
+                    "version": 1,
+                    "data": {
+                        "position": [1.6, 1.2, 0],
+                        "rotation": [0, 0, 0],
+                        "scale": [0.35, 0.35, 0.35]
+                    }
+                },
+                {
+                    "typeId": "angularVelocity",
+                    "version": 1,
+                    "data": {
+                        "x": 0.4,
+                        "y": 0.7,
+                        "z": 0.2
+                    }
+                },
+                {
+                    "typeId": "meshRenderer",
+                    "version": 1,
+                    "data": {
+                        "meshAssetId": "builtin:capsule",
+                        "materialsBySlot": {
+                            "default": "material:grass"
+                        }
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Main Camera",
             "id": "6475b38a-9cc8-43c6-93f5-28017a3d2cf1",
             "components": [
                 {
