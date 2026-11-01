@@ -76,6 +76,26 @@ export class AssetScope {
         return asset;
     }
 
+    GetHandle(assetId) {
+        this._RequireOpen();
+        this._RequireAssetId(assetId);
+
+        const lease = this._leasesByAssetId.get(assetId);
+        return lease?.Handle;
+    }
+
+    GetHandleRequired(assetId) {
+        const handle = this.GetHandle(assetId);
+
+        if (handle === undefined) {
+            throw new Error(
+                "Asset has not been acquired by this scope: " + assetId,
+            );
+        }
+
+        return handle;
+    }
+
     ReleaseAll() {
         if (this._state === "disposed") {
             return Promise.resolve();

@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { AssetCatalog } from "../src/core/assets/asset-catalog.js";
+import { AssetHandle } from "../src/core/assets/asset-handle.js";
 import { AssetLoaderRegistry } from "../src/core/assets/asset-loader-registry.js";
 import { AssetManager } from "../src/core/assets/asset-manager.js";
 import { ImageTextureLoader } from "../src/graphics/assets/image-texture-loader.js";
@@ -9,6 +10,12 @@ import { Material } from "../src/graphics/material.js";
 import { Mesh } from "../src/graphics/mesh.js";
 import { CreateCubeMesh } from "../src/graphics/primitives/cube.js";
 import { WebGPURenderer } from "../src/graphics/webgpu-renderer.js";
+
+function CreateLoadedHandle(assetId, asset) {
+    const handle = new AssetHandle(assetId);
+    handle._Replace(asset);
+    return handle;
+}
 
 function WithGpuTextureUsage(callback) {
     const previous = Object.getOwnPropertyDescriptor(
@@ -101,14 +108,22 @@ test("cube mesh has one UV pair for each vertex", () => {
     );
 });
 
-test("renderer creates one draw item per material slot", () => {
+test("renderer resolves current handles into draw items per material slot", () => {
     const renderer = new WebGPURenderer({});
     const cube = CreateCubeMesh();
-    const materialsBySlot = {
+    const meshHandle = CreateLoadedHandle("builtin:cube", cube);
+    const materials = {
         side: new Material({ bitmap: {} }),
         top: new Material({ bitmap: {} }),
         bottom: new Material({ bitmap: {} }),
     };
+    const materialHandlesBySlot = Object.fromEntries(
+        Object.entries(materials).map(([materialSlot, material]) => [
+            materialSlot,
+            CreateLoadedHandle(`material:${materialSlot}`, material),
+        ]),
+    );
+    let resolvedMesh;
 
     renderer._device = {
         queue: {
@@ -119,10 +134,13 @@ test("renderer creates one draw item per material slot", () => {
     renderer._uniformStride = 256;
     renderer._drawCapacity = 1;
     renderer._matrixData = new Float32Array(64);
-    renderer._GetMeshResource = (mesh) => ({
-        vertexBuffer: {},
-        submeshes: mesh.Submeshes,
-    });
+    renderer._GetMeshResource = (mesh) => {
+        resolvedMesh = mesh;
+        return {
+            vertexBuffer: {},
+            submeshes: mesh.Submeshes,
+        };
+    };
     renderer._GetMaterialBindGroup = (material) => ({ material });
     renderer._PruneMeshResources = () => {};
     renderer._PruneMaterialResources = () => {};
@@ -130,8 +148,8 @@ test("renderer creates one draw item per material slot", () => {
     renderer.SetRenderItems(
         [
             {
-                mesh: cube,
-                materialsBySlot,
+                meshHandle,
+                materialHandlesBySlot,
                 modelMatrix: new Float32Array(16),
             },
         ],
@@ -151,21 +169,44 @@ test("renderer creates one draw item per material slot", () => {
                 firstVertex: 0,
                 vertexCount: 24,
                 transformOffset: 0,
-                material: materialsBySlot.side,
+                material: materials.side,
             },
             {
                 firstVertex: 24,
                 vertexCount: 6,
                 transformOffset: 0,
-                material: materialsBySlot.top,
+                material: materials.top,
             },
             {
                 firstVertex: 30,
                 vertexCount: 6,
                 transformOffset: 0,
-                material: materialsBySlot.bottom,
+                material: materials.bottom,
             },
         ],
+    );
+
+    const replacementMesh = CreateCubeMesh();
+    const replacementTopMaterial = new Material({ bitmap: {} });
+    meshHandle._Replace(replacementMesh);
+    materialHandlesBySlot.top._Replace(replacementTopMaterial);
+
+    renderer.SetRenderItems(
+        [
+            {
+                meshHandle,
+                materialHandlesBySlot,
+                modelMatrix: new Float32Array(16),
+            },
+        ],
+        new Float32Array(16),
+        new Float32Array(16),
+    );
+
+    assert.strictEqual(resolvedMesh, replacementMesh);
+    assert.strictEqual(
+        renderer._drawItems[1].materialBindGroup.material,
+        replacementTopMaterial,
     );
 });
 

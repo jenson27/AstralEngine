@@ -12,6 +12,7 @@ The asset registry stores asset descriptors and maps loader IDs to loader object
 | `AssetCatalog.Register()` / `RegisterManifest()` | Validates and stores asset descriptors. |
 | `AssetCatalog.Get()` / `GetRequired()` | Looks up an optional or required descriptor by ID. |
 | `AssetCatalog.Has()` / `GetAll()` | Checks for an ID or returns registered descriptors. |
+| `AssetCatalog.GetAssetIdsBySourcePath()` | Returns asset IDs registered for a source URL path. |
 | `AssetLoaderRegistry.constructor()` | Creates an empty loader registry. |
 | `AssetLoaderRegistry.Register()` | Validates and stores a loader by ID. |
 | `AssetLoaderRegistry.Get()` / `GetRequired()` | Looks up an optional or required loader by ID. |
@@ -61,6 +62,7 @@ The asset registry stores asset descriptors and maps loader IDs to loader object
 - `AssetCatalog.RegisterManifest()` rejects an invalid manifest format or version, duplicate IDs within the manifest, and IDs already in the catalog.
 - `AssetCatalog.Get()` returns `undefined` for an unknown ID. `GetRequired()` throws for an unknown ID.
 - `AssetCatalog.Has()` checks whether an ID exists. `GetAll()` returns an array of the registered frozen descriptors.
+- `GetAssetIdsBySourcePath()` returns a frozen array of IDs whose same-origin `source.url` matches the given path. It returns an empty array for an invalid or unknown path.
 - `AssetLoaderRegistry.Register()` requires a non-empty loader ID and a loader with a `Load()` function.
 - A loader may provide `Release()`. If it does, that value must be a function.
 - Duplicate loader IDs are rejected. `Get()` returns `undefined` for an unknown ID; `GetRequired()` throws.

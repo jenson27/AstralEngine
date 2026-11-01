@@ -43,6 +43,7 @@ export class SceneManager {
         this._createLoadOptions = createLoadOptions;
         this._createAssetScope = createAssetScope;
         this._activeScene = null;
+        this._activeSceneUrl = null;
         this._activeAssetScope = null;
         this._isLoading = false;
         this._loadCompletion = null;
@@ -52,6 +53,10 @@ export class SceneManager {
 
     get ActiveScene() {
         return this._activeScene;
+    }
+
+    get ActiveSceneUrl() {
+        return this._activeSceneUrl;
     }
 
     async LoadScene(url) {
@@ -115,6 +120,7 @@ export class SceneManager {
             const previousAssetScope = this._activeAssetScope;
 
             this._activeScene = pendingScene;
+            this._activeSceneUrl = url;
             this._activeAssetScope = pendingAssetScope;
             pendingScene = null;
             pendingAssetScope = null;
@@ -170,6 +176,7 @@ export class SceneManager {
         const pendingLoadCompletion = this._loadCompletion;
 
         this._activeScene = null;
+        this._activeSceneUrl = null;
         this._activeAssetScope = null;
 
         let resolveDispose;

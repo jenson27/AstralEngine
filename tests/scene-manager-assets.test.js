@@ -49,9 +49,11 @@ test("creates a scope and forwards it to scene loading", async () => {
 
     assert.strictEqual(receivedScope, scope);
     assert.strictEqual(manager.ActiveScene, scene);
+    assert.equal(manager.ActiveSceneUrl, "/scenes/scene.json");
     assert.deepEqual(releaseCalls, []);
 
     await manager.Dispose();
+    assert.equal(manager.ActiveSceneUrl, null);
 });
 
 test("releases the previous scope after replacing its scene", async () => {
@@ -79,9 +81,11 @@ test("releases the previous scope after replacing its scene", async () => {
     );
 
     await manager.LoadScene("/scenes/first.json");
+    assert.equal(manager.ActiveSceneUrl, "/scenes/first.json");
     await manager.LoadScene("/scenes/second.json");
 
     assert.deepEqual(releaseCalls, ["first"]);
+    assert.equal(manager.ActiveSceneUrl, "/scenes/second.json");
     assert.strictEqual(
         manager.ActiveScene,
         scenes.get("/scenes/second.json"),
@@ -122,6 +126,7 @@ test("releases a failed pending scope and keeps the active scene", async () => {
     );
 
     assert.strictEqual(manager.ActiveScene, activeScene);
+    assert.equal(manager.ActiveSceneUrl, "/scenes/active.json");
     assert.deepEqual(releaseCalls, ["failed"]);
 
     await manager.Dispose();

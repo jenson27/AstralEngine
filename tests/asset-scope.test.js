@@ -51,6 +51,32 @@ test("deduplicates repeated acquisitions within one scope", async () => {
     assert.equal(releaseCount, 1);
 });
 
+test("exposes a stable handle while the scope holds the asset", async () => {
+    const asset = { name: "cube" };
+    const assetManager = CreateAssetManager({
+        Load() {
+            return asset;
+        },
+    });
+    const scope = new AssetScope(assetManager);
+
+    await scope.Acquire("mesh:cube");
+
+    const handle = scope.GetHandleRequired("mesh:cube");
+
+    assert.equal(handle.AssetId, "mesh:cube");
+    assert.equal(handle.Version, 1);
+    assert.strictEqual(handle.Current, asset);
+    assert.strictEqual(scope.GetHandle("mesh:cube"), handle);
+
+    await scope.ReleaseAll();
+
+    assert.throws(
+        () => handle.Current,
+        /not currently loaded/,
+    );
+});
+
 test("keeps an asset loaded until all scopes release it", async () => {
     let loadCount = 0;
     let releaseCount = 0;

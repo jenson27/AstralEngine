@@ -1,6 +1,7 @@
 export class AssetCatalog {
     constructor() {
         this._descriptorsById = new Map();
+        this._assetIdsBySourcePath = new Map();
     }
 
     Register(descriptor) {
@@ -12,10 +13,7 @@ export class AssetCatalog {
             );
         }
 
-        this._descriptorsById.set(
-            normalizedDescriptor.id,
-            normalizedDescriptor,
-        );
+        this._RegisterDescriptor(normalizedDescriptor);
     }
 
     RegisterManifest(manifest) {
@@ -57,7 +55,7 @@ export class AssetCatalog {
         }
 
         for (const descriptor of descriptors) {
-            this._descriptorsById.set(descriptor.id, descriptor);
+            this._RegisterDescriptor(descriptor);
         }
     }
 
@@ -81,6 +79,58 @@ export class AssetCatalog {
 
     GetAll() {
         return Array.from(this._descriptorsById.values());
+    }
+
+    GetAssetIdsBySourcePath(sourcePath) {
+        const normalizedPath = this._NormalizeSourcePath(sourcePath);
+
+        if (!normalizedPath) {
+            return [];
+        }
+
+        return Object.freeze([
+            ...(this._assetIdsBySourcePath.get(normalizedPath) ?? []),
+        ]);
+    }
+
+    _RegisterDescriptor(descriptor) {
+        this._descriptorsById.set(descriptor.id, descriptor);
+
+        const sourcePath = this._NormalizeSourcePath(
+            descriptor.source.url,
+        );
+
+        if (!sourcePath) {
+            return;
+        }
+
+        let assetIds = this._assetIdsBySourcePath.get(sourcePath);
+
+        if (!assetIds) {
+            assetIds = new Set();
+            this._assetIdsBySourcePath.set(sourcePath, assetIds);
+        }
+
+        assetIds.add(descriptor.id);
+    }
+
+    _NormalizeSourcePath(sourcePath) {
+        if (typeof sourcePath !== "string" || sourcePath.trim() === "") {
+            return undefined;
+        }
+
+        try {
+            const baseUrl = new URL("http://astral-engine.local");
+            const sourceUrl = new URL(sourcePath, baseUrl);
+
+            if (sourceUrl.origin !== baseUrl.origin) {
+                return undefined;
+            }
+
+            return decodeURIComponent(sourceUrl.pathname).replace(/\\/g, "/");
+        } catch {
+            return undefined;
+        }
     }
 
     _CreateDescriptor(descriptor) {

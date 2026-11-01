@@ -2,6 +2,7 @@
 // It initializes GPU resources, including a vertex buffer, and draws a mesh to the canvas.
 
 import { AstralLogger } from "../diagnostics/logger.js";
+import { AssetHandle } from "../core/assets/asset-handle.js";
 import { Mesh } from "./mesh.js";
 import { Material } from "./material.js";
 
@@ -240,17 +241,35 @@ export class WebGPURenderer {
             }
 
             this._RequireMatrix(renderItem.modelMatrix, "Model matrix");
-            activeMeshes.add(renderItem.mesh);
-            const meshResource = this._GetMeshResource(renderItem.mesh);
+
+            if (!(renderItem.meshHandle instanceof AssetHandle)) {
+                throw new TypeError(
+                    "Render item requires a mesh asset handle.",
+                );
+            }
+
+            const mesh = renderItem.meshHandle.Current;
+            activeMeshes.add(mesh);
+            const meshResource = this._GetMeshResource(mesh);
             const transformOffset = index * this._uniformStride;
 
             for (const submesh of meshResource.submeshes) {
-                const material =
-                    renderItem.materialsBySlot?.[submesh.materialSlot];
+                const materialHandle =
+                    renderItem.materialHandlesBySlot?.[
+                        submesh.materialSlot
+                    ];
+
+                if (!(materialHandle instanceof AssetHandle)) {
+                    throw new TypeError(
+                        `Render item has no material handle for slot "${submesh.materialSlot}".`,
+                    );
+                }
+
+                const material = materialHandle.Current;
 
                 if (!(material instanceof Material)) {
                     throw new TypeError(
-                        `Render item has no Material for slot "${submesh.materialSlot}".`,
+                        `Material handle for slot "${submesh.materialSlot}" must contain a Material.`,
                     );
                 }
 

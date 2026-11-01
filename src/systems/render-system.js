@@ -44,8 +44,9 @@ export class RenderSystem {
             );
 
             renderItems.push({
-                mesh: meshRenderer.mesh,
-                materialsBySlot: meshRenderer.MaterialsBySlot,
+                meshHandle: meshRenderer.MeshHandle,
+                materialHandlesBySlot:
+                    meshRenderer.MaterialHandlesBySlot,
                 modelMatrix: transform.GetModelMatrix(),
             });
         }

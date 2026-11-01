@@ -14,6 +14,7 @@ import { CreateSceneComponentRegistry } from "./components/register-scene-compon
 import { AssetCatalog } from "./core/assets/asset-catalog.js";
 import { AssetLoaderRegistry } from "./core/assets/asset-loader-registry.js";
 import { AssetManager } from "./core/assets/asset-manager.js";
+import { HotReloadClient } from "./core/hot-reload-client.js";
 import { AssetScope } from "./core/assets/asset-scope.js";
 import { BuiltinMeshLoader } from "./graphics/assets/builtin-mesh-loader.js";
 import { ImageTextureLoader } from "./graphics/assets/image-texture-loader.js";
@@ -27,6 +28,7 @@ async function StartApplication() {
     let renderer;
     let engine;
     let sceneManager;
+    let hotReloadClient;
 
     try {
         platform = new BrowserPlatform(canvas);
@@ -68,6 +70,11 @@ async function StartApplication() {
             assetCatalog,
             assetLoaderRegistry,
         );
+        const assetRuntime = {
+            catalog: assetCatalog,
+            loaderRegistry: assetLoaderRegistry,
+            manager: assetManager,
+        };
         const componentRegistry = CreateSceneComponentRegistry();
         const sceneLoader = new SceneLoader(componentRegistry);
 
@@ -85,26 +92,35 @@ async function StartApplication() {
                     },
                 ],
                 services: {
-                    ResolveMesh: (meshAssetId) =>
-                        assetScope.GetRequired(meshAssetId),
-                    ResolveMaterial: (materialAssetId) =>
-                        assetScope.GetRequired(materialAssetId),
+                    ResolveMeshHandle: (meshAssetId) =>
+                        assetScope.GetHandleRequired(meshAssetId),
+                    ResolveMaterialHandle: (materialAssetId) =>
+                        assetScope.GetHandleRequired(materialAssetId),
                 },
             }),
-            () => new AssetScope(assetManager),
+            () => new AssetScope(assetRuntime.manager),
         );
 
         await sceneManager.LoadScene("/assets/scenes/main.scene.json");
+
+        hotReloadClient = new HotReloadClient(
+            assetRuntime,
+            sceneManager,
+        );
+        hotReloadClient.Connect();
 
         engine = new Engine(
             renderer,
             (deltaTime, elapsedTime) =>
                 sceneManager.FixedUpdate(deltaTime, elapsedTime),
-            (interpolationAlpha) =>
+            (interpolationAlpha) => {
+                hotReloadClient.CommitAtFrameBoundary();
+
                 sceneManager.PrepareRender(
                     interpolationAlpha,
                     platform.Canvas.width / platform.Canvas.height,
-                ),
+                );
+            },
         );
         engine.Start();
 
@@ -119,6 +135,7 @@ async function StartApplication() {
         }
     } catch (error) {
         engine?.Stop();
+        hotReloadClient?.Dispose();
 
         try {
             await sceneManager?.Dispose();

@@ -42,6 +42,58 @@ test("shares one load between concurrent acquisitions", async () => {
     await Promise.all(leases.map((lease) => lease.Release()));
 });
 
+test("stages an asset replacement and swaps its stable handle on commit", async () => {
+    const assets = [{ version: 1 }, { version: 2 }];
+    const releasedAssets = [];
+    let loadCount = 0;
+    const manager = CreateAssetManager({
+        Load() {
+            return assets[loadCount++];
+        },
+        Release(asset) {
+            releasedAssets.push(asset);
+        },
+    });
+
+    const lease = await manager.Acquire("mesh:cube");
+    const handle = lease.Handle;
+
+    const staged = await manager.StageReload("mesh:cube");
+
+    assert.deepEqual(staged.affectedAssetIds, ["mesh:cube"]);
+    assert.strictEqual(handle.Current, assets[0]);
+    assert.equal(handle.Version, 1);
+    assert.deepEqual(releasedAssets, []);
+
+    let nextLeaseReady = false;
+    const nextLeasePromise = manager
+        .Acquire("mesh:cube")
+        .then((nextLease) => {
+            nextLeaseReady = true;
+            return nextLease;
+        });
+
+    await Promise.resolve();
+    assert.equal(nextLeaseReady, false);
+
+    const cleanupPromise = manager.CommitStagedReload();
+
+    assert.ok(cleanupPromise instanceof Promise);
+    assert.strictEqual(handle.Current, assets[1]);
+    assert.equal(handle.Version, 2);
+
+    const nextLease = await nextLeasePromise;
+    assert.strictEqual(nextLease.Handle, handle);
+    assert.strictEqual(nextLease.Asset, assets[1]);
+
+    await cleanupPromise;
+    assert.deepEqual(releasedAssets, [assets[0]]);
+
+    await nextLease.Release();
+    await lease.Release();
+    assert.deepEqual(releasedAssets, [assets[0], assets[1]]);
+});
+
 test("releases the asset after its final lease is released", async () => {
     let releaseCount = 0;
     const manager = CreateAssetManager({

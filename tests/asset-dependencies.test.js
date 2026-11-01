@@ -156,3 +156,129 @@ test("detects dependency cycles before calling any loader", async () => {
     assert.equal(loadCount, 0);
     assert.equal(manager.GetState("asset:first"), "unloaded");
 });
+
+test("stages a dependency and its loaded dependents as one reload", async () => {
+    const textures = [];
+    const releases = [];
+    let materialVersion = 0;
+    const manager = CreateAssetManager(
+        [
+            CreateDescriptor("texture:stone"),
+            CreateDescriptor("material:stone", ["texture:stone"]),
+        ],
+        {
+            "loader:texture:stone": {
+                Load() {
+                    const texture = { version: textures.length + 1 };
+                    textures.push(texture);
+                    return texture;
+                },
+                Release(texture) {
+                    releases.push(["texture", texture.version]);
+                },
+            },
+            "loader:material:stone": {
+                Load(_descriptor, { GetDependency }) {
+                    return {
+                        version: ++materialVersion,
+                        texture: GetDependency("texture:stone"),
+                    };
+                },
+                Release(material) {
+                    releases.push(["material", material.version]);
+                },
+            },
+        },
+    );
+
+    const textureLease = await manager.Acquire("texture:stone");
+    const materialLease = await manager.Acquire("material:stone");
+    const textureHandle = textureLease.Handle;
+    const materialHandle = materialLease.Handle;
+    const firstTexture = textureHandle.Current;
+    const firstMaterial = materialHandle.Current;
+
+    const staged = await manager.StageReload("texture:stone");
+
+    assert.deepEqual(staged.affectedAssetIds, [
+        "texture:stone",
+        "material:stone",
+    ]);
+    assert.strictEqual(textureHandle.Current, firstTexture);
+    assert.strictEqual(materialHandle.Current, firstMaterial);
+
+    const cleanupPromise = manager.CommitStagedReload();
+
+    assert.strictEqual(textureHandle.Current, textures[1]);
+    assert.strictEqual(materialHandle.Current.texture, textures[1]);
+    assert.equal(textureHandle.Version, 2);
+    assert.equal(materialHandle.Version, 2);
+
+    await cleanupPromise;
+
+    assert.deepEqual(releases, [
+        ["material", 1],
+        ["texture", 1],
+    ]);
+
+    await materialLease.Release();
+    await textureLease.Release();
+});
+
+test("keeps live dependencies when a dependent reload fails", async () => {
+    const textures = [];
+    const releasedTextures = [];
+    let materialLoadCount = 0;
+    const manager = CreateAssetManager(
+        [
+            CreateDescriptor("texture:stone"),
+            CreateDescriptor("material:stone", ["texture:stone"]),
+        ],
+        {
+            "loader:texture:stone": {
+                Load() {
+                    const texture = { version: textures.length + 1 };
+                    textures.push(texture);
+                    return texture;
+                },
+                Release(texture) {
+                    releasedTextures.push(texture);
+                },
+            },
+            "loader:material:stone": {
+                Load(_descriptor, { GetDependency }) {
+                    materialLoadCount += 1;
+
+                    if (materialLoadCount === 2) {
+                        throw new Error("Invalid updated material.");
+                    }
+
+                    return {
+                        texture: GetDependency("texture:stone"),
+                    };
+                },
+            },
+        },
+    );
+
+    const textureLease = await manager.Acquire("texture:stone");
+    const materialLease = await manager.Acquire("material:stone");
+    const originalTexture = textureLease.Handle.Current;
+    const originalMaterial = materialLease.Handle.Current;
+
+    await assert.rejects(
+        manager.StageReload("texture:stone"),
+        /Failed to stage reload for texture:stone/,
+    );
+
+    assert.strictEqual(textureLease.Handle.Current, originalTexture);
+    assert.strictEqual(materialLease.Handle.Current, originalMaterial);
+    assert.equal(textureLease.Handle.Version, 1);
+    assert.equal(materialLease.Handle.Version, 1);
+    assert.deepEqual(releasedTextures, [textures[1]]);
+    assert.equal(manager.GetState("texture:stone"), "loaded");
+    assert.equal(manager.GetState("material:stone"), "loaded");
+
+    await materialLease.Release();
+    await textureLease.Release();
+});

@@ -6,32 +6,42 @@ import { MeshRenderer } from "../../src/components/graphics/mesh-renderer.js";
 import { Material } from "../../src/graphics/material.js";
 import { AngularVelocity } from "../../src/components/angular-velocity.js";
 import { Transform } from "../../src/components/transform.js";
+import { AssetHandle } from "../../src/core/assets/asset-handle.js";
 import { CreateSceneComponentRegistry } from "../../src/components/register-scene-components.js";
 import { SceneLoader } from "../../src/core/scene-loader.js";
 import { Scene } from "../../src/core/scene.js";
 import { EcsDocumentAdapter } from "../../src/serialization/adapters/ecs-document-adapter.js";
 import { JsonFormat } from "../../src/serialization/json-format.js";
 
+function CreateLoadedHandle(assetId, asset) {
+    const handle = new AssetHandle(assetId);
+    handle._Replace(asset);
+    return handle;
+}
+
 test("serializes and loads ECS data through registered component codecs", async () => {
     const componentRegistry = CreateSceneComponentRegistry();
     const mesh = CreateCubeMesh();
     const material = new Material({ bitmap: {} });
+    const meshHandle = CreateLoadedHandle("builtin:cube", mesh);
+    const materialHandle = CreateLoadedHandle(
+        "material:grass",
+        material,
+    );
+    const materialHandlesBySlot = Object.fromEntries(
+        mesh.Submeshes.map(({ materialSlot }) => [
+            materialSlot,
+            materialHandle,
+        ]),
+    );
     const services = {
-        ResolveMesh(assetId) {
+        ResolveMeshHandle(assetId) {
             assert.equal(assetId, "builtin:cube");
-            return mesh;
+            return meshHandle;
         },
-        GetMeshAssetId(resolvedMesh) {
-            assert.strictEqual(resolvedMesh, mesh);
-            return "builtin:cube";
-        },
-        ResolveMaterial(assetId) {
+        ResolveMaterialHandle(assetId) {
             assert.equal(assetId, "material:grass");
-            return material;
-        },
-        GetMaterialAssetId(resolvedMaterial) {
-            assert.strictEqual(resolvedMaterial, material);
-            return "material:grass";
+            return materialHandle;
         },
     };
     const scene = new Scene("serializer-check");
@@ -59,7 +69,7 @@ test("serializes and loads ECS data through registered component codecs", async 
     scene.EntityManager.AddComponent(
         meshEntityId,
         MeshRenderer,
-        new MeshRenderer(mesh, material),
+        new MeshRenderer(meshHandle, materialHandlesBySlot),
     );
 
     const adapter = new EcsDocumentAdapter(componentRegistry);
@@ -119,6 +129,11 @@ test("loads version 2 mesh renderers with a default material asset", async () =>
     const componentRegistry = CreateSceneComponentRegistry();
     const mesh = CreateCubeMesh();
     const material = new Material({ bitmap: {} });
+    const meshHandle = CreateLoadedHandle("builtin:cube", mesh);
+    const materialHandle = CreateLoadedHandle(
+        "material:grass",
+        material,
+    );
     const document = {
         format: "astral-scene",
         version: 2,
@@ -180,8 +195,8 @@ test("loads version 2 mesh renderers with a default material asset", async () =>
                 async Acquire() {},
             },
             services: {
-                ResolveMesh: () => mesh,
-                ResolveMaterial: () => material,
+                ResolveMeshHandle: () => meshHandle,
+                ResolveMaterialHandle: () => materialHandle,
             },
         },
     );
