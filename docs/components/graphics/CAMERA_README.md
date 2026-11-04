@@ -2,60 +2,70 @@
 
 ## Purpose
 
-`Camera` stores perspective settings and creates view and projection matrices for rendering. It reads position and rotation from a caller-provided `Transform`; it does not own that transform, choose an active camera, or draw objects. `RenderSystem.Prepare()` uses the camera entity ID supplied by its caller. See [Transform](../TRANSFORM_README.md) and [Entity Manager](../../core/ENTITY_MANAGER_README.md) for related data and ECS context.
+`Camera` stores perspective settings and reusable view and projection matrices. `CameraControlSystem` optionally moves the active camera when its entity also has a `CameraController`. The scene selects which camera renders; these classes do not create or activate scenes. See [Scene Management](../../core/SCENE_MANAGEMENT_README.md) and [Input](../../core/INPUT_README.md).
 
 ## Main parts and responsibilities
 
 | Part | Responsibility |
 | --- | --- |
-| `Camera` | Stores perspective settings and reusable view and projection matrices. |
-| `constructor()` | Sets the default field of view and clipping planes and creates the matrix arrays. |
-| `UpdateMatrices()` | Updates the view and projection matrices and returns references to them. |
-| `SetViewMatrixFromTransform()` | Builds a view matrix from a transform's position and rotation. |
-| `SetPerspectiveMatrix()` | Validates perspective settings and writes a perspective projection matrix. |
+| `Camera()` | Builds view and perspective matrices from camera settings |
+| `Camera.UpdateMatrices(transform, aspectRatio)` | Builds a view matrix from local position and rotation |
+| `Camera.UpdateMatricesFromWorldMatrix(worldMatrix, aspectRatio)` | Builds a view matrix from the camera's world matrix |
+| `CameraController(settings)` | Stores validated movement and look settings |
+| `ValidateCameraControllerSettings(controller)` | Checks controller value ranges |
+| `CameraControlSystem.Initialize()` / `Shutdown()` | Acquires and clears the input service |
+| `CameraControlSystem.FixedUpdate(scene, context)` | Applies pointer look and movement to the active camera transform |
+| `Scene.SetActiveCameraEntity(entityId)` | Selects an entity that has both `Camera` and `Transform` |
 
-## Ownership
+## Camera data and matrices
 
-- Each `Camera` owns its `_viewMatrix` and `_projectionMatrix` arrays.
-- `UpdateMatrices()` does not store or own the supplied `Transform`.
-- Each call returns a new object that refers to the camera's existing matrix arrays.
-- The matrix arrays are overwritten by later calls to `UpdateMatrices()`.
+- `fieldOfView` - Vertical field of view in radians; default is π/3
+- `nearPlane` - Near clipping distance; default is `0.1`
+- `farPlane` - Far clipping distance; default is `100`
+- `UpdateMatrices()` and `UpdateMatricesFromWorldMatrix()` return `{ viewMatrix, projectionMatrix }`
+- The returned matrix arrays are owned and reused by the `Camera`; copy them to retain a snapshot
+- The projection matrix is recomputed when field of view, aspect ratio, near plane, or far plane changes
+- Invalid perspective values or a non-positive aspect ratio throw
+- The world-matrix path requires an invertible camera transform; zero scale can make it fail
+- Scene component serialization validates `0 < fieldOfView < π`, `nearPlane > 0`, and `farPlane > nearPlane`
 
-## Camera data
+## Camera controller settings
 
-- `fieldOfView` - Vertical field of view in radians. Defaults to `Math.PI / 3`.
-- `nearPlane` - Near clipping distance. Defaults to `0.1`.
-- `farPlane` - Far clipping distance. Defaults to `100`.
-- `_viewMatrix` - A 16-element `Float32Array` for the view matrix.
-- `_projectionMatrix` - A 16-element `Float32Array` for the projection matrix.
+- `movementSpeed` - Finite value greater than or equal to zero
+- `runMultiplier` - Finite value greater than or equal to one
+- `lookSensitivity` - Finite value greater than or equal to zero
+- `maxPitchRadians` - Finite value greater than zero and less than π/2
+- Missing settings or values outside these ranges throw
 
-## Matrix updates
+## Camera controls
 
-- `UpdateMatrices(transform, aspectRatio)` reads `transform.position` and `transform.rotation`.
-- `SetViewMatrixFromTransform()` writes the view matrix using the inverse camera rotation and position.
-- `SetPerspectiveMatrix()` writes the projection matrix using `fieldOfView`, `aspectRatio`, `nearPlane`, and `farPlane`.
-- The projection matrix uses WebGPU's 0-to-1 depth range.
-- The matrices are stored in column-major order for WGSL.
+- The system requires the input service methods `IsActionDown()`, `GetPointerDelta()`, and `IsPointerLocked()`
+- It also requires these actions to exist: `moveForward`, `moveBackward`, `moveLeft`, `moveRight`, and `run`
+- Mouse look runs only while pointer-locked; pitch is clamped and yaw is wrapped to the range around ±π
+- Movement follows the camera's horizontal world direction; parent transforms convert the world movement into local position changes
+- Diagonal input is normalized
+- Holding `run` multiplies movement speed by `runMultiplier`
+- No active camera or no `CameraController` means no camera movement; a controller without `Transform` throws
+- `CameraControlSystem` must be initialized by the scene before `FixedUpdate()`; otherwise it throws
 
-## Invalid input
+## Active camera
 
-- `SetPerspectiveMatrix()` throws a `RangeError` if an input is not finite, the field of view is not between 0 and π, the aspect ratio is not positive, the near plane is not positive, or the far plane is not greater than the near plane.
-- `UpdateMatrices()` updates the view matrix before it validates the projection settings. If projection settings are invalid, it throws and does not return the matrices. The projection matrix keeps its previous contents, or its initial zero values.
-- The camera does not validate the supplied transform. A missing transform can cause a `TypeError`; invalid position or rotation values can produce invalid view-matrix values.
-
-## Design choices and tradeoffs
-
-- **Separate camera settings from `Transform`.** The transform controls camera position and rotation; the camera controls projection. The caller must provide both.
-- **Reuse matrix arrays.** This avoids allocating new arrays on each update, but callers must copy a matrix if they need to keep a snapshot.
-- **Use perspective projection only.** Orthographic projection is not implemented.
+- The active camera entity must exist and contain both `Camera` and `Transform`
+- The scene loader requires `activeCameraEntityId` in every scene document
+- The render system uses the active camera's world matrix so parent transforms affect the view
+- A scene cannot remove or destroy its active camera until another camera is selected
 
 ## Current scope
 
-- A `Camera` can be stored on an entity with `EntityManager`.
-- `RenderSystem.Prepare()` uses the camera entity ID supplied by its caller; automatic active-camera selection is not implemented.
-- The camera does not manage viewport size or render objects.
+- The controller moves on the horizontal plane and does not implement vertical movement
+- Camera control is a sample system; applications can register another camera system
+- Camera settings are perspective-only
 
 ## Source
 
 - `src/components/graphics/camera.js`
+- `src/components/graphics/camera-controller.js`
+- `src/systems/camera-control-system.js`
 - `src/math/matrix4.js`
+- `src/core/scene.js`
+- `src/systems/render-system.js`

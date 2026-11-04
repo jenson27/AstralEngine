@@ -40,18 +40,23 @@ export class ComponentStorage {
         }
 
         const lastIndex = this._entities.length - 1;
-        const lastEntityId = this._entities[lastIndex];
 
         if (componentIndex !== lastIndex) {
-            this._entities[componentIndex] = lastEntityId;
-            this._components[componentIndex] = this._components[lastIndex];
-            this._indices.set(lastEntityId, componentIndex);
+            this._MoveLastEntryToIndex(componentIndex, lastIndex);
         }
 
         this._entities.pop();
         this._components.pop();
         this._indices.delete(entityId);
         return true;
+    }
+
+    _MoveLastEntryToIndex(componentIndex, lastIndex) {
+        const lastEntityId = this._entities[lastIndex];
+
+        this._entities[componentIndex] = lastEntityId;
+        this._components[componentIndex] = this._components[lastIndex];
+        this._indices.set(lastEntityId, componentIndex);
     }
 
     *EntityIds() {

@@ -30,12 +30,25 @@ export class Mesh {
             },
         ];
 
+        const normalizedSubmeshes = this._CreateNormalizedSubmeshes(
+            sourceSubmeshes,
+            vertexCount,
+        );
+        this._ValidateSubmeshCoverage(normalizedSubmeshes, vertexCount);
+
+        this._positions = positions.slice();
+        this._uvs = uvs.slice();
+        this._submeshes = Object.freeze(normalizedSubmeshes);
+    }
+
+    _CreateNormalizedSubmeshes(sourceSubmeshes, vertexCount) {
         if (!Array.isArray(sourceSubmeshes) || sourceSubmeshes.length === 0) {
             throw new TypeError("Mesh must have at least one submesh.");
         }
 
         const seenSlots = new Set();
-        const normalizedSubmeshes = sourceSubmeshes.map((submesh) => {
+
+        return sourceSubmeshes.map((submesh) => {
             if (!submesh || typeof submesh !== "object") {
                 throw new TypeError("Each submesh must be an object.");
             }
@@ -77,8 +90,10 @@ export class Mesh {
                 vertexCount: submeshVertexCount,
             });
         });
+    }
 
-        const orderedSubmeshes = [...normalizedSubmeshes].sort(
+    _ValidateSubmeshCoverage(submeshes, vertexCount) {
+        const orderedSubmeshes = [...submeshes].sort(
             (a, b) => a.firstVertex - b.firstVertex,
         );
         let expectedFirstVertex = 0;
@@ -98,10 +113,6 @@ export class Mesh {
                 "Submesh ranges must cover every mesh vertex.",
             );
         }
-
-        this._positions = positions.slice();
-        this._uvs = uvs.slice();
-        this._submeshes = Object.freeze(normalizedSubmeshes);
     }
 
     get VertexCount() {

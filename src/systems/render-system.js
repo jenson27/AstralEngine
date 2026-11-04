@@ -30,8 +30,8 @@ export class RenderSystem {
             );
         }
 
-        const cameraMatrices = camera.UpdateMatrices(
-            cameraTransform,
+        const cameraMatrices = camera.UpdateMatricesFromWorldMatrix(
+            cameraTransform.WorldMatrix,
             aspectRatio,
         );
         const renderItems = [];
@@ -47,7 +47,7 @@ export class RenderSystem {
                 meshHandle: meshRenderer.MeshHandle,
                 materialHandlesBySlot:
                     meshRenderer.MaterialHandlesBySlot,
-                modelMatrix: transform.GetModelMatrix(),
+                modelMatrix: transform.WorldMatrix,
             });
         }
 

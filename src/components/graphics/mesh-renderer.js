@@ -2,63 +2,80 @@ import { AssetHandle } from "../../core/assets/asset-handle.js";
 import { Mesh } from "../../graphics/mesh.js";
 import { Material } from "../../graphics/material.js";
 
+function ValidateMeshHandle(meshHandle) {
+    if (!(meshHandle instanceof AssetHandle)) {
+        throw new TypeError("MeshRenderer requires a mesh asset handle.");
+    }
+
+    return meshHandle;
+}
+
+function NormalizeMaterialHandlesBySlot(
+    meshHandle,
+    materialHandlesBySlot,
+) {
+    if (
+        !materialHandlesBySlot ||
+        typeof materialHandlesBySlot !== "object" ||
+        Array.isArray(materialHandlesBySlot)
+    ) {
+        throw new TypeError(
+            "MeshRenderer requires material handles keyed by mesh slot.",
+        );
+    }
+
+    const mesh = meshHandle.Current;
+
+    if (!(mesh instanceof Mesh)) {
+        throw new TypeError(
+            "MeshRenderer mesh handle must contain a Mesh.",
+        );
+    }
+
+    const normalizedHandles = Object.create(null);
+    const validSlots = new Set();
+
+    for (const { materialSlot } of mesh.Submeshes) {
+        validSlots.add(materialSlot);
+
+        const materialHandle = materialHandlesBySlot[materialSlot];
+
+        if (!(materialHandle instanceof AssetHandle)) {
+            throw new TypeError(
+                `MeshRenderer requires a material handle for slot "${materialSlot}".`,
+            );
+        }
+
+        if (!(materialHandle.Current instanceof Material)) {
+            throw new TypeError(
+                `Material handle for slot "${materialSlot}" must contain a Material.`,
+            );
+        }
+
+        normalizedHandles[materialSlot] = materialHandle;
+    }
+
+    for (const materialSlot of Object.keys(materialHandlesBySlot)) {
+        if (!validSlots.has(materialSlot)) {
+            throw new Error(
+                `Mesh has no material slot named "${materialSlot}".`,
+            );
+        }
+    }
+
+    return Object.freeze(normalizedHandles);
+}
+
 export class MeshRenderer {
     constructor(meshHandle, materialHandlesBySlot) {
-        if (!(meshHandle instanceof AssetHandle)) {
-            throw new TypeError("MeshRenderer requires a mesh asset handle.");
-        }
+        const validatedMeshHandle = ValidateMeshHandle(meshHandle);
+        const normalizedHandles = NormalizeMaterialHandlesBySlot(
+            validatedMeshHandle,
+            materialHandlesBySlot,
+        );
 
-        if (
-            !materialHandlesBySlot ||
-            typeof materialHandlesBySlot !== "object" ||
-            Array.isArray(materialHandlesBySlot)
-        ) {
-            throw new TypeError(
-                "MeshRenderer requires material handles keyed by mesh slot.",
-            );
-        }
-
-        const mesh = meshHandle.Current;
-
-        if (!(mesh instanceof Mesh)) {
-            throw new TypeError(
-                "MeshRenderer mesh handle must contain a Mesh.",
-            );
-        }
-
-        const normalizedHandles = Object.create(null);
-        const validSlots = new Set();
-
-        for (const { materialSlot } of mesh.Submeshes) {
-            validSlots.add(materialSlot);
-
-            const materialHandle = materialHandlesBySlot[materialSlot];
-
-            if (!(materialHandle instanceof AssetHandle)) {
-                throw new TypeError(
-                    `MeshRenderer requires a material handle for slot "${materialSlot}".`,
-                );
-            }
-
-            if (!(materialHandle.Current instanceof Material)) {
-                throw new TypeError(
-                    `Material handle for slot "${materialSlot}" must contain a Material.`,
-                );
-            }
-
-            normalizedHandles[materialSlot] = materialHandle;
-        }
-
-        for (const materialSlot of Object.keys(materialHandlesBySlot)) {
-            if (!validSlots.has(materialSlot)) {
-                throw new Error(
-                    `Mesh has no material slot named "${materialSlot}".`,
-                );
-            }
-        }
-
-        this._meshHandle = meshHandle;
-        this._materialHandlesBySlot = Object.freeze(normalizedHandles);
+        this._meshHandle = validatedMeshHandle;
+        this._materialHandlesBySlot = normalizedHandles;
     }
 
     get mesh() {

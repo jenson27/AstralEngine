@@ -113,34 +113,11 @@ export class AstralLogger {
 
     static _SerializeDetails(details) {
         if (details instanceof AggregateError) {
-            return {
-                name: details.name,
-                message: details.message,
-                stack: details.stack,
-                errors: Array.from(details.errors, (error) =>
-                    AstralLogger._SerializeDetails(error),
-                ),
-            };
+            return AstralLogger._SerializeAggregateError(details);
         }
 
         if (details instanceof Error) {
-            const serializedError = {
-                name: details.name,
-                message: details.message,
-                stack: details.stack,
-            };
-
-            if (details.cause !== undefined) {
-                serializedError.cause = AstralLogger._SerializeDetails(
-                    details.cause,
-                );
-            }
-
-            if (details.command !== undefined) {
-                serializedError.command = details.command;
-            }
-
-            return serializedError;
+            return AstralLogger._SerializeError(details);
         }
 
         try {
@@ -148,5 +125,36 @@ export class AstralLogger {
         } catch {
             return String(details);
         }
+    }
+
+    static _SerializeAggregateError(details) {
+        return {
+            name: details.name,
+            message: details.message,
+            stack: details.stack,
+            errors: Array.from(details.errors, (error) =>
+                AstralLogger._SerializeDetails(error),
+            ),
+        };
+    }
+
+    static _SerializeError(details) {
+        const serializedError = {
+            name: details.name,
+            message: details.message,
+            stack: details.stack,
+        };
+
+        if (details.cause !== undefined) {
+            serializedError.cause = AstralLogger._SerializeDetails(
+                details.cause,
+            );
+        }
+
+        if (details.command !== undefined) {
+            serializedError.command = details.command;
+        }
+
+        return serializedError;
     }
 }

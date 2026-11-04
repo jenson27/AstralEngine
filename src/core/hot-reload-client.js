@@ -232,7 +232,12 @@ export class HotReloadClient {
             return;
         }
 
-        for (const sourcePath of message.paths) {
+        this._QueueChangedPaths(message.paths);
+        this._ProcessPendingReloads();
+    }
+
+    _QueueChangedPaths(paths) {
+        for (const sourcePath of paths) {
             if (this._IsActiveScenePath(sourcePath)) {
                 this._pendingSceneUrls.add(
                     this._sceneManager.ActiveSceneUrl,
@@ -253,8 +258,6 @@ export class HotReloadClient {
                 }
             }
         }
-
-        this._ProcessPendingReloads();
     }
 
     _ProcessPendingReloads() {

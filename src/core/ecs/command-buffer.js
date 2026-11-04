@@ -40,6 +40,11 @@ export class CommandBuffer {
         return true;
     }
 
+    IsEntityPendingDestroy(entityId) {
+        this._RequireActive();
+        return this._pendingDestroyEntities.has(entityId);
+    }
+
     Flush(entityManager) {
         this._RequireActive();
         const commands = this._commands;
@@ -72,17 +77,7 @@ export class CommandBuffer {
                             );
                     }
                 } catch (error) {
-                    const commandError = new Error(
-                        `Failed to apply ECS command "${command.type}" ` +
-                            `for entity ${command.entityId}.`,
-                    );
-                    commandError.cause = error;
-                    commandError.command = {
-                        type: command.type,
-                        entityId: command.entityId,
-                        componentType: command.componentType?.name ?? null,
-                    };
-                    errors.push(commandError);
+                    errors.push(this._CreateCommandError(command, error));
                 }
             }
         } finally {
@@ -99,6 +94,21 @@ export class CommandBuffer {
                 `Failed to apply ${errors.length} ECS command(s).`,
             );
         }
+    }
+
+    _CreateCommandError(command, error) {
+        const commandError = new Error(
+            `Failed to apply ECS command "${command.type}" ` +
+                `for entity ${command.entityId}.`,
+        );
+        commandError.cause = error;
+        commandError.command = {
+            type: command.type,
+            entityId: command.entityId,
+            componentType: command.componentType?.name ?? null,
+        };
+
+        return commandError;
     }
 
     Dispose() {

@@ -29,16 +29,72 @@ function ValidateJsonValue(value, path = "$", ancestors = new Set()) {
         throw new TypeError(`Circular reference at ${path}.`);
     }
 
-    const isArray = Array.isArray(value);
+    if (Array.isArray(value)) {
+        ValidateJsonArray(value, path, ancestors);
+        return;
+    }
 
-    if (!isArray) {
-        const prototype = Object.getPrototypeOf(value);
+    ValidateJsonObject(value, path, ancestors);
+}
 
-        if (prototype !== Object.prototype && prototype !== null) {
-            throw new TypeError(
-                `Expected a plain object at ${path}.`,
-            );
+function ValidateJsonArray(value, path, ancestors) {
+    if (Object.getOwnPropertySymbols(value).length > 0) {
+        throw new TypeError(`Symbol property found at ${path}.`);
+    }
+
+    ancestors.add(value);
+
+    try {
+        for (const key of Object.getOwnPropertyNames(value)) {
+            if (key === "length") {
+                continue;
+            }
+
+            const index = Number(key);
+            if (
+                !Number.isInteger(index) ||
+                index < 0 ||
+                index >= value.length ||
+                String(index) !== key
+            ) {
+                throw new TypeError(
+                    `Non-index array property found at ${path}[${key}].`,
+                );
+            }
         }
+
+        for (let index = 0; index < value.length; index++) {
+            const itemPath = `${path}[${index}]`;
+
+            if (!Object.hasOwn(value, index)) {
+                throw new TypeError(`Sparse array item at ${itemPath}.`);
+            }
+
+            const descriptor = Object.getOwnPropertyDescriptor(
+                value,
+                String(index),
+            );
+
+            if (!descriptor || !Object.hasOwn(descriptor, "value")) {
+                throw new TypeError(
+                    `Accessor property found at ${itemPath}.`,
+                );
+            }
+
+            ValidateJsonValue(descriptor.value, itemPath, ancestors);
+        }
+    } finally {
+        ancestors.delete(value);
+    }
+}
+
+function ValidateJsonObject(value, path, ancestors) {
+    const prototype = Object.getPrototypeOf(value);
+
+    if (prototype !== Object.prototype && prototype !== null) {
+        throw new TypeError(
+            `Expected a plain object at ${path}.`,
+        );
     }
 
     if (Object.getOwnPropertySymbols(value).length > 0) {
@@ -48,49 +104,6 @@ function ValidateJsonValue(value, path = "$", ancestors = new Set()) {
     ancestors.add(value);
 
     try {
-        if (isArray) {
-            for (const key of Object.getOwnPropertyNames(value)) {
-                if (key === "length") {
-                    continue;
-                }
-
-                const index = Number(key);
-                if (
-                    !Number.isInteger(index) ||
-                    index < 0 ||
-                    index >= value.length ||
-                    String(index) !== key
-                ) {
-                    throw new TypeError(
-                        `Non-index array property found at ${path}[${key}].`,
-                    );
-                }
-            }
-
-            for (let index = 0; index < value.length; index++) {
-                const itemPath = `${path}[${index}]`;
-
-                if (!Object.hasOwn(value, index)) {
-                    throw new TypeError(`Sparse array item at ${itemPath}.`);
-                }
-
-                const descriptor = Object.getOwnPropertyDescriptor(
-                    value,
-                    String(index),
-                );
-
-                if (!descriptor || !Object.hasOwn(descriptor, "value")) {
-                    throw new TypeError(
-                        `Accessor property found at ${itemPath}.`,
-                    );
-                }
-
-                ValidateJsonValue(descriptor.value, itemPath, ancestors);
-            }
-
-            return;
-        }
-
         for (const key of Object.getOwnPropertyNames(value)) {
             const propertyPath = `${path}[${JSON.stringify(key)}]`;
             const descriptor = Object.getOwnPropertyDescriptor(value, key);

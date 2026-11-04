@@ -1,6 +1,7 @@
 import {
     SetPerspectiveMatrix,
     SetViewMatrixFromTransform,
+    SetViewMatrixFromWorldMatrix,
 } from "../../math/matrix4.js";
 
 export class Camera {
@@ -21,6 +22,16 @@ export class Camera {
             transform.rotation,
         );
 
+        return this._UpdateProjectionMatrix(aspectRatio);
+    }
+
+    UpdateMatricesFromWorldMatrix(worldMatrix, aspectRatio) {
+        SetViewMatrixFromWorldMatrix(this._viewMatrix, worldMatrix);
+
+        return this._UpdateProjectionMatrix(aspectRatio);
+    }
+
+    _UpdateProjectionMatrix(aspectRatio) {
         const projectionChanged =
             this._projectionParameters === null ||
             this._projectionParameters.fieldOfView !== this.fieldOfView ||

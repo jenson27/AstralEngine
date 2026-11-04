@@ -314,12 +314,18 @@ export class WebGPURenderer {
             throw new TypeError("Render item requires a Mesh.");
         }
 
-        let meshResource = this._meshResources.get(mesh);
+        const meshResource = this._meshResources.get(mesh);
 
         if (meshResource) {
             return meshResource;
         }
 
+        const newMeshResource = this._CreateMeshResource(mesh);
+        this._meshResources.set(mesh, newMeshResource);
+        return newMeshResource;
+    }
+
+    _CreateMeshResource(mesh) {
         const positions = mesh.GetPositions();
         const uvs = mesh.GetUVs();
         const vertexData = new Float32Array(mesh.VertexCount * 5);
@@ -342,13 +348,11 @@ export class WebGPURenderer {
 
         this._device.queue.writeBuffer(vertexBuffer, 0, vertexData);
 
-        meshResource = {
+        return {
             vertexBuffer,
             vertexCount: mesh.VertexCount,
             submeshes: mesh.Submeshes,
         };
-        this._meshResources.set(mesh, meshResource);
-        return meshResource;
     }
 
     _GetTextureResource(imageAsset) {

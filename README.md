@@ -1,72 +1,48 @@
 # AstralEngine
 
-This repository contains the initial browser shell for AstralEngine.
+AstralEngine is a JavaScript 3D engine that runs in a browser. It uses an entity-component-system design, JSON scene and asset data, and WebGPU for rendering.
 
 ## Documentation
 
-### Start here
-
-- [Engine Documentation](docs/SRC_README.md) - Index to the engine guides.
+- [Engine documentation](docs/SRC_README.md) - Index to the system guides
+- [Browser shell](docs/SHELL_README.md) - Browser page and startup context
 
 ## Requirements
 
-- Node.js
-- A browser that supports WebGPU
+- Node.js and npm
+- A browser with WebGPU support
+- The project uses PM2 as a development dependency to run the local server
 
-The project currently has no third-party npm dependencies.
+## Install and run
 
-## Run locally
-
-Open a terminal in the repository root and run:
-
-1. Install Node.js.
-2. Copy or clone this repository to the PC.
-3. Open a terminal in the repository root.
-4. Run `pm2 start server.cjs --name astral-engine`.
-5. Open [http://localhost:8000](http://localhost:8000).
-
-You do not need to run `npm install` for the current shell because it has no npm dependencies.
-
-## npm packages
-
-When the project gains npm packages, install them from the repository root. Replace `<package>` with the package's real name:
+From the repository root:
 
 ```powershell
-npm install <package>
+npm install
+npx pm2 start server.cjs --name astral-engine
 ```
 
-For a development tool, use:
+Open [http://localhost:8000](http://localhost:8000) in a WebGPU-capable browser.
+The local server serves the page and files from the repository and provides the engine's log and asset hot-reload endpoints.
+
+View server output:
 
 ```powershell
-npm install --save-dev <package>
-```
-
-Commit both `package.json` and `package-lock.json`. On another PC, run `npm ci` to install the versions recorded in the lockfile.
-
-From the repository root, start the server with PM2:
-
-```powershell
-pm2 start server.cjs --name astral-engine
-```
-
-View the server logs:
-
-```powershell
-pm2 logs astral-engine
+npx pm2 logs astral-engine
 ```
 
 Stop the server:
 
 ```powershell
-pm2 stop astral-engine
+npx pm2 stop astral-engine
 ```
 
 ## Tests
 
-Run the tests from the repository root:
+Run the test suite from the repository root:
 
 ```powershell
 npm test
 ```
 
-This runs Node.js's built-in test runner with the test files under `tests/`.
+This runs the tests with Node.js's built-in test runner.

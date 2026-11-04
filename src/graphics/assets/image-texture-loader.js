@@ -35,7 +35,16 @@ export class ImageTextureLoader {
 
         const blob = await response.blob();
         const bitmap = await this._bitmapDecoder(blob);
+        this._ValidateBitmap(bitmap);
 
+        return {
+            bitmap,
+            width: bitmap.width,
+            height: bitmap.height,
+        };
+    }
+
+    _ValidateBitmap(bitmap) {
         if (!bitmap || typeof bitmap.close !== "function") {
             throw new TypeError(
                 "Image decoder returned an invalid bitmap.",
@@ -53,12 +62,6 @@ export class ImageTextureLoader {
                 "Decoded image must have a valid width and height.",
             );
         }
-
-        return {
-            bitmap,
-            width: bitmap.width,
-            height: bitmap.height,
-        };
     }
 
     Release(imageAsset) {

@@ -121,26 +121,12 @@ export class TypeSerializerRegistry {
         }
 
         const serializationContext = SerializationContext.From(context);
-        let data = record.data;
-        let version = record.version;
-
-        while (version < registration.Version) {
-            if (!registration.Migrate) {
-                throw new Error(
-                    `No migration for "${record.typeId}" from version ${version}.`,
-                );
-            }
-
-            data = registration.Migrate(data, version, serializationContext);
-            if (data === undefined) {
-                throw new TypeError(
-                    `Migration for "${record.typeId}" returned undefined.`,
-                );
-            }
-
-            version += 1;
-        }
-
+        const data = this._MigrateDataToCurrentVersion(
+            record.data,
+            record.version,
+            registration,
+            serializationContext,
+        );
         const value = registration.Deserialize(data, serializationContext);
         if (!(value instanceof registration.runtimeType)) {
             throw new TypeError(
@@ -149,5 +135,26 @@ export class TypeSerializerRegistry {
         }
 
         return value;
+    }
+
+    _MigrateDataToCurrentVersion(data, version, registration, context) {
+        while (version < registration.Version) {
+            if (!registration.Migrate) {
+                throw new Error(
+                    `No migration for "${registration.typeId}" from version ${version}.`,
+                );
+            }
+
+            data = registration.Migrate(data, version, context);
+            if (data === undefined) {
+                throw new TypeError(
+                    `Migration for "${registration.typeId}" returned undefined.`,
+                );
+            }
+
+            version += 1;
+        }
+
+        return data;
     }
 }

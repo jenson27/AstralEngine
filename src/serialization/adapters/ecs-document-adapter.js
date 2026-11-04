@@ -53,7 +53,6 @@ export class EcsDocumentAdapter {
             );
         }
 
-        const assetIds = new Set();
         const entities = entityIds.map((entityId) => ({
             name: entityManager.GetEntityName(entityId),
             id: entityId,
@@ -66,6 +65,19 @@ export class EcsDocumentAdapter {
                     ),
                 ),
         }));
+
+        return {
+            format: "astral-scene",
+            version: 1,
+            name: scene.Name,
+            activeCameraEntityId,
+            assets: this._CollectAssetIds(entities),
+            entities,
+        };
+    }
+
+    _CollectAssetIds(entities) {
+        const assetIds = new Set();
 
         for (const entity of entities) {
             for (const component of entity.components) {
@@ -83,13 +95,6 @@ export class EcsDocumentAdapter {
             }
         }
 
-        return {
-            format: "astral-scene",
-            version: 1,
-            name: scene.Name,
-            activeCameraEntityId,
-            assets: [...assetIds].sort(),
-            entities,
-        };
+        return [...assetIds].sort();
     }
 }

@@ -2,106 +2,99 @@
 
 ## Purpose
 
-`EntityManager` creates entity IDs and stores component objects by an explicitly supplied component type. `ComponentStorage` stores each component type, and `CommandBuffer` queues membership changes for later application. The entity manager does not run game logic; systems query it and update component data. See [Engine](ENGINE_README.md) for how the engine calls game updates.
+`EntityManager` stores entity IDs, names, and components grouped by runtime component class. It provides queries and structural changes, but it does not define component behavior; systems do that. See [Scene Management](SCENE_MANAGEMENT_README.md) for scene ownership and deferred updates.
 
 ## Main parts and responsibilities
 
 | Part | Responsibility |
 | --- | --- |
-| `EntityManager` | Owns entity IDs, names, component stores, query state, and component-removal handlers. |
-| `EntityManager.constructor()` | Initializes the empty ECS stores. |
-| `CreateEntity()` | Creates an entity with an ID and name, then returns its ID. |
-| `GetEntityName()` / `SetEntityName()` | Reads or changes an entity name. |
-| `DestroyEntity()` | Removes an entity and all its components. |
-| `AddComponent()` | Stores a component under the supplied component type. |
-| `GetComponent()` / `HasComponent()` | Reads or checks a component for an entity. |
-| `RemoveComponent()` | Removes a component and queues its removal notification when handlers exist. |
-| `RegisterComponentRemovalHandler()` | Registers a handler for removal of one component type and returns an unregister function. |
-| `DispatchComponentRemovals()` | Calls queued removal handlers and reports handler errors. |
-| `Query()` | Yields entities that have every requested component type. |
-| `ComponentStorage` | Stores entity IDs and component objects for one component type. |
-| `ComponentStorage.constructor()` | Initializes the storage arrays and entity index. |
-| `Size` / `EntityIds()` | Reports the number of stored components and yields their entity IDs. |
-| `Add()` / `Get()` / `Has()` / `Remove()` | Adds, reads, checks, or removes a component in one storage. |
-| `CommandBuffer` | Queues component additions, removals, and entity destruction. |
-| `CommandBuffer.constructor()` | Initializes the command queue and pending-destruction set. |
-| `AddComponent()` / `RemoveComponent()` / `DestroyEntity()` | Adds a structural change to the command queue. |
-| `Flush()` | Applies queued commands in order and reports command errors. |
+| `EntityManager` | Creates and destroys entities, accesses components and names, runs `Query()`, and registers and dispatches removal handlers |
+| `ComponentStorage` | Stores components in packed arrays and exposes `Size`, `Add()`, `Get()`, `Has()`, `Remove()`, and `EntityIds()` |
+| `CommandBuffer` | Queues `AddComponent()`, `RemoveComponent()`, and `DestroyEntity()` commands, checks pending destruction, flushes, and disposes |
+| `CreateEntityId()` / `IsEntityId()` | Creates and validates lowercase UUID entity IDs |
 
 ## Ownership
 
-- `EntityManager` owns the entity `Set`, the entity-name `Map`, the component-store `Map`, and each `ComponentStorage`.
-- The entity-name `Map` uses entity UUIDs as keys and names as values.
-- Each `ComponentStorage` owns arrays of entity IDs and component references, plus an index `Map`.
-- Component objects are stored by reference. The manager does not clone them.
-- A `CommandBuffer` owns its queued commands and pending-destruction set. The caller creates it and passes it to `Flush()`.
-- Queued component-removal records keep references to removed components until they are dispatched.
+- A `Scene` owns its `EntityManager` and supplies a guard for structural changes
+- The manager owns its entity set, name map, component stores, and pending removal records
+- A component instance is stored by reference; the manager does not clone it
+- Removal handlers run only when `DispatchComponentRemovals()` is called
 
-## Entity and component data
+## Entity and component API
 
-- `CreateEntity()` generates a lowercase UUID with `crypto.randomUUID()`. Callers can also supply a lowercase UUID.
-- `CreateEntity()` uses the name `Entity` when no name is supplied. Names are trimmed and do not need to be unique.
-- `GetEntityName()` and `SetEntityName()` read and change names without changing component membership.
-- In browsers, `crypto.randomUUID()` requires a secure context such as HTTPS or localhost.
-- Destroyed IDs are not reused.
-- Component stores are keyed by the component type supplied to `AddComponent()`.
-- A component-removal record contains `entityId`, `componentType`, and `component`.
-- Add-component commands contain an entity ID, a component type, and a component instance.
+| Member | Behaviour |
+| --- | --- |
+| `EntityManager(beforeStructuralChange)` | Creates an empty manager and accepts an optional structural-change guard |
+| `CreateEntity(entityId, name)` | Creates a unique lowercase UUID and a trimmed non-empty name; the ID and name have defaults |
+| `DestroyEntity(entityId)` | Removes one entity and its components; it throws if the ID is unknown or a query is active |
+| `DestroyAllEntities()` | Destroys every entity, subject to the scene's structural-change guard |
+| `GetEntityIds()` | Returns a new array of current IDs |
+| `GetEntityName(entityId)` / `SetEntityName(entityId, name)` | Reads or replaces a validated entity name |
+| `AddComponent(entityId, componentType, component)` | Stores an instance of the given class; duplicate membership throws |
+| `GetComponent(entityId, componentType)` | Returns the stored component or `undefined` |
+| `HasComponent(entityId, componentType)` | Returns whether the entity has that component type |
+| `RemoveComponent(entityId, componentType)` | Removes a component and returns `true`, or returns `false` if it was absent |
+| `GetComponentEntries(entityId)` | Returns the entity's component classes and instances |
+| `Query(...componentTypes)` | Yields entities that have every requested component type |
 
-## Entity and component changes
-
-- `CreateEntity()` adds a lowercase UUID and a non-empty name. It throws a `TypeError` for an invalid UUID or name and an `Error` for a duplicate ID.
-- `GetEntityName()` and `SetEntityName()` throw a `RangeError` when the entity does not exist. `SetEntityName()` throws a `TypeError` for an empty or non-string name.
-- Operations that require an existing entity throw a `RangeError` for an unknown ID.
-- `AddComponent()` requires a component type and an instance of that type. It throws if the instance does not match the type or the entity already has that component type.
-- `GetComponent()` returns `undefined` when the entity has no component of that type.
-- `HasComponent()` returns `false` when no store or component exists for that type.
-- `RemoveComponent()` returns `false` when the component is absent. Otherwise, it removes the component and returns `true`.
-- `DestroyEntity()` removes the entity and all its components. It does not return a value.
-- `DestroyEntity()` also removes the entity's name.
-- Component type arguments must be class constructors. Invalid types cause a `TypeError`.
-- `RegisterComponentRemovalHandler()` throws a `TypeError` if the handler is not a function.
+- Entity IDs must be lowercase UUID strings
+- Names must be non-empty strings; the manager trims them before storing
+- Component types must be classes, and component values must be instances of that class
+- Unknown entity IDs throw `RangeError`; invalid types or values throw `TypeError`
 
 ## Queries and membership changes
 
-- `Query()` requires at least one component type. An empty query throws a `TypeError`.
-- A query with an unregistered component store yields no entities.
-- A query yields entities that have all requested component types.
-- `ComponentStorage.Add()` throws if the entity already has a component in that store. `Get()` returns `undefined` when the entity is absent, and `Remove()` returns `false` when there is no component to remove.
-- `ComponentStorage.Remove()` moves the last stored entry into a removed entry's position. This keeps removal compact, but component iteration order can change.
-- `AddComponent()`, `RemoveComponent()`, and `DestroyEntity()` throw if called while a query is being iterated.
-- `CreateEntity()` is allowed during iteration, but the new entity cannot gain or lose component membership until the active query has ended.
-- Use `CommandBuffer` to defer membership changes until after system queries finish.
+- `Query(...componentTypes)` yields IDs that have every requested component
+- A query requires at least one component class
+- If any component type has no storage, the query yields no IDs
+- The manager iterates the smallest component store, then checks the other stores
+- Add, remove, or destroy operations are blocked while a query iterator is active
+- Storage uses packed arrays; removing an item moves the last entry into its place, so iteration order is not stable
 
 ## Removal notifications
 
-- `RegisterComponentRemovalHandler()` stores handlers in a `Set`, so registering the same function twice does not add a duplicate.
-- The returned function unregisters that handler.
-- A removal is queued only if at least one handler for its type exists when the component is removed.
-- At dispatch time, the manager calls the handlers then registered for that component type. If no handlers remain, it skips the queued record.
-- `DispatchComponentRemovals()` clears the current queue before it calls handlers. Removals queued by handlers are left for the next dispatch.
-- It calls all registered handlers even if some throw, then throws an `AggregateError` containing the handler errors.
-- Removing an entity queues a removal record for each component type that has registered handlers.
+| Member | Behaviour |
+| --- | --- |
+| `RegisterComponentRemovalHandler(componentType, handler)` | Registers a handler and returns a function that unregisters it |
+| `DispatchComponentRemovals()` | Calls registered handlers for queued removals and throws one `AggregateError` after all handlers run if any fail |
+
+- Component removals caused by `RemoveComponent()` or entity destruction are queued only when that type has at least one handler
+- A handler receives `{ entityId, componentType, component }`
+- `EntityManager` does not dispatch notifications automatically
 
 ## Command buffer
 
-- `AddComponent()` queues the component type and instance. `AddComponent()` and `RemoveComponent()` do not validate the entity or component type until `Flush()`.
-- `DestroyEntity()` returns `false` if that entity is already queued for destruction. Otherwise, it queues the destroy and returns `true`.
-- After an entity is queued for destruction, the command buffer rejects further component additions or removals for that entity.
-- `Flush()` clears the current queue before applying its commands. Commands added later remain queued for a later flush.
-- `Flush()` applies commands in order and continues after a command fails.
-- After all commands run, `Flush()` throws an `AggregateError` if any commands failed.
-- Pending-destruction markers are cleared after the flush, including when commands fail.
+| Member | Behaviour |
+| --- | --- |
+| `CommandBuffer()` | Creates an empty command queue |
+| `AddComponent(entityId, componentType, component)` / `RemoveComponent(entityId, componentType)` | Queues a component membership change |
+| `DestroyEntity(entityId)` | Queues destruction and returns `false` if that entity is already queued |
+| `IsEntityPendingDestroy(entityId)` | Checks whether destruction is queued |
+| `Flush(entityManager)` | Applies queued commands in order, attempts every command, then throws an `AggregateError` if any failed |
+| `Dispose()` | Clears queued commands and prevents further use |
+
+- Add and remove commands are rejected after the entity is queued for destruction
+- A failed command does not stop later queued commands from running
+- `Scene.FixedUpdate()` flushes the buffer after systems and parent changes
+
+## Component storage API
+
+| Member | Behaviour |
+| --- | --- |
+| `ComponentStorage.Size` | Returns the number of stored components |
+| `Add(entityId, component)` / `Get(entityId)` / `Has(entityId)` / `Remove(entityId)` | Adds, reads, checks, or removes one entity's component |
+| `EntityIds()` | Iterates the IDs in the packed store's current order |
 
 ## Current scope
 
-- `EntityManager` does not serialize data. `EcsDocumentAdapter` serializes scene entities, names, and components to JSON.
-- The entity manager does not provide parent-child hierarchies or automatic system updates.
-- Component stores use arrays and swap removal; iteration order is not stable.
+- The manager is single-threaded and stores JavaScript object components
+- It does not provide entity generations, archetypes, or stable query order
+- Runtime parent changes must use `Scene.SetParent()`
 
 ## Source
 
-- `src/core/ecs/entity-manager.js`
 - `src/core/ecs/entity-id.js`
+- `src/core/ecs/entity-manager.js`
 - `src/core/ecs/component-storage.js`
 - `src/core/ecs/command-buffer.js`
+- `src/core/scene.js`

@@ -1,6 +1,11 @@
 import { ComponentRegistry } from "../core/ecs/component-registry.js";
 import { Transform } from "./transform.js";
+import { Parent } from "./parent.js";
 import { Camera } from "./graphics/camera.js";
+import {
+    CameraController,
+    ValidateCameraControllerSettings,
+} from "./graphics/camera-controller.js";
 import { MeshRenderer } from "./graphics/mesh-renderer.js";
 import { AngularVelocity } from "./angular-velocity.js";
 
@@ -78,6 +83,18 @@ export function CreateSceneComponentRegistry() {
     );
 
     registry.Register(
+        "parent",
+        Parent,
+        (data) => new Parent(data.parentEntityId),
+        {
+            Version: 1,
+            Serialize: (parent) => ({
+                parentEntityId: parent.ParentEntityId,
+            }),
+        },
+    );
+
+    registry.Register(
         "angularVelocity",
         AngularVelocity,
         (data) => new AngularVelocity(data.x, data.y, data.z),
@@ -114,6 +131,24 @@ export function CreateSceneComponentRegistry() {
                     fieldOfView: camera.fieldOfView,
                     nearPlane: camera.nearPlane,
                     farPlane: camera.farPlane,
+                };
+            },
+        },
+    );
+
+    registry.Register(
+        "cameraController",
+        CameraController,
+        (data) => new CameraController(data),
+        {
+            Version: 1,
+            Serialize: (cameraController) => {
+                ValidateCameraControllerSettings(cameraController);
+                return {
+                    movementSpeed: cameraController.movementSpeed,
+                    runMultiplier: cameraController.runMultiplier,
+                    lookSensitivity: cameraController.lookSensitivity,
+                    maxPitchRadians: cameraController.maxPitchRadians,
                 };
             },
         },

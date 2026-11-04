@@ -2,35 +2,32 @@
 
 ## Start here
 
-This page is the documentation index for AstralEngine. Start with the shell guide to understand how the browser application starts and how it renders its first graphics.
+- Read the guide for the system you want to change
+- See [the browser shell guide](SHELL_README.md) for page and startup context
+- Guides describe the current source and data in this repository
 
-## Core and platform
+## Core systems
 
-- [Shell Documentation](SHELL_README.md) - Describes the browser page, platform setup, WebGPU renderer, and first triangle.
-- [Engine](core/ENGINE_README.md) - Describes the frame loop, fixed updates, and render callbacks.
-- [Entity Manager](core/ENTITY_MANAGER_README.md) - Describes entities, component storage, queries, removal handlers, and deferred changes.
-- [Scene Management](core/SCENE_MANAGEMENT_README.md) - Describes scene loading, system phases, updates, and disposal.
+- [Engine](core/ENGINE_README.md) - Frame timing and system scheduling
+- [Entity Manager](core/ENTITY_MANAGER_README.md) - Entities, component storage, queries, and deferred changes
+- [Scene Management](core/SCENE_MANAGEMENT_README.md) - Scene loading, switching, update, and cleanup
+- [Transform Hierarchy](core/TRANSFORM_HIERARCHY_README.md) - Parent links, world matrices, and hierarchy changes
+- [Input](core/INPUT_README.md) - Browser input events and named actions
 
 ## Assets
 
-- [Asset Registry](core/ASSET_REGISTRY_README.md) - Stores asset descriptors and maps loader IDs to loaders.
-- [Asset Manager](core/ASSET_MANAGER_README.md) - Loads assets and manages dependencies, leases, and scopes.
+- [Asset Registry](core/ASSET_REGISTRY_README.md) - Asset descriptors, manifests, and loader registration
+- [Asset Manager](core/ASSET_MANAGER_README.md) - Loading, dependency leases, scopes, and reloads
 
 ## Components
 
-- [Transform](components/TRANSFORM_README.md) - Describes local transform data and model-matrix generation.
-- [Camera](components/graphics/CAMERA_README.md) - Describes camera settings and view/projection matrices.
-- [Angular Velocity](components/ANGULAR_VELOCITY_README.md) - Describes angular-rate data and its update system.
-- [Mesh Renderer](components/graphics/MESH_RENDERER_README.md) - Describes the mesh reference used for entity rendering.
+- [Transform](components/TRANSFORM_README.md) - Local transforms, interpolation, and world matrices
+- [Camera](components/graphics/CAMERA_README.md) - Camera matrices and first-person camera controls
+- [Mesh Renderer](components/graphics/MESH_RENDERER_README.md) - Mesh and material asset handles
+- [Angular Velocity](components/ANGULAR_VELOCITY_README.md) - Angular rate data and its update system
 
-## Graphics
+## Other systems
 
-- [Graphics](graphics/GRAPHICS_README.md) - Describes meshes, materials, graphics loaders, render preparation, and WebGPU resource lifetime.
-
-## Serialization
-
-- [Serialization](serialization/SERIALIZATION_README.md) - Describes type and component codecs, JSON rules, and scene documents.
-
-## Diagnostics
-
-- [Logging](diagnostics/LOGGING_README.md) - Describes log levels, entry data, output sinks, and server log files.
+- [Graphics](graphics/GRAPHICS_README.md) - Mesh data, materials, loaders, and the WebGPU renderer
+- [Serialization](serialization/SERIALIZATION_README.md) - Versioned records, JSON rules, and scene documents
+- [Logging](diagnostics/LOGGING_README.md) - Log entries, sinks, and server log files

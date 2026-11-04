@@ -2,62 +2,74 @@
 
 ## Purpose
 
-`Engine` runs fixed updates and renders frames through a supplied renderer. It stores the update callbacks and timing state, but it does not create the renderer or own game systems. See [Entity Manager](ENTITY_MANAGER_README.md) for the ECS that game callbacks can update.
+`Engine` runs the browser animation-frame loop and separates fixed simulation updates from render preparation. It owns timing state, but it does not create scenes or register systems; `main.js` wires those parts together. See [Scene Management](SCENE_MANAGEMENT_README.md) for scene updates.
 
 ## Main parts and responsibilities
 
 | Part | Responsibility |
 | --- | --- |
-| `Engine` | Stores the renderer, callbacks, and frame timing state. |
-| `constructor()` | Validates the renderer and callbacks and sets the timing limits. |
-| `IsRunning` | Returns whether the frame loop is running. |
-| `Start()` | Starts the loop if it is not already running. |
-| `Stop()` | Stops the loop and cancels a scheduled frame. |
-| `_ScheduleFrame()` | Schedules one browser animation frame while the engine is running. |
-| `_Frame()` | Runs fixed updates, prepares rendering, draws a frame, and handles errors. |
+| `Engine` | Starts and stops the frame loop, runs fixed updates, prepares rendering, and calls the renderer |
+| `SystemPhase` | Names the `FixedUpdate` and `PrepareRender` phases |
+| `SystemScheduler` | Adds systems, lists registered systems, and runs them in phase order |
 
 ## Ownership
 
-- `Engine` stores references to the supplied renderer and callbacks. It does not initialize or shut down the renderer.
-- `Engine` owns its frame timing state, including its accumulator and elapsed time.
-- The renderer and callbacks remain the responsibility of the caller.
+- `Engine` keeps references to the renderer and callback functions supplied by its caller
+- The caller owns the renderer and must initialize and shut it down
+- `SystemScheduler` stores systems in insertion order within each phase
+- The scene owns its scheduler and disposes initialized systems
 
 ## Frame timing
 
-- `Start()` does nothing when the engine is already running.
-- `Stop()` does nothing when the engine is already stopped.
-- Starting resets the previous frame timestamp and fixed-step accumulator. It does not reset elapsed time.
-- The fixed-update and render-preparation callbacks default to no-op functions when omitted.
-- The first frame after start has a delta time of zero.
-- Later frame delta time is capped at `0.1` seconds.
-- Fixed updates use a step of `1 / 60` seconds. The engine runs at most five fixed steps in one frame.
-- If more fixed-step time remains after the five-step limit, the engine drops whole excess steps and keeps the fractional remainder.
-- `prepareRenderCallback()` receives an interpolation value between zero and one. The engine does not interpolate object transforms itself.
+- `Engine` uses `requestAnimationFrame()` and a fixed step of `1 / 60` seconds
+- It clamps each frame's accumulated time to `0.1` seconds
+- It runs at most five fixed updates in one frame
+- If more fixed time remains, it drops whole excess steps, keeps the fractional remainder, and logs a warning at most once every five seconds
+- The render interpolation alpha is the remaining accumulator divided by the fixed step
+- A stopped or restarted run ignores callbacks from an older animation-frame sequence
+
+## Engine API
+
+| Member | Behaviour |
+| --- | --- |
+| `Engine(renderer, fixedUpdateCallback, prepareRenderCallback)` | Requires a renderer with `Render()` and two callback functions |
+| `IsRunning` | Returns whether the loop is active |
+| `Start()` | Starts the loop; repeated calls while running do nothing |
+| `Stop()` | Cancels the scheduled frame and clears timing accumulation; repeated calls do nothing |
+
+- The fixed callback receives `(deltaTime, elapsedTime)` for each fixed step
+- The preparation callback receives `interpolationAlpha` once before each render
+- A callback or renderer error stops the loop and is logged
+
+## System scheduling
+
+| Member | Behaviour |
+| --- | --- |
+| `SystemScheduler.AddSystem(phase, system)` | Adds a system before the scheduler is running |
+| `SystemScheduler.GetSystems()` | Returns registered systems once each, in phase and insertion order |
+| `SystemScheduler.Run(phase, scene, context)` | Calls `FixedUpdate(scene, context)` or `PrepareRender(scene, context)` in order |
+
+- A system must implement the method required by its phase
+- Unknown phases, duplicate registration in one phase, and recursive runs throw
+- A system cannot be added while a phase is running
+- If a system throws, the run stops at that system; the scheduler clears its running flag in `finally`
 
 ## Frame flow
 
-1. `_Frame()` converts the browser timestamp to seconds and calculates the capped frame delta.
-2. `_Frame()` adds that delta to the fixed-step accumulator.
-3. `_Frame()` calls `fixedUpdateCallback(this._fixedDeltaTime, this._elapsedTime)` once per available fixed step, up to the five-step limit.
-4. If the callback stops the engine, `_Frame()` returns without preparing or rendering the frame.
-5. `_Frame()` calls `prepareRenderCallback(interpolationAlpha)` with the remaining interpolation value.
-6. If the callback stops the engine, `_Frame()` returns without rendering.
-7. `_Frame()` calls `renderer.Render()`.
-8. If an update, preparation, or render call throws, `_Frame()` stops the engine and logs the error through `AstralLogger`.
-9. If the engine is still running, `_Frame()` schedules the next frame.
-
-## Design choices and tradeoffs
-
-- **Use fixed updates.** This gives game systems a stable time step, but the engine limits catch-up work and drops excess whole steps to avoid an unbounded update loop.
-- **Separate update and render callbacks.** Game systems can update at a fixed rate while rendering can continue once per browser frame. The caller must set up both callbacks.
+1. `Engine._Frame()` adds the clamped frame time to the accumulator
+2. The engine invokes the fixed callback while a full fixed step remains, up to the step limit
+3. The engine computes interpolation alpha and invokes the preparation callback
+4. The renderer's `Render()` method draws the prepared frame
+5. The engine schedules the next animation frame
 
 ## Current scope
 
-- The engine uses the browser's `requestAnimationFrame()` and `cancelAnimationFrame()` APIs.
-- The timestep and timing limits are fixed in the constructor.
-- Pause, resume, and renderer lifecycle management are not implemented.
+- Timing uses browser animation-frame APIs and is not a headless or server loop
+- The engine does not run a separate variable-rate update callback
+- WebGPU setup and application startup belong to `main.js` and `WebGPURenderer`
 
 ## Source
 
 - `src/core/engine.js`
-- `src/diagnostics/logger.js`
+- `src/core/system-scheduler.js`
+- `src/main.js`

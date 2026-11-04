@@ -2,10 +2,15 @@
 // It initializes the platform and starts the application.
 
 import { BrowserPlatform } from "./platform/browser-platform.js";
+import { BrowserInputSource } from "./platform/browser-input-source.js";
+import { InputManager } from "./core/input/input-manager.js";
 import { WebGPURenderer } from "./graphics/webgpu-renderer.js";
 import { Engine } from "./core/engine.js";
 import { AstralLogger } from "./diagnostics/logger.js";
 import { AngularVelocitySystem } from "./systems/angular-velocity-system.js";
+import { TransformSnapshotSystem } from "./systems/transform-snapshot-system.js";
+import { CameraControlSystem } from "./systems/camera-control-system.js";
+import { TransformHierarchySystem } from "./systems/transform-hierarchy-system.js";
 import { RenderSystem } from "./systems/render-system.js";
 import { SceneLoader } from "./core/scene-loader.js";
 import { SceneManager } from "./core/scene-manager.js";
@@ -23,8 +28,22 @@ import { MaterialLoader } from "./graphics/assets/material-loader.js";
 const canvas = document.getElementById("game-canvas");
 const status = document.getElementById("engine-status");
 
+async function FetchRequiredResponse(url, resourceName) {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+        throw new Error(
+            `Could not load ${resourceName}. HTTP ${response.status}.`,
+        );
+    }
+
+    return response;
+}
+
 async function StartApplication() {
     let platform;
+    let inputSource;
+    let inputManager;
     let renderer;
     let engine;
     let sceneManager;
@@ -37,17 +56,21 @@ async function StartApplication() {
         renderer = new WebGPURenderer(platform.Canvas);
         await renderer.Initialize();
 
-        const manifestResponse = await fetch(
-            "/assets/asset-manifest.json",
+        const inputMapResponse = await FetchRequiredResponse(
+            "/assets/input/default.input-map.json",
+            "input action map",
         );
 
-        if (!manifestResponse.ok) {
-            throw new Error(
-                "Could not load asset manifest. HTTP " +
-                    manifestResponse.status +
-                    ".",
-            );
-        }
+        inputSource = new BrowserInputSource(platform.Canvas);
+        inputManager = new InputManager(
+            inputSource,
+            await inputMapResponse.json(),
+        );
+
+        const manifestResponse = await FetchRequiredResponse(
+            "/assets/asset-manifest.json",
+            "asset manifest",
+        );
 
         const assetCatalog = new AssetCatalog();
         assetCatalog.RegisterManifest(await manifestResponse.json());
@@ -84,7 +107,19 @@ async function StartApplication() {
                 systems: [
                     {
                         phase: SystemPhase.FixedUpdate,
+                        system: new TransformSnapshotSystem(),
+                    },
+                    {
+                        phase: SystemPhase.FixedUpdate,
                         system: new AngularVelocitySystem(),
+                    },
+                    {
+                        phase: SystemPhase.FixedUpdate,
+                        system: new CameraControlSystem(),
+                    },
+                    {
+                        phase: SystemPhase.PrepareRender,
+                        system: new TransformHierarchySystem(),
                     },
                     {
                         phase: SystemPhase.PrepareRender,
@@ -92,6 +127,7 @@ async function StartApplication() {
                     },
                 ],
                 services: {
+                    input: inputManager,
                     ResolveMeshHandle: (meshAssetId) =>
                         assetScope.GetHandleRequired(meshAssetId),
                     ResolveMaterialHandle: (materialAssetId) =>
@@ -108,11 +144,14 @@ async function StartApplication() {
             sceneManager,
         );
         hotReloadClient.Connect();
+        inputSource.Start();
 
         engine = new Engine(
             renderer,
-            (deltaTime, elapsedTime) =>
-                sceneManager.FixedUpdate(deltaTime, elapsedTime),
+            (deltaTime, elapsedTime) => {
+                inputManager.Update();
+                sceneManager.FixedUpdate(deltaTime, elapsedTime);
+            },
             (interpolationAlpha) => {
                 hotReloadClient.CommitAtFrameBoundary();
 
@@ -135,6 +174,7 @@ async function StartApplication() {
         }
     } catch (error) {
         engine?.Stop();
+        inputSource?.Stop();
         hotReloadClient?.Dispose();
 
         try {

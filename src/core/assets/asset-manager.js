@@ -136,7 +136,28 @@ export class AssetManager {
             this._ValidateDependencyGraph(assetId);
         }
 
+        const transaction = this._CreateReloadTransaction(requestedIds);
+        this._stagedReload = transaction;
+
+        try {
+            await this._PrepareStagedReload(transaction);
+            await this._LoadStagedReplacements(transaction);
+            transaction.state = "ready";
+
+            return Object.freeze({
+                requestedAssetIds: Object.freeze([...requestedIds]),
+                affectedAssetIds: Object.freeze(
+                    transaction.entries.map((entry) => entry.assetId),
+                ),
+            });
+        } catch (error) {
+            await this._AbortStagedReload(transaction, error);
+        }
+    }
+
+    _CreateReloadTransaction(requestedIds) {
         let resolveCompletion;
+
         const transaction = {
             state: "staging",
             requestedIds,
@@ -148,134 +169,138 @@ export class AssetManager {
             }),
             resolveCompletion: null,
         };
+
         transaction.resolveCompletion = resolveCompletion;
-        this._stagedReload = transaction;
+        return transaction;
+    }
 
-        try {
-            const pendingLoads = Array.from(
-                this._entriesById.values(),
-                (entry) => entry,
-            )
-                .filter((entry) => entry.state === "loading")
-                .map((entry) => entry.promise);
+    async _PrepareStagedReload(transaction) {
+        const pendingLoads = Array.from(
+            this._entriesById.values(),
+            (entry) => entry,
+        )
+            .filter((entry) => entry.state === "loading")
+            .map((entry) => entry.promise);
 
-            await Promise.allSettled(pendingLoads);
+        await Promise.allSettled(pendingLoads);
 
-            transaction.entries = this._CollectReloadEntries(
-                requestedIds,
-            );
+        transaction.entries = this._CollectReloadEntries(
+            transaction.requestedIds,
+        );
 
-            const leaseResults = await Promise.allSettled(
-                transaction.entries.map((entry) =>
-                    this._Acquire(entry.assetId),
-                ),
-            );
+        const leaseResults = await Promise.allSettled(
+            transaction.entries.map((entry) =>
+                this._Acquire(entry.assetId),
+            ),
+        );
 
-            for (const result of leaseResults) {
-                if (result.status === "fulfilled") {
-                    transaction.temporaryLeases.push(result.value);
-                }
+        for (const result of leaseResults) {
+            if (result.status === "fulfilled") {
+                transaction.temporaryLeases.push(result.value);
             }
+        }
 
-            const failedLease = leaseResults.find(
-                (result) => result.status === "rejected",
-            );
+        const failedLease = leaseResults.find(
+            (result) => result.status === "rejected",
+        );
 
-            if (failedLease) {
-                throw failedLease.reason;
-            }
+        if (failedLease) {
+            throw failedLease.reason;
+        }
 
-            transaction.entries.forEach((entry, index) => {
-                if (
-                    transaction.temporaryLeases[index].Handle !==
-                    entry.handle
-                ) {
-                    throw new Error(
-                        `Asset "${entry.assetId}" changed while staging reload.`,
-                    );
-                }
-            });
-
-            const stagedAssetsById = new Map();
-
-            for (const entry of transaction.entries) {
-                const dependenciesById = new Map();
-
-                for (const dependencyId of entry.descriptor.dependencies) {
-                    if (stagedAssetsById.has(dependencyId)) {
-                        dependenciesById.set(
-                            dependencyId,
-                            stagedAssetsById.get(dependencyId),
-                        );
-                        continue;
-                    }
-
-                    const dependencyEntry =
-                        this._entriesById.get(dependencyId);
-
-                    if (!dependencyEntry || dependencyEntry.state !== "loaded") {
-                        throw new Error(
-                            `Dependency "${dependencyId}" for asset "${entry.assetId}" is not loaded.`,
-                        );
-                    }
-
-                    dependenciesById.set(
-                        dependencyId,
-                        dependencyEntry.handle.Current,
-                    );
-                }
-
-                const asset = await entry.loader.Load(
-                    entry.descriptor,
-                    this._CreateLoaderContext(entry, dependenciesById),
+        transaction.entries.forEach((entry, index) => {
+            if (
+                transaction.temporaryLeases[index].Handle !==
+                entry.handle
+            ) {
+                throw new Error(
+                    `Asset "${entry.assetId}" changed while staging reload.`,
                 );
-
-                if (asset === undefined || asset === null) {
-                    throw new TypeError(
-                        `Loader returned no replacement for asset "${entry.assetId}".`,
-                    );
-                }
-
-                stagedAssetsById.set(entry.assetId, asset);
-                transaction.replacements.push({
-                    entry,
-                    asset,
-                    previousAsset: entry.asset,
-                });
             }
+        });
+    }
 
-            transaction.state = "ready";
+    async _LoadStagedReplacements(transaction) {
+        const stagedAssetsById = new Map();
 
-            return Object.freeze({
-                requestedAssetIds: Object.freeze([...requestedIds]),
-                affectedAssetIds: Object.freeze(
-                    transaction.entries.map((entry) => entry.assetId),
-                ),
-            });
-        } catch (error) {
-            const cleanupErrors = await this._CleanupStagedReload(
-                transaction,
+        for (const entry of transaction.entries) {
+            const dependenciesById = this._CreateStagedDependencyMap(
+                entry,
+                stagedAssetsById,
             );
-            transaction.state = "aborted";
 
-            if (this._stagedReload === transaction) {
-                this._stagedReload = null;
-            }
+            const asset = await entry.loader.Load(
+                entry.descriptor,
+                this._CreateLoaderContext(entry, dependenciesById),
+            );
 
-            transaction.resolveCompletion();
-
-            if (cleanupErrors.length > 0) {
-                throw new AggregateError(
-                    [error, ...cleanupErrors],
-                    "Asset reload staging failed and cleanup also failed.",
+            if (asset === undefined || asset === null) {
+                throw new TypeError(
+                    `Loader returned no replacement for asset "${entry.assetId}".`,
                 );
             }
 
-            throw new Error(
-                `Failed to stage reload for ${requestedIds.join(", ")}.`,
-                { cause: error },
+            stagedAssetsById.set(entry.assetId, asset);
+            transaction.replacements.push({
+                entry,
+                asset,
+                previousAsset: entry.asset,
+            });
+        }
+    }
+
+    _CreateStagedDependencyMap(entry, stagedAssetsById) {
+        const dependenciesById = new Map();
+
+        for (const dependencyId of entry.descriptor.dependencies) {
+            if (stagedAssetsById.has(dependencyId)) {
+                dependenciesById.set(
+                    dependencyId,
+                    stagedAssetsById.get(dependencyId),
+                );
+                continue;
+            }
+
+            const dependencyEntry = this._entriesById.get(dependencyId);
+
+            if (!dependencyEntry || dependencyEntry.state !== "loaded") {
+                throw new Error(
+                    `Dependency "${dependencyId}" for asset "${entry.assetId}" is not loaded.`,
+                );
+            }
+
+            dependenciesById.set(
+                dependencyId,
+                dependencyEntry.handle.Current,
             );
         }
+
+        return dependenciesById;
+    }
+
+    async _AbortStagedReload(transaction, error) {
+        const cleanupErrors = await this._CleanupStagedReload(
+            transaction,
+        );
+        transaction.state = "aborted";
+
+        if (this._stagedReload === transaction) {
+            this._stagedReload = null;
+        }
+
+        transaction.resolveCompletion();
+
+        if (cleanupErrors.length > 0) {
+            throw new AggregateError(
+                [error, ...cleanupErrors],
+                "Asset reload staging failed and cleanup also failed.",
+            );
+        }
+
+        throw new Error(
+            `Failed to stage reload for ${transaction.requestedIds.join(", ")}.`,
+            { cause: error },
+        );
     }
 
     CommitStagedReload() {
@@ -315,6 +340,11 @@ export class AssetManager {
     }
 
     _CollectReloadEntries(requestedIds) {
+        const affectedIds = this._CollectAffectedReloadIds(requestedIds);
+        return this._OrderReloadEntries(affectedIds);
+    }
+
+    _CollectAffectedReloadIds(requestedIds) {
         const affectedIds = new Set(requestedIds);
 
         for (const assetId of requestedIds) {
@@ -351,6 +381,10 @@ export class AssetManager {
             }
         } while (foundDependent);
 
+        return affectedIds;
+    }
+
+    _OrderReloadEntries(affectedIds) {
         const orderedEntries = [];
         const visitedIds = new Set();
 
@@ -362,18 +396,19 @@ export class AssetManager {
             visitedIds.add(entry.assetId);
 
             for (const dependencyId of entry.descriptor.dependencies) {
-                if (affectedIds.has(dependencyId)) {
-                    const dependencyEntry =
-                        this._entriesById.get(dependencyId);
-
-                    if (!dependencyEntry || dependencyEntry.state !== "loaded") {
-                        throw new Error(
-                            `Dependency "${dependencyId}" must be loaded before reload.`,
-                        );
-                    }
-
-                    visit(dependencyEntry);
+                if (!affectedIds.has(dependencyId)) {
+                    continue;
                 }
+
+                const dependencyEntry = this._entriesById.get(dependencyId);
+
+                if (!dependencyEntry || dependencyEntry.state !== "loaded") {
+                    throw new Error(
+                        `Dependency "${dependencyId}" must be loaded before reload.`,
+                    );
+                }
+
+                visit(dependencyEntry);
             }
 
             orderedEntries.push(entry);

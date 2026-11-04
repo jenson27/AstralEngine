@@ -242,9 +242,214 @@ export class SceneLoader {
             this._ValidateEntityData(entityData, entityIds);
         }
 
+        this._ValidateActiveCameraEntity(
+            data.activeCameraEntityId,
+            data.entities,
+        );
+        this._ValidateParentRelationships(data.entities, entityIds);
+        this._ValidateActiveCameraTransform(data);
         this._ValidateSceneAssetReferences(data);
 
         return entityIds;
+    }
+
+    _ValidateActiveCameraEntity(cameraEntityId, entities) {
+        const cameraEntity = entities.find(
+            (entity) => entity.id === cameraEntityId,
+        );
+
+        if (!cameraEntity) {
+            throw new Error(
+                "Active camera entity does not exist in the scene.",
+            );
+        }
+
+        const componentTypeIds = new Set(
+            cameraEntity.components.map(({ typeId }) => typeId),
+        );
+
+        if (
+            !componentTypeIds.has("camera") ||
+            !componentTypeIds.has("transform")
+        ) {
+            throw new Error(
+                "Active camera entity must have Camera and Transform components.",
+            );
+        }
+    }
+
+    _ValidateActiveCameraTransform(data) {
+        const { scalesByEntityId, parentByChildId } =
+            this._BuildTransformHierarchyLookups(data.entities);
+
+        this._ValidateActiveCameraHierarchyScale(
+            data.activeCameraEntityId,
+            scalesByEntityId,
+            parentByChildId,
+        );
+    }
+
+    _BuildTransformHierarchyLookups(entities) {
+        const scalesByEntityId = new Map();
+        const parentByChildId = new Map();
+
+        for (const entityData of entities) {
+            for (const componentRecord of entityData.components) {
+                if (componentRecord.typeId === "transform") {
+                    scalesByEntityId.set(
+                        entityData.id,
+                        componentRecord.data?.scale,
+                    );
+                }
+
+                if (componentRecord.typeId === "parent") {
+                    parentByChildId.set(
+                        entityData.id,
+                        componentRecord.data?.parentEntityId,
+                    );
+                }
+            }
+        }
+
+        return { scalesByEntityId, parentByChildId };
+    }
+
+    _ValidateActiveCameraHierarchyScale(
+        cameraEntityId,
+        scalesByEntityId,
+        parentByChildId,
+    ) {
+        let entityId = cameraEntityId;
+        const visitedEntityIds = new Set();
+
+        while (entityId !== undefined) {
+            if (visitedEntityIds.has(entityId)) {
+                throw new Error("Parent hierarchy contains a cycle.");
+            }
+
+            visitedEntityIds.add(entityId);
+
+            const scale = scalesByEntityId.get(entityId);
+
+            // The component loader reports malformed Transform data.
+            if (
+                !Array.isArray(scale) ||
+                scale.length !== 3 ||
+                !scale.every(Number.isFinite)
+            ) {
+                return;
+            }
+
+            if (scale.some((value) => Math.abs(value - 1) > 1e-6)) {
+                throw new RangeError(
+                    "The active camera and its parents must have unit scale.",
+                );
+            }
+
+            entityId = parentByChildId.get(entityId);
+        }
+    }
+
+    _ValidateParentRelationships(entities, entityIds) {
+        const transformEntityIds = new Set();
+        const parentByChildId = new Map();
+
+        this._CollectParentRelationships(
+            entities,
+            entityIds,
+            transformEntityIds,
+            parentByChildId,
+        );
+        this._ValidateParentTransformTargets(
+            parentByChildId,
+            transformEntityIds,
+        );
+        this._ValidateParentHierarchyCycles(parentByChildId);
+    }
+
+    _CollectParentRelationships(
+        entities,
+        entityIds,
+        transformEntityIds,
+        parentByChildId,
+    ) {
+        for (const entityData of entities) {
+            const componentTypeIds = new Set(
+                entityData.components.map(({ typeId }) => typeId),
+            );
+
+            if (componentTypeIds.has("transform")) {
+                transformEntityIds.add(entityData.id);
+            }
+
+            const parentRecord = entityData.components.find(
+                ({ typeId }) => typeId === "parent",
+            );
+
+            if (!parentRecord) {
+                continue;
+            }
+
+            if (!componentTypeIds.has("transform")) {
+                throw new Error(
+                    `Entity "${entityData.id}" with a Parent component must have a Transform component.`,
+                );
+            }
+
+            const parentEntityId = parentRecord.data?.parentEntityId;
+
+            if (
+                !IsEntityId(parentEntityId) ||
+                !entityIds.has(parentEntityId)
+            ) {
+                throw new Error(
+                    `Parent component on entity "${entityData.id}" must reference an existing entity ID.`,
+                );
+            }
+
+            parentByChildId.set(entityData.id, parentEntityId);
+        }
+    }
+
+    _ValidateParentTransformTargets(
+        parentByChildId,
+        transformEntityIds,
+    ) {
+        for (const parentEntityId of parentByChildId.values()) {
+            if (!transformEntityIds.has(parentEntityId)) {
+                throw new Error(
+                    `Parent entity "${parentEntityId}" must have a Transform component.`,
+                );
+            }
+        }
+    }
+
+    _ValidateParentHierarchyCycles(parentByChildId) {
+        const visitStateByEntityId = new Map();
+
+        for (const entityId of parentByChildId.keys()) {
+            let currentEntityId = entityId;
+            const path = [];
+
+            while (
+                currentEntityId !== undefined &&
+                visitStateByEntityId.get(currentEntityId) !== "visited"
+            ) {
+                if (
+                    visitStateByEntityId.get(currentEntityId) === "visiting"
+                ) {
+                    throw new Error("Parent hierarchy contains a cycle.");
+                }
+
+                visitStateByEntityId.set(currentEntityId, "visiting");
+                path.push(currentEntityId);
+                currentEntityId = parentByChildId.get(currentEntityId);
+            }
+
+            for (const pathEntityId of path) {
+                visitStateByEntityId.set(pathEntityId, "visited");
+            }
+        }
     }
 
     _ValidateSceneAssetIds(assetIds) {
@@ -288,50 +493,10 @@ export class SceneLoader {
                     continue;
                 }
 
-                const componentData = componentRecord.data;
-                const assetReferences = [
-                    ["meshAssetId", componentData?.meshAssetId],
-                ];
-
-                if (componentData?.defaultMaterialAssetId !== undefined) {
-                    assetReferences.push([
-                        "defaultMaterialAssetId",
-                        componentData.defaultMaterialAssetId,
-                    ]);
-                } else {
-                    const materialsBySlot = componentData?.materialsBySlot;
-
-                    if (
-                        !materialsBySlot ||
-                        typeof materialsBySlot !== "object" ||
-                        Array.isArray(materialsBySlot)
-                    ) {
-                        throw new TypeError(
-                            "MeshRenderer materialsBySlot must be an object.",
-                        );
-                    }
-
-                    const materialEntries = Object.entries(materialsBySlot);
-
-                    if (materialEntries.length === 0) {
-                        throw new TypeError(
-                            "MeshRenderer must define at least one material slot.",
-                        );
-                    }
-
-                    for (const [materialSlot, assetId] of materialEntries) {
-                        if (materialSlot.trim() === "") {
-                            throw new TypeError(
-                                "MeshRenderer material slot names must not be empty.",
-                            );
-                        }
-
-                        assetReferences.push([
-                            `materialsBySlot.${materialSlot}`,
-                            assetId,
-                        ]);
-                    }
-                }
+                const assetReferences =
+                    this._GetMeshRendererAssetReferences(
+                        componentRecord.data,
+                    );
 
                 for (const [field, assetId] of assetReferences) {
                     if (
@@ -350,6 +515,61 @@ export class SceneLoader {
                     }
                 }
             }
+        }
+    }
+
+    _GetMeshRendererAssetReferences(componentData) {
+        const assetReferences = [
+            ["meshAssetId", componentData?.meshAssetId],
+        ];
+
+        if (componentData?.defaultMaterialAssetId !== undefined) {
+            assetReferences.push([
+                "defaultMaterialAssetId",
+                componentData.defaultMaterialAssetId,
+            ]);
+            return assetReferences;
+        }
+
+        this._AppendMaterialSlotAssetReferences(
+            componentData,
+            assetReferences,
+        );
+        return assetReferences;
+    }
+
+    _AppendMaterialSlotAssetReferences(componentData, assetReferences) {
+        const materialsBySlot = componentData?.materialsBySlot;
+
+        if (
+            !materialsBySlot ||
+            typeof materialsBySlot !== "object" ||
+            Array.isArray(materialsBySlot)
+        ) {
+            throw new TypeError(
+                "MeshRenderer materialsBySlot must be an object.",
+            );
+        }
+
+        const materialEntries = Object.entries(materialsBySlot);
+
+        if (materialEntries.length === 0) {
+            throw new TypeError(
+                "MeshRenderer must define at least one material slot.",
+            );
+        }
+
+        for (const [materialSlot, assetId] of materialEntries) {
+            if (materialSlot.trim() === "") {
+                throw new TypeError(
+                    "MeshRenderer material slot names must not be empty.",
+                );
+            }
+
+            assetReferences.push([
+                `materialsBySlot.${materialSlot}`,
+                assetId,
+            ]);
         }
     }
 

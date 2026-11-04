@@ -1,0 +1,35 @@
+{
+    "version": 1,
+    "actions": {
+        "moveForward": {
+            "bindings": [
+                { "device": "keyboard", "code": "KeyW" },
+                { "device": "keyboard", "code": "ArrowUp" }
+            ]
+        },
+        "moveBackward": {
+            "bindings": [
+                { "device": "keyboard", "code": "KeyS" },
+                { "device": "keyboard", "code": "ArrowDown" }
+            ]
+        },
+        "moveLeft": {
+            "bindings": [
+                { "device": "keyboard", "code": "KeyA" },
+                { "device": "keyboard", "code": "ArrowLeft" }
+            ]
+        },
+        "moveRight": {
+            "bindings": [
+                { "device": "keyboard", "code": "KeyD" },
+                { "device": "keyboard", "code": "ArrowRight" }
+            ]
+        },
+        "jump": {
+            "bindings": [{ "device": "keyboard", "code": "Space" }]
+        },
+        "run": {
+            "bindings": [{ "device": "keyboard", "code": "ShiftLeft" }]
+        }
+    }
+}

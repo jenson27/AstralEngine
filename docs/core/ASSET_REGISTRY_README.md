@@ -2,86 +2,70 @@
 
 ## Purpose
 
-The asset registry stores asset descriptors and maps loader IDs to loader objects. It validates this metadata but does not load or release assets. See [Asset Manager](ASSET_MANAGER_README.md) for asset loading and lifetime behavior.
+`AssetCatalog` stores immutable descriptors that identify assets, sources, loaders, and dependencies. `AssetLoaderRegistry` maps loader IDs to loader objects. They do not load or release assets; `AssetManager` owns that work. See [Asset Manager](ASSET_MANAGER_README.md) for loading and reload behavior.
 
 ## Main parts and responsibilities
 
 | Part | Responsibility |
 | --- | --- |
-| `AssetCatalog.constructor()` | Creates an empty descriptor catalog. |
-| `AssetCatalog.Register()` / `RegisterManifest()` | Validates and stores asset descriptors. |
-| `AssetCatalog.Get()` / `GetRequired()` | Looks up an optional or required descriptor by ID. |
-| `AssetCatalog.Has()` / `GetAll()` | Checks for an ID or returns registered descriptors. |
-| `AssetCatalog.GetAssetIdsBySourcePath()` | Returns asset IDs registered for a source URL path. |
-| `AssetLoaderRegistry.constructor()` | Creates an empty loader registry. |
-| `AssetLoaderRegistry.Register()` | Validates and stores a loader by ID. |
-| `AssetLoaderRegistry.Get()` / `GetRequired()` | Looks up an optional or required loader by ID. |
-| `AssetLoaderRegistry.Has()` | Checks whether a loader ID is registered. |
+| `AssetCatalog` | Registers descriptors and looks them up by ID or local source path |
+| `AssetLoaderRegistry` | Registers and looks up asset loader implementations |
+| Asset descriptor | Declares one asset's type, loader, source data, version, and dependencies |
+| `assets/asset-manifest.json` | Provides the current version 1 catalog data |
 
 ## Asset manifest
 
-- `AssetCatalog.RegisterManifest()` accepts an object with:
-  - `format` - Must be `"astral-assets"`
-  - `version` - Must be `1`
-  - `assets` - An array of asset descriptors
-- Each descriptor contains:
-  - `id` - Unique asset ID
-  - `typeId` - Asset type label
-  - `loaderId` - Registered loader ID
-  - `source` - JSON data passed to the loader
-  - `version` - Positive integer
-  - `dependencies` - Optional array of asset IDs; defaults to an empty array
-- Dependency IDs must be non-empty strings and must not repeat in one descriptor.
-- Registering a manifest validates every descriptor and checks for duplicate IDs before adding any of them.
-- The catalog copies and freezes each source value as JSON data. It also freezes each descriptor and its dependency list.
+- The top-level record has `format: "astral-assets"`, `version: 1`, and an `assets` array
+- Each descriptor has non-empty `id`, `typeId`, and `loaderId` strings
+- `source` is JSON data copied and frozen by the catalog
+- `version` must be a positive integer
+- `dependencies` is optional and defaults to an empty array
+- Dependency IDs must be non-empty and unique within a descriptor
+- Asset IDs must be unique in the catalog and within a manifest
+- Manifest registration validates all descriptors before registering any of them
+- Dependency existence and cycles are checked by `AssetManager` when an asset is acquired or staged for reload
 
-```json
-{
-  "format": "astral-assets",
-  "version": 1,
-  "assets": [
-    {
-      "id": "texture:grass",
-      "typeId": "texture",
-      "loaderId": "image:texture",
-      "source": {
-        "kind": "image",
-        "url": "/assets/textures/grass.jpg"
-      },
-      "version": 1,
-      "dependencies": []
-    }
-  ]
-}
-```
+## Asset catalog API
 
-## Registration and lookup
+| Member | Behaviour |
+| --- | --- |
+| `Register(descriptor)` | Registers one new descriptor; an existing ID throws |
+| `RegisterManifest(manifest)` | Validates and registers a complete version 1 manifest |
+| `Get(assetId)` / `Has(assetId)` | Returns a descriptor or checks whether its ID exists |
+| `GetRequired(assetId)` | Returns a descriptor or throws for an unknown ID |
+| `GetAll()` | Returns a new array of registered descriptors |
+| `GetAssetIdsBySourcePath(sourcePath)` | Returns a frozen array of IDs whose local source URL maps to that path |
 
-- `AssetCatalog.Register()` rejects a non-object descriptor, missing or blank string fields, a missing `source`, a non-positive version, or invalid dependencies.
-- A descriptor ID cannot be registered more than once.
-- `AssetCatalog.RegisterManifest()` rejects an invalid manifest format or version, duplicate IDs within the manifest, and IDs already in the catalog.
-- `AssetCatalog.Get()` returns `undefined` for an unknown ID. `GetRequired()` throws for an unknown ID.
-- `AssetCatalog.Has()` checks whether an ID exists. `GetAll()` returns an array of the registered frozen descriptors.
-- `GetAssetIdsBySourcePath()` returns a frozen array of IDs whose same-origin `source.url` matches the given path. It returns an empty array for an invalid or unknown path.
-- `AssetLoaderRegistry.Register()` requires a non-empty loader ID and a loader with a `Load()` function.
-- A loader may provide `Release()`. If it does, that value must be a function.
-- Duplicate loader IDs are rejected. `Get()` returns `undefined` for an unknown ID; `GetRequired()` throws.
+- Descriptor objects, their source objects, and dependency arrays are frozen
+- Source-path lookup normalizes URL paths and slashes; invalid or cross-origin paths return no IDs
+- A source without a usable `source.url` is not indexed by path
+
+## Loader registry API
+
+| Member | Behaviour |
+| --- | --- |
+| `Register(loaderId, loader)` | Stores a loader with `Load()` and optional `Release()` methods |
+| `Get(loaderId)` / `Has(loaderId)` | Looks up a loader or checks registration |
+| `GetRequired(loaderId)` | Returns a loader or throws for an unknown ID |
+
+- Loader IDs must be non-empty and unique
+- A provided `Release` member must be a function
+- The registry does not check that a loader supports a descriptor's `typeId`; the loader validates its source when loading
 
 ## Ownership
 
-- `AssetCatalog` stores descriptors in a `Map`, keyed by asset ID.
-- `AssetLoaderRegistry` stores loader references in a `Map`, keyed by loader ID.
-- The catalog copies descriptor source data. Loaders and other callers cannot mutate the stored JSON data.
-- The registry stores loader objects by reference. It does not create or destroy loaders.
+- The application creates the catalog and loader registry, then passes them to `AssetManager`
+- The catalog owns descriptor records; it does not own loaded asset objects
+- The registry stores loader references and does not call them directly
 
 ## Current scope
 
-- The catalog has no removal or update API.
-- `AssetCatalog` stores metadata only. It does not instantiate assets.
-- The browser startup code registers built-in mesh, image texture, and material loaders.
-- See [Graphics](../graphics/GRAPHICS_README.md) for those loader implementations.
+- The manifest format is version `1`
+- The catalog does not fetch manifests or watch files
+- Asset hot reload maps local `source.url` paths to IDs; assets without a local URL need another reload trigger
 
 ## Source
 
 - `src/core/assets/asset-catalog.js`
 - `src/core/assets/asset-loader-registry.js`
+- `assets/asset-manifest.json`

@@ -41,7 +41,10 @@ export class EntityManager {
         this._beforeStructuralChange({ type: "destroy-entity", entityId });
         this._entities.delete(entityId);
         this._entityNames.delete(entityId);
+        this._RemoveEntityComponents(entityId);
+    }
 
+    _RemoveEntityComponents(entityId) {
         for (const [componentType, storage] of this._componentStores) {
             if (!storage.Has(entityId)) {
                 continue;

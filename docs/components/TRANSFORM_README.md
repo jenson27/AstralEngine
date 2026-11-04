@@ -2,53 +2,73 @@
 
 ## Purpose
 
-`Transform` stores an object's local position, Euler rotation, and scale. It builds a model matrix from those values when `GetModelMatrix()` is called. It does not manage parent-child hierarchies or ECS storage; game code updates it, and the renderer uses its matrix. See the [Engine Documentation](../SRC_README.md) for the documentation index.
+`Transform` stores an entity's local position, Euler rotation, and scale, and builds local and world matrices for rendering. It captures the previous fixed-update state and uses quaternion interpolation for rendered rotation between simulation steps. It does not manage parent links; `TransformHierarchySystem` combines the local matrix with the parent world matrix. See [Transform Hierarchy](../core/TRANSFORM_HIERARCHY_README.md).
 
 ## Main parts and responsibilities
 
 | Part | Responsibility |
 | --- | --- |
-| `Transform` | Stores local position, rotation, scale, and a reusable model matrix. |
-| `constructor()` | Initializes position and rotation to zero and scale to one. |
-| `GetModelMatrix()` | Rebuilds and returns the model matrix from the current transform values. |
-| `SetTRSMatrix()` | Writes translation, rotation, and scale into the provided matrix. |
+| `Transform` | Stores local TRS state and reusable matrices |
+| `CapturePreviousState()` / `SnapInterpolationToCurrentState()` | Set the state used as the previous interpolation sample |
+| `TransformSnapshotSystem.FixedUpdate(scene)` | Captures the previous state for every entity with a `Transform` |
+| `GetInterpolatedState(alpha)` | Interpolates position and scale and returns a quaternion rotation |
+| `GetInterpolatedModelMatrix(alpha)` / `GetModelMatrix()` | Builds the interpolated or current local matrix |
+| `UpdateWorldMatrix(parentWorldMatrix, alpha)` | Writes the interpolated local matrix or its parent-relative world matrix |
+| `WorldMatrix` | Exposes the current world matrix buffer |
+| `SetQuaternionFromEuler()` / `SlerpQuaternion()` | Convert and interpolate rotation quaternions |
+| `SetTRSMatrix()` / `SetTRSMatrixFromQuaternion()` / `MultiplyMatrix4()` | Build and combine 4×4 matrices |
 
 ## Ownership
 
-- Each `Transform` owns its `position`, `rotation`, and `scale` arrays.
-- Each `Transform` owns one 16-element `_modelMatrix` typed array.
-- `GetModelMatrix()` returns a borrowed reference to `_modelMatrix`.
-- The returned array remains the same object, but its values are overwritten by the next `GetModelMatrix()` call.
+- The entity manager stores each `Transform` object by reference
+- `Transform` owns its local arrays, interpolation state, and matrix buffers
+- Matrix getters and matrix-building methods return reusable internal buffers; copy a buffer if it must be retained across updates
+- `GetInterpolatedState()` returns a reusable object whose arrays change on the next call
 
 ## Transform data
 
-- `position` - Three values for X, Y, and Z position. Defaults to `[0, 0, 0]`.
-- `rotation` - Three Euler angles for X, Y, and Z rotation, in radians. Defaults to `[0, 0, 0]`.
-- `scale` - Three scale values for X, Y, and Z. Defaults to `[1, 1, 1]`.
-- `_modelMatrix` - A 16-element `Float32Array` stored in column-major order for WGSL.
+- `position` - Mutable `[x, y, z]` local position
+- `rotation` - Mutable `[x, y, z]` Euler angles in radians
+- `scale` - Mutable `[x, y, z]` local scale; defaults to `[1, 1, 1]`
+- Position and rotation default to `[0, 0, 0]`
+- Scene serialization requires each vector to contain exactly three finite numbers
 
-## Model matrix
+## Interpolation and matrices
 
-- `GetModelMatrix()` passes the current transform values and `_modelMatrix` to `SetTRSMatrix()`.
-- `SetTRSMatrix()` applies rotation in Z * Y * X order, then writes scale and position into the matrix.
-- The matrix represents this transform's local position, rotation, and scale. It does not include a parent transform.
-- The matrix is only rebuilt when `GetModelMatrix()` is called.
-- The code does not validate array lengths or finite values. Invalid values can produce invalid matrix values.
+- `CapturePreviousState()` copies current position and scale and converts the Euler rotation to a quaternion
+- `SnapInterpolationToCurrentState()` performs the same capture for a snap with no visual transition
+- `GetInterpolatedState(alpha)` requires a finite alpha from `0` to `1`; if no prior state exists, it first captures the current state
+- Position and scale use linear interpolation
+- Rotation uses spherical quaternion interpolation and follows the shorter orientation path
+- `GetInterpolatedState(alpha)` returns rotation in `rotationQuaternion` as `[x, y, z, w]`
+- `GetInterpolatedModelMatrix(alpha)` builds a local matrix from the interpolated state
+- `GetModelMatrix()` builds a local matrix from the current state without interpolation
+- `UpdateWorldMatrix(null, alpha)` writes the local matrix to `WorldMatrix`; with a parent matrix, it writes `parent × local`
 
-## Design choices and tradeoffs
+## Fixed-update snapshots and runtime values
 
-- **Reuse the matrix.** This avoids creating a new matrix on every call, but callers must not treat a returned matrix as a saved snapshot.
-- **Use Euler angles.** They are simple to edit, but can have rotation limitations such as gimbal lock.
+- In the current application setup, `TransformSnapshotSystem` runs before `AngularVelocitySystem` and `CameraControlSystem`
+- After teleporting a transform, call `SnapInterpolationToCurrentState()` so rendering does not interpolate from its previous position or rotation
+- The `position`, `rotation`, and `scale` arrays are mutable and are not validated during runtime updates; scene serialization checks that each contains three finite numbers
+
+## Matrix convention
+
+- Matrices are `Float32Array` values with 16 elements
+- The matrix helpers write column-major matrices for the WGSL shader
+- Euler-to-quaternion conversion uses Z, then Y, then X rotation order
+- Quaternions use `[x, y, z, w]` order
+- `MultiplyMatrix4(out, left, right)` rejects an output buffer that aliases either input
 
 ## Current scope
 
-- `Transform` can be stored on an entity by `EntityManager`.
-- Parent-child transform hierarchy is not implemented.
-- `AngularVelocitySystem` updates rotation for entities with both `Transform` and `AngularVelocity`.
-- `RenderSystem` uses `Transform` with `MeshRenderer` to build model matrices.
-- Camera view and projection matrices are handled by `Camera`.
+- Transform values are local to the entity; parent composition belongs to the hierarchy system
+- Simulation and scene data use Euler angles; rendered interpolation uses quaternions
+- Scale can be zero, but a zero scale on a camera can make its world matrix non-invertible
 
 ## Source
 
 - `src/components/transform.js`
 - `src/math/matrix4.js`
+- `src/systems/transform-snapshot-system.js`
+- `src/systems/transform-hierarchy-system.js`
+- `src/components/register-scene-components.js`

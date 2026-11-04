@@ -78,24 +78,10 @@ export class SceneManager {
         try {
             pendingAssetScope = this._CreateAssetScope();
 
-            const loadOptions = this._createLoadOptions(
+            const sceneLoadOptions = this._CreateSceneLoadOptions(
                 url,
                 pendingAssetScope,
             );
-
-            if (
-                !loadOptions ||
-                typeof loadOptions !== "object" ||
-                Array.isArray(loadOptions)
-            ) {
-                throw new TypeError(
-                    "Scene load options must be an object.",
-                );
-            }
-
-            const sceneLoadOptions = pendingAssetScope
-                ? { ...loadOptions, assetScope: pendingAssetScope }
-                : loadOptions;
 
             pendingScene = await this._sceneLoader.Load(
                 url,
@@ -215,6 +201,24 @@ export class SceneManager {
             .then(resolveDispose, rejectDispose);
 
         return this._disposePromise;
+    }
+
+    _CreateSceneLoadOptions(url, assetScope) {
+        const loadOptions = this._createLoadOptions(url, assetScope);
+
+        if (
+            !loadOptions ||
+            typeof loadOptions !== "object" ||
+            Array.isArray(loadOptions)
+        ) {
+            throw new TypeError(
+                "Scene load options must be an object.",
+            );
+        }
+
+        return assetScope
+            ? { ...loadOptions, assetScope }
+            : loadOptions;
     }
 
     _CreateAssetScope() {

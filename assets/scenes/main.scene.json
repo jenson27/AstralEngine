@@ -314,6 +314,16 @@
                         "nearPlane": 0.1,
                         "farPlane": 100
                     }
+                },
+                {
+                    "typeId": "cameraController",
+                    "version": 1,
+                    "data": {
+                        "movementSpeed": 4,
+                        "runMultiplier": 2,
+                        "lookSensitivity": 0.002,
+                        "maxPitchRadians": 1.5533430342749532
+                    }
                 }
             ]
         }

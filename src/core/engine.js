@@ -163,26 +163,45 @@ export class Engine {
             fixedStepCount === this._maxFixedStepsPerFrame &&
             this._accumulator >= this._fixedDeltaTime
         ) {
-            this._WarnAboutDroppedTime(
-                fixedStepCount,
-                measuredFrameDeltaTime,
-                frameDeltaTime,
-            );
-
             if (
-                !this._isRunning ||
-                runGeneration !== this._runGeneration
+                !this._DropExcessFixedUpdateTime(
+                    fixedStepCount,
+                    measuredFrameDeltaTime,
+                    frameDeltaTime,
+                    runGeneration,
+                )
             ) {
                 return false;
             }
-
-            this._accumulator %= this._fixedDeltaTime;
         }
 
         return (
             this._isRunning &&
             runGeneration === this._runGeneration
         );
+    }
+
+    _DropExcessFixedUpdateTime(
+        fixedStepCount,
+        measuredFrameDeltaTime,
+        frameDeltaTime,
+        runGeneration,
+    ) {
+        this._WarnAboutDroppedTime(
+            fixedStepCount,
+            measuredFrameDeltaTime,
+            frameDeltaTime,
+        );
+
+        if (
+            !this._isRunning ||
+            runGeneration !== this._runGeneration
+        ) {
+            return false;
+        }
+
+        this._accumulator %= this._fixedDeltaTime;
+        return true;
     }
 
     _WarnAboutDroppedTime(

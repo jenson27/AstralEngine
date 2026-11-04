@@ -36,6 +36,14 @@ export class AssetCatalog {
         const descriptors = manifest.assets.map((descriptor) =>
             this._CreateDescriptor(descriptor),
         );
+        this._ValidateManifestAssetIds(descriptors);
+
+        for (const descriptor of descriptors) {
+            this._RegisterDescriptor(descriptor);
+        }
+    }
+
+    _ValidateManifestAssetIds(descriptors) {
         const idsInManifest = new Set();
 
         for (const descriptor of descriptors) {
@@ -52,10 +60,6 @@ export class AssetCatalog {
             }
 
             idsInManifest.add(descriptor.id);
-        }
-
-        for (const descriptor of descriptors) {
-            this._RegisterDescriptor(descriptor);
         }
     }
 
@@ -134,6 +138,25 @@ export class AssetCatalog {
     }
 
     _CreateDescriptor(descriptor) {
+        this._ValidateDescriptor(descriptor);
+
+        const normalizedDependencies = this._CreateDependencies(
+            descriptor.dependencies,
+        );
+        const source = this._CloneAndFreezeSource(descriptor.source);
+        const normalizedDescriptor = {
+            id: descriptor.id,
+            typeId: descriptor.typeId,
+            loaderId: descriptor.loaderId,
+            source,
+            version: descriptor.version,
+            dependencies: normalizedDependencies,
+        };
+
+        return Object.freeze(normalizedDescriptor);
+    }
+
+    _ValidateDescriptor(descriptor) {
         if (
             !descriptor ||
             typeof descriptor !== "object" ||
@@ -158,36 +181,31 @@ export class AssetCatalog {
                 "Asset version must be a positive integer.",
             );
         }
+    }
 
-        const dependencies = descriptor.dependencies ?? [];
+    _CreateDependencies(dependencies) {
+        const normalizedDependencies = dependencies ?? [];
 
-        if (!Array.isArray(dependencies)) {
+        if (!Array.isArray(normalizedDependencies)) {
             throw new TypeError("Asset dependencies must be an array.");
         }
 
-        const normalizedDependencies = dependencies.map((dependency) => {
+        const copiedDependencies = normalizedDependencies.map((dependency) => {
             this._RequireString(dependency, "Asset dependency ID");
             return dependency;
         });
 
-        if (new Set(normalizedDependencies).size !== normalizedDependencies.length) {
+        if (new Set(copiedDependencies).size !== copiedDependencies.length) {
             throw new Error("Asset dependencies must not contain duplicates.");
         }
 
-        const source = JSON.parse(JSON.stringify(descriptor.source));
-        const normalizedDescriptor = {
-            id: descriptor.id,
-            typeId: descriptor.typeId,
-            loaderId: descriptor.loaderId,
-            source,
-            version: descriptor.version,
-            dependencies: normalizedDependencies,
-        };
+        return Object.freeze(copiedDependencies);
+    }
 
-        this._FreezeJson(normalizedDescriptor.source);
-        Object.freeze(normalizedDescriptor.dependencies);
-
-        return Object.freeze(normalizedDescriptor);
+    _CloneAndFreezeSource(source) {
+        const clonedSource = JSON.parse(JSON.stringify(source));
+        this._FreezeJson(clonedSource);
+        return clonedSource;
     }
 
     _RequireString(value, label) {

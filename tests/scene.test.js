@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Camera } from "../src/components/graphics/camera.js";
+import { Parent } from "../src/components/parent.js";
 import { Transform } from "../src/components/transform.js";
 import { Scene } from "../src/core/scene.js";
 import { SystemPhase } from "../src/core/system-scheduler.js";
@@ -11,6 +12,12 @@ function AddCameraEntity(scene) {
     const entityId = scene.EntityManager.CreateEntity();
     scene.EntityManager.AddComponent(entityId, Transform, new Transform());
     scene.EntityManager.AddComponent(entityId, Camera, new Camera());
+    return entityId;
+}
+
+function AddTransformEntity(scene) {
+    const entityId = scene.EntityManager.CreateEntity();
+    scene.EntityManager.AddComponent(entityId, Transform, new Transform());
     return entityId;
 }
 
@@ -233,5 +240,289 @@ test("protects the active camera until another camera is selected", () => {
     );
 
     scene.EntityManager.DestroyEntity(firstCameraId);
+    scene.Dispose();
+});
+
+test("destroys a hierarchy from children to root at the fixed update boundary", () => {
+    const scene = new Scene("hierarchy-destroy-test");
+    const rootEntityId = scene.EntityManager.CreateEntity();
+    const childEntityId = scene.EntityManager.CreateEntity();
+    const grandchildEntityId = scene.EntityManager.CreateEntity();
+    const destroyedEntityIds = [];
+
+    for (const entityId of [
+        rootEntityId,
+        childEntityId,
+        grandchildEntityId,
+    ]) {
+        scene.EntityManager.AddComponent(entityId, Marker, new Marker());
+    }
+    scene.EntityManager.AddComponent(
+        childEntityId,
+        Parent,
+        new Parent(rootEntityId),
+    );
+    scene.EntityManager.AddComponent(
+        grandchildEntityId,
+        Parent,
+        new Parent(childEntityId),
+    );
+    scene.EntityManager.RegisterComponentRemovalHandler(
+        Marker,
+        ({ entityId }) => destroyedEntityIds.push(entityId),
+    );
+    scene.Initialize();
+
+    assert.equal(scene.DestroyEntity(rootEntityId), true);
+    assert.deepEqual(scene.EntityManager.GetEntityIds(), [
+        rootEntityId,
+        childEntityId,
+        grandchildEntityId,
+    ]);
+
+    scene.FixedUpdate(1 / 60, 1 / 60);
+
+    assert.deepEqual(scene.EntityManager.GetEntityIds(), []);
+    assert.deepEqual(destroyedEntityIds, [
+        grandchildEntityId,
+        childEntityId,
+        rootEntityId,
+    ]);
+    scene.Dispose();
+});
+
+test("rejects direct deletion of a parent and hierarchy-wide clear", () => {
+    const scene = new Scene("hierarchy-delete-guard-test");
+    const parentEntityId = scene.EntityManager.CreateEntity();
+    const childEntityId = scene.EntityManager.CreateEntity();
+    scene.EntityManager.AddComponent(
+        childEntityId,
+        Parent,
+        new Parent(parentEntityId),
+    );
+    scene.Initialize();
+
+    assert.throws(
+        () => scene.EntityManager.DestroyEntity(parentEntityId),
+        /Use Scene.DestroyEntity\(\)/,
+    );
+    assert.throws(
+        () => scene.EntityManager.DestroyAllEntities(),
+        /parent relationships exist/,
+    );
+    scene.CommandBuffer.DestroyEntity(parentEntityId);
+    assert.throws(
+        () => scene.FixedUpdate(1 / 60, 1 / 60),
+        (error) =>
+            error instanceof AggregateError &&
+            error.errors[0] instanceof AggregateError &&
+            error.errors[0].errors[0].cause.message.includes(
+                "Use Scene.DestroyEntity()",
+            ),
+    );
+    assert.deepEqual(
+        scene.EntityManager.GetEntityIds(),
+        [parentEntityId, childEntityId],
+    );
+    scene.Dispose();
+});
+
+test("refuses to destroy a hierarchy that contains the active camera", () => {
+    const scene = new Scene("hierarchy-camera-delete-test");
+    const rootEntityId = scene.EntityManager.CreateEntity();
+    const cameraEntityId = AddCameraEntity(scene);
+    scene.EntityManager.AddComponent(
+        cameraEntityId,
+        Parent,
+        new Parent(rootEntityId),
+    );
+    scene.SetActiveCameraEntity(cameraEntityId);
+    scene.Initialize();
+
+    assert.throws(
+        () => scene.DestroyEntity(rootEntityId),
+        /Switch to another camera/,
+    );
+    scene.FixedUpdate(1 / 60, 1 / 60);
+    assert.deepEqual(
+        scene.EntityManager.GetEntityIds(),
+        [rootEntityId, cameraEntityId],
+    );
+    scene.Dispose();
+});
+
+test("queues parent changes until fixed update and supports detaching", () => {
+    const scene = new Scene("set-parent-test");
+    const firstParentId = AddTransformEntity(scene);
+    const secondParentId = AddTransformEntity(scene);
+    const childEntityId = AddTransformEntity(scene);
+    scene.EntityManager.AddComponent(
+        childEntityId,
+        Parent,
+        new Parent(firstParentId),
+    );
+    scene.Initialize();
+
+    assert.equal(scene.SetParent(childEntityId, secondParentId), true);
+    assert.equal(
+        scene.EntityManager.GetComponent(childEntityId, Parent).ParentEntityId,
+        firstParentId,
+    );
+
+    scene.FixedUpdate(1 / 60, 1 / 60);
+
+    assert.equal(
+        scene.EntityManager.GetComponent(childEntityId, Parent).ParentEntityId,
+        secondParentId,
+    );
+    assert.equal(scene.SetParent(childEntityId, null), true);
+    assert.equal(
+        scene.EntityManager.GetComponent(childEntityId, Parent).ParentEntityId,
+        secondParentId,
+    );
+
+    scene.FixedUpdate(1 / 60, 2 / 60);
+
+    assert.equal(scene.EntityManager.HasComponent(childEntityId, Parent), false);
+    scene.Dispose();
+});
+
+test("validates queued parent changes against the effective hierarchy", () => {
+    const scene = new Scene("set-parent-cycle-test");
+    const firstEntityId = AddTransformEntity(scene);
+    const secondEntityId = AddTransformEntity(scene);
+    scene.Initialize();
+
+    assert.equal(scene.SetParent(firstEntityId, secondEntityId), true);
+    assert.throws(
+        () => scene.SetParent(secondEntityId, firstEntityId),
+        /Parent hierarchy contains a cycle/,
+    );
+    assert.throws(
+        () => scene.SetParent(firstEntityId, firstEntityId),
+        /Parent hierarchy contains a cycle/,
+    );
+
+    scene.FixedUpdate(1 / 60, 1 / 60);
+
+    assert.equal(
+        scene.EntityManager.GetComponent(firstEntityId, Parent).ParentEntityId,
+        secondEntityId,
+    );
+    assert.equal(scene.EntityManager.HasComponent(secondEntityId, Parent), false);
+    scene.Dispose();
+});
+
+test("uses queued parent changes when cascading entity destruction", () => {
+    const scene = new Scene("set-parent-destroy-order-test");
+    const originalParentId = AddTransformEntity(scene);
+    const newParentId = AddTransformEntity(scene);
+    const childEntityId = AddTransformEntity(scene);
+    scene.EntityManager.AddComponent(
+        childEntityId,
+        Parent,
+        new Parent(originalParentId),
+    );
+    scene.Initialize();
+
+    assert.equal(scene.SetParent(childEntityId, newParentId), true);
+    assert.equal(scene.DestroyEntity(originalParentId), true);
+    scene.FixedUpdate(1 / 60, 1 / 60);
+
+    assert.deepEqual(
+        scene.EntityManager.GetEntityIds(),
+        [newParentId, childEntityId],
+    );
+    assert.equal(
+        scene.EntityManager.GetComponent(childEntityId, Parent).ParentEntityId,
+        newParentId,
+    );
+    scene.Dispose();
+});
+
+test("rejects parent changes for pending deletion and direct runtime mutations", () => {
+    const scene = new Scene("set-parent-guard-test");
+    const parentEntityId = AddTransformEntity(scene);
+    const childEntityId = AddTransformEntity(scene);
+    const otherEntityId = AddTransformEntity(scene);
+    scene.EntityManager.AddComponent(
+        childEntityId,
+        Parent,
+        new Parent(parentEntityId),
+    );
+    scene.Initialize();
+
+    assert.throws(
+        () =>
+            scene.EntityManager.AddComponent(
+                otherEntityId,
+                Parent,
+                new Parent(parentEntityId),
+            ),
+        /Use Scene.SetParent\(\)/,
+    );
+    assert.throws(
+        () => scene.EntityManager.RemoveComponent(childEntityId, Parent),
+        /Use Scene.SetParent\(\)/,
+    );
+
+    assert.equal(scene.DestroyEntity(parentEntityId), true);
+    assert.throws(
+        () => scene.SetParent(childEntityId, null),
+        /queued for destruction/,
+    );
+    scene.FixedUpdate(1 / 60, 1 / 60);
+
+    assert.deepEqual(scene.EntityManager.GetEntityIds(), [otherEntityId]);
+    scene.Dispose();
+});
+
+test("protects Transform components used by parent relationships", () => {
+    const scene = new Scene("transform-hierarchy-guard-test");
+    const parentEntityId = AddTransformEntity(scene);
+    const childEntityId = AddTransformEntity(scene);
+    scene.EntityManager.AddComponent(
+        childEntityId,
+        Parent,
+        new Parent(parentEntityId),
+    );
+    scene.Initialize();
+
+    assert.throws(
+        () => scene.EntityManager.RemoveComponent(childEntityId, Transform),
+        /Detach or reparent it first/,
+    );
+    assert.throws(
+        () => scene.EntityManager.RemoveComponent(parentEntityId, Transform),
+        /Detach or reparent it first/,
+    );
+
+    scene.CommandBuffer.RemoveComponent(parentEntityId, Transform);
+    assert.throws(
+        () => scene.FixedUpdate(1 / 60, 1 / 60),
+        (error) =>
+            error instanceof AggregateError &&
+            error.errors[0] instanceof AggregateError &&
+            error.errors[0].errors[0].cause.message.includes(
+                "Detach or reparent it first",
+            ),
+    );
+    assert.equal(
+        scene.EntityManager.HasComponent(parentEntityId, Transform),
+        true,
+    );
+
+    scene.SetParent(childEntityId, null);
+    scene.CommandBuffer.RemoveComponent(parentEntityId, Transform);
+    scene.FixedUpdate(1 / 60, 2 / 60);
+
+    assert.equal(
+        scene.EntityManager.HasComponent(parentEntityId, Transform),
+        false,
+    );
+    assert.equal(
+        scene.EntityManager.RemoveComponent(childEntityId, Transform),
+        true,
+    );
     scene.Dispose();
 });
