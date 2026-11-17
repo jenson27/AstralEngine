@@ -93,6 +93,62 @@ test("reports press and release edges only in the consumed input frame", () => {
     assert.equal(manager.IsActionDown("moveForward"), false);
 });
 
+test("reports edges for the combined state of alternative bindings", () => {
+    const { manager, frames } = CreateInputManager();
+
+    frames.push(
+        CreateInputFrame({
+            keysDown: ["KeyW"],
+            keysPressed: ["KeyW"],
+        }),
+    );
+    manager.Update();
+
+    frames.push(
+        CreateInputFrame({
+            keysDown: ["KeyW", "ArrowUp"],
+            keysPressed: ["ArrowUp"],
+        }),
+    );
+    manager.Update();
+
+    assert.equal(manager.WasActionPressed("moveForward"), false);
+    assert.equal(manager.WasActionReleased("moveForward"), false);
+
+    frames.push(
+        CreateInputFrame({
+            keysDown: ["ArrowUp"],
+            keysReleased: ["KeyW"],
+        }),
+    );
+    manager.Update();
+
+    assert.equal(manager.IsActionDown("moveForward"), true);
+    assert.equal(manager.WasActionReleased("moveForward"), false);
+
+    frames.push(CreateInputFrame({ keysReleased: ["ArrowUp"] }));
+    manager.Update();
+
+    assert.equal(manager.IsActionDown("moveForward"), false);
+    assert.equal(manager.WasActionReleased("moveForward"), true);
+});
+
+test("reports both edges for a press and release within one input frame", () => {
+    const { manager, frames } = CreateInputManager();
+
+    frames.push(
+        CreateInputFrame({
+            keysPressed: ["KeyW"],
+            keysReleased: ["KeyW"],
+        }),
+    );
+    manager.Update();
+
+    assert.equal(manager.IsActionDown("moveForward"), false);
+    assert.equal(manager.WasActionPressed("moveForward"), true);
+    assert.equal(manager.WasActionReleased("moveForward"), true);
+});
+
 test("exposes pointer movement and pointer-lock state", () => {
     const { manager, frames } = CreateInputManager();
 

@@ -1,5 +1,5 @@
 // Makes the page and canvas fill the browser window, and resizes the canvas when the window is resized.
-// This is a simple implementation of a platform for running WebGL applications in a browser environment.
+// This is a simple implementation of a platform for running WebGPU applications in a browser environment.
 
 const http = require("node:http");
 const fs = require("node:fs");
@@ -13,6 +13,21 @@ const contentTypes = {
     ".css": "text/css; charset=utf-8",
     ".js": "text/javascript; charset=utf-8",
 };
+const maxLogRequestBytes = 64 * 1024;
+const staticFiles = new Map([
+    ["/index.html", path.join(rootDirectory, "index.html")],
+    ["/style.css", path.join(rootDirectory, "style.css")],
+]);
+const staticDirectories = [
+    {
+        urlPrefix: "/src/",
+        directory: path.join(rootDirectory, "src"),
+    },
+    {
+        urlPrefix: "/assets/",
+        directory: path.join(rootDirectory, "assets"),
+    },
+];
 const hotReloadClients = new Set();
 const pendingAssetPaths = new Set();
 let fullRescanPending = false;
@@ -21,6 +36,38 @@ let assetWatcher = null;
 let assetWatcherRetryTimer = null;
 let assetWatcherRetryDelayMs = 1000;
 let assetWatcherNeedsRescan = false;
+
+function ResolveStaticFilePath(requestPath) {
+    const exactFilePath = staticFiles.get(requestPath);
+
+    if (exactFilePath) {
+        return exactFilePath;
+    }
+
+    const route = staticDirectories.find(({ urlPrefix }) =>
+        requestPath.startsWith(urlPrefix),
+    );
+
+    if (!route) {
+        return null;
+    }
+
+    const filePath = path.resolve(
+        route.directory,
+        requestPath.slice(route.urlPrefix.length),
+    );
+    const relativePath = path.relative(route.directory, filePath);
+
+    if (
+        relativePath === ".." ||
+        relativePath.startsWith(`..${path.sep}`) ||
+        path.isAbsolute(relativePath)
+    ) {
+        return null;
+    }
+
+    return filePath;
+}
 
 function GetDailyLogFileName(date) {
     const year = date.getFullYear();
@@ -219,11 +266,51 @@ function StartAssetWatcher() {
     }
 }
 
+function IsValidLogEntry(logEntry) {
+    return (
+        !!logEntry &&
+        typeof logEntry === "object" &&
+        typeof logEntry.timestamp === "string" &&
+        typeof logEntry.level === "string" &&
+        typeof logEntry.message === "string"
+    );
+}
+
+function FormatLogLine(logEntry) {
+    const details =
+        logEntry.details === undefined
+            ? ""
+            : ` ${JSON.stringify(logEntry.details)}`;
+    const readableTimestamp = new Intl.DateTimeFormat(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+    }).format(new Date(logEntry.timestamp));
+
+    return (
+        `[${readableTimestamp}] [${logEntry.level}] ` +
+        `${logEntry.message}${details}\n`
+    );
+}
+
 async function WriteLogEntry(request, response) {
     let requestBody = "";
+    let requestBytes = 0;
 
     try {
         for await (const chunk of request) {
+            requestBytes += chunk.byteLength;
+
+            if (requestBytes > maxLogRequestBytes) {
+                response.writeHead(413, { Connection: "close" });
+                response.end("Log entry is too large.", () =>
+                    request.destroy(),
+                );
+                return;
+            }
+
             requestBody += chunk.toString("utf8");
         }
 
@@ -237,13 +324,7 @@ async function WriteLogEntry(request, response) {
             return;
         }
 
-        if (
-            !logEntry ||
-            typeof logEntry !== "object" ||
-            typeof logEntry.timestamp !== "string" ||
-            typeof logEntry.level !== "string" ||
-            typeof logEntry.message !== "string"
-        ) {
+        if (!IsValidLogEntry(logEntry)) {
             response.writeHead(400);
             response.end("Invalid log entry.");
             return;
@@ -252,20 +333,7 @@ async function WriteLogEntry(request, response) {
         const date = new Date();
         const fileName = GetDailyLogFileName(date);
         const logFilePath = path.join(logDirectory, fileName);
-        const details =
-            logEntry.details === undefined
-                ? ""
-                : ` ${JSON.stringify(logEntry.details)}`;
-        const readableTimestamp = new Intl.DateTimeFormat(undefined, {
-            year: "numeric",
-            month: "short",
-            day: "numeric",
-            hour: "numeric",
-            minute: "2-digit",
-        }).format(new Date(logEntry.timestamp));
-        const logLine =
-            `[${readableTimestamp}] [${logEntry.level}] ` +
-            `${logEntry.message}${details}\n`;
+        const logLine = FormatLogLine(logEntry);
 
         await fs.promises.mkdir(logDirectory, { recursive: true });
         await fs.promises.appendFile(logFilePath, logLine, "utf8");
@@ -279,7 +347,7 @@ async function WriteLogEntry(request, response) {
     }
 }
 
-const server = http.createServer((request, response) => {
+function HandleRequest(request, response) {
     let filePath;
 
     try {
@@ -303,13 +371,23 @@ const server = http.createServer((request, response) => {
                 ? "/index.html"
                 : decodeURIComponent(requestUrl.pathname);
 
-        filePath = path.resolve(rootDirectory, `.${requestPath}`);
+        filePath = ResolveStaticFilePath(requestPath);
+
+        if (!filePath) {
+            response.writeHead(404);
+            response.end("Not found");
+            return;
+        }
     } catch {
         response.writeHead(400);
         response.end("Bad request");
         return;
     }
 
+    ServeStaticFile(response, filePath);
+}
+
+function ServeStaticFile(response, filePath) {
     if (
         filePath !== rootDirectory &&
         !filePath.startsWith(`${rootDirectory}${path.sep}`)
@@ -335,7 +413,9 @@ const server = http.createServer((request, response) => {
         });
         response.end(contents);
     });
-});
+}
+
+const server = http.createServer(HandleRequest);
 
 StartAssetWatcher();
 

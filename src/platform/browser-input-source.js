@@ -147,7 +147,10 @@ export class BrowserInputSource {
 
     _HandlePointerDown() {
         this._canvas.focus({ preventScroll: true });
+        this._RequestPointerLock();
+    }
 
+    _RequestPointerLock() {
         if (
             this._document.pointerLockElement === this._canvas ||
             typeof this._canvas.requestPointerLock !== "function"
@@ -166,7 +169,7 @@ export class BrowserInputSource {
     }
 
     _HandlePointerMove(event) {
-        if (!this._IsInputActive()) {
+        if (!this._isPointerLocked) {
             return;
         }
 
@@ -180,8 +183,15 @@ export class BrowserInputSource {
     }
 
     _HandlePointerLockChange() {
-        this._isPointerLocked =
+        const isPointerLocked =
             this._document.pointerLockElement === this._canvas;
+
+        if (isPointerLocked !== this._isPointerLocked) {
+            this._pointerDeltaX = 0;
+            this._pointerDeltaY = 0;
+        }
+
+        this._isPointerLocked = isPointerLocked;
 
         if (!this._isPointerLocked) {
             this._ReleaseHeldKeys();

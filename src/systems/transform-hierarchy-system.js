@@ -1,46 +1,74 @@
 import { Parent } from "../components/parent.js";
 import { Transform } from "../components/transform.js";
 
-const emptyEntityIds = Object.freeze([]);
+function HasUnitScale(scale) {
+    return (
+        scale?.length === 3 &&
+        Number.isFinite(scale[0]) &&
+        Number.isFinite(scale[1]) &&
+        Number.isFinite(scale[2]) &&
+        Math.abs(scale[0] - 1) <= 1e-6 &&
+        Math.abs(scale[1] - 1) <= 1e-6 &&
+        Math.abs(scale[2] - 1) <= 1e-6
+    );
+}
 
 export class TransformHierarchySystem {
     constructor() {
         this._transformsByEntityId = new Map();
         this._parentByChildId = new Map();
-        this._childrenByParentId = new Map();
-        this._childListPool = [];
-        this._pendingEntityIds = [];
-        this._processedEntityIds = new Set();
+        this._traversalOrder = [];
+        this._cachedStructuralRevision = null;
     }
 
     PrepareRender(scene, { interpolationAlpha }) {
-        this._ResetHierarchyState();
-        this._BuildHierarchyGraph(scene.EntityManager);
+        const entityManager = scene.EntityManager;
+        const structuralRevision = entityManager.StructuralRevision;
+
+        if (this._cachedStructuralRevision !== structuralRevision) {
+            this._BuildHierarchyGraph(entityManager);
+            this._cachedStructuralRevision = structuralRevision;
+        }
+
+        this._ValidateActiveCameraScale(scene.ActiveCameraEntityId);
         this._UpdateWorldTransforms(interpolationAlpha);
     }
 
-    _ResetHierarchyState() {
-        const transformsByEntityId = this._transformsByEntityId;
-        const parentByChildId = this._parentByChildId;
-        const childrenByParentId = this._childrenByParentId;
+    _ValidateActiveCameraScale(cameraEntityId) {
+        while (cameraEntityId !== null) {
+            const transform =
+                this._transformsByEntityId.get(cameraEntityId);
 
-        transformsByEntityId.clear();
-        parentByChildId.clear();
-        this._pendingEntityIds.length = 0;
-        this._processedEntityIds.clear();
+            if (!transform) {
+                throw new Error(
+                    "The active camera hierarchy needs Transform components.",
+                );
+            }
 
-        for (const childEntityIds of childrenByParentId.values()) {
-            childEntityIds.length = 0;
-            this._childListPool.push(childEntityIds);
+            if (!HasUnitScale(transform.scale)) {
+                throw new RangeError(
+                    "The active camera and its parents must have unit scale. " +
+                        `Invalid scale on entity "${cameraEntityId}".`,
+                );
+            }
+
+            cameraEntityId =
+                this._parentByChildId.get(cameraEntityId) ?? null;
         }
-        childrenByParentId.clear();
     }
 
     _BuildHierarchyGraph(entityManager) {
+        this._transformsByEntityId.clear();
+        this._parentByChildId.clear();
+        this._traversalOrder.length = 0;
+
+        this._CollectTransforms(entityManager);
+        this._CollectParentLinks(entityManager);
+        this._BuildTraversalOrder();
+    }
+
+    _CollectTransforms(entityManager) {
         const transformsByEntityId = this._transformsByEntityId;
-        const parentByChildId = this._parentByChildId;
-        const childrenByParentId = this._childrenByParentId;
-        const pendingEntityIds = this._pendingEntityIds;
 
         for (const entityId of entityManager.Query(Transform)) {
             transformsByEntityId.set(
@@ -48,25 +76,39 @@ export class TransformHierarchySystem {
                 entityManager.GetComponent(entityId, Transform),
             );
         }
+    }
 
-        this._CollectParentLinks(
-            entityManager,
-            transformsByEntityId,
-            parentByChildId,
+    _BuildTraversalOrder() {
+        const childrenByParentId = new Map();
+        const rootEntityIds = [];
+
+        this._CollectRootsAndChildren(
+            childrenByParentId,
+            rootEntityIds,
         );
+        this._AppendTraversalOrder(
+            rootEntityIds,
+            childrenByParentId,
+        );
+        this._ValidateTraversalOrder();
+    }
+
+    _CollectRootsAndChildren(childrenByParentId, rootEntityIds) {
+        const transformsByEntityId = this._transformsByEntityId;
+        const parentByChildId = this._parentByChildId;
 
         for (const entityId of transformsByEntityId.keys()) {
             const parentEntityId = parentByChildId.get(entityId);
 
             if (parentEntityId === undefined) {
-                pendingEntityIds.push(entityId);
+                rootEntityIds.push(entityId);
                 continue;
             }
 
             let childEntityIds = childrenByParentId.get(parentEntityId);
 
             if (!childEntityIds) {
-                childEntityIds = this._childListPool.pop() ?? [];
+                childEntityIds = [];
                 childrenByParentId.set(parentEntityId, childEntityIds);
             }
 
@@ -74,20 +116,36 @@ export class TransformHierarchySystem {
         }
     }
 
-    _UpdateWorldTransforms(interpolationAlpha) {
-        const transformsByEntityId = this._transformsByEntityId;
-        const parentByChildId = this._parentByChildId;
-        const childrenByParentId = this._childrenByParentId;
-        const pendingEntityIds = this._pendingEntityIds;
-        const processedEntityIds = this._processedEntityIds;
+    _AppendTraversalOrder(rootEntityIds, childrenByParentId) {
+        const pendingEntityIds = rootEntityIds.slice();
 
         while (pendingEntityIds.length > 0) {
             const entityId = pendingEntityIds.pop();
+            this._traversalOrder.push(entityId);
 
-            if (processedEntityIds.has(entityId)) {
-                continue;
+            const childEntityIds = childrenByParentId.get(entityId);
+
+            if (childEntityIds) {
+                for (const childEntityId of childEntityIds) {
+                    pendingEntityIds.push(childEntityId);
+                }
             }
+        }
+    }
 
+    _ValidateTraversalOrder() {
+        if (
+            this._traversalOrder.length !==
+            this._transformsByEntityId.size
+        ) {
+            throw new Error("Parent hierarchy contains a cycle.");
+        }
+    }
+
+    _UpdateWorldTransforms(interpolationAlpha) {
+        const transformsByEntityId = this._transformsByEntityId;
+        const parentByChildId = this._parentByChildId;
+        for (const entityId of this._traversalOrder) {
             const transform = transformsByEntityId.get(entityId);
             const parentEntityId = parentByChildId.get(entityId);
             const parentWorldMatrix =
@@ -99,24 +157,13 @@ export class TransformHierarchySystem {
                 parentWorldMatrix,
                 interpolationAlpha,
             );
-            processedEntityIds.add(entityId);
-
-            for (const childEntityId of
-                childrenByParentId.get(entityId) ?? emptyEntityIds) {
-                pendingEntityIds.push(childEntityId);
-            }
-        }
-
-        if (processedEntityIds.size !== transformsByEntityId.size) {
-            throw new Error("Parent hierarchy contains a cycle.");
         }
     }
 
-    _CollectParentLinks(
-        entityManager,
-        transformsByEntityId,
-        parentByChildId,
-    ) {
+    _CollectParentLinks(entityManager) {
+        const transformsByEntityId = this._transformsByEntityId;
+        const parentByChildId = this._parentByChildId;
+
         for (const entityId of entityManager.Query(Parent)) {
             const parent = entityManager.GetComponent(entityId, Parent);
 
@@ -131,7 +178,5 @@ export class TransformHierarchySystem {
 
             parentByChildId.set(entityId, parent.ParentEntityId);
         }
-
-        return parentByChildId;
     }
 }

@@ -31,7 +31,7 @@
 | `BrowserInputSource.ConsumeFrameInput()` | Returns copies of key sets, pointer delta, and pointer-lock state, then clears pressed/released edges and pointer delta |
 | `InputManager.Update()` | Replaces its current snapshot with input consumed from the source |
 | `IsActionDown(actionName)` | Returns whether any binding is held |
-| `WasActionPressed(actionName)` / `WasActionReleased(actionName)` | Returns whether a binding changed state in the consumed snapshot |
+| `WasActionPressed(actionName)` / `WasActionReleased(actionName)` | Returns whether the combined action state changed; pressing or releasing an alternate binding does not create an edge while another binding keeps the action active |
 | `GetPointerDelta()` | Returns `{ x, y }` movement accumulated since the last consume |
 | `IsPointerLocked()` | Returns the snapshot's pointer-lock state |
 
@@ -54,6 +54,7 @@
 
 - Held keys remain active across consumes until a key-up or focus-loss event
 - If several fixed steps run in one browser frame, transient pressed/released edges and pointer delta are available to the first consume only
+- A press and release that both occur between consumes report both action edges when the action was inactive before the tap
 
 ## Current scope
 

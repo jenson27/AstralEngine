@@ -64,7 +64,7 @@
 
 - Reparenting preserves local transforms, not world transforms
 - There is no public child list or hierarchy editor API
-- The system recomputes the hierarchy during render preparation
+- The system rebuilds its hierarchy cache after ECS structural changes and recomputes world matrices during each render preparation
 
 ## Source
 

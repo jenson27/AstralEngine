@@ -1,26 +1,42 @@
+function ValidateVertexData(positions, uvs) {
+    if (!(positions instanceof Float32Array)) {
+        throw new TypeError("Mesh positions must be a Float32Array.");
+    }
+
+    if (positions.length === 0 || positions.length % 9 !== 0) {
+        throw new RangeError(
+            "Mesh positions must contain complete xyz triangles.",
+        );
+    }
+
+    if (!(uvs instanceof Float32Array)) {
+        throw new TypeError("Mesh UVs must be a Float32Array.");
+    }
+
+    const vertexCount = positions.length / 3;
+
+    if (uvs.length !== vertexCount * 2) {
+        throw new RangeError(
+            "Mesh must have one uv pair for each vertex.",
+        );
+    }
+
+    if (!positions.every(Number.isFinite)) {
+        throw new RangeError(
+            "Mesh positions must contain finite values.",
+        );
+    }
+
+    if (!uvs.every(Number.isFinite)) {
+        throw new RangeError("Mesh UVs must contain finite values.");
+    }
+
+    return vertexCount;
+}
+
 export class Mesh {
     constructor(positions, uvs, submeshes = null) {
-        if (!(positions instanceof Float32Array)) {
-            throw new TypeError("Mesh positions must be a Float32Array.");
-        }
-
-        if (positions.length === 0 || positions.length % 9 !== 0) {
-            throw new RangeError(
-                "Mesh positions must contain complete xyz triangles.",
-            );
-        }
-
-        if (!(uvs instanceof Float32Array)) {
-            throw new TypeError("Mesh UVs must be a Float32Array.");
-        }
-
-        const vertexCount = positions.length / 3;
-
-        if (uvs.length !== vertexCount * 2) {
-            throw new RangeError(
-                "Mesh must have one uv pair for each vertex.",
-            );
-        }
+        const vertexCount = ValidateVertexData(positions, uvs);
 
         const sourceSubmeshes = submeshes ?? [
             {

@@ -13,9 +13,14 @@ export class EntityManager {
         this._entities = new Set();
         this._entityNames = new Map();
         this._componentStores = new Map();
+        this._structuralRevision = 0;
         this._activeQueryCount = 0;
         this._componentRemovalHandlers = new Map();
         this._pendingComponentRemovals = [];
+    }
+
+    get StructuralRevision() {
+        return this._structuralRevision;
     }
 
     CreateEntity(entityId = CreateEntityId(), name = "Entity") {
@@ -32,6 +37,7 @@ export class EntityManager {
         this._beforeStructuralChange({ type: "create-entity", entityId });
         this._entities.add(entityId);
         this._entityNames.set(entityId, name.trim());
+        this._structuralRevision += 1;
         return entityId;
     }
 
@@ -42,6 +48,7 @@ export class EntityManager {
         this._entities.delete(entityId);
         this._entityNames.delete(entityId);
         this._RemoveEntityComponents(entityId);
+        this._structuralRevision += 1;
     }
 
     _RemoveEntityComponents(entityId) {
@@ -122,6 +129,7 @@ export class EntityManager {
 
         const storage = this._GetOrCreateStorage(componentType);
         storage.Add(entityId, component);
+        this._structuralRevision += 1;
         return component;
     }
 
@@ -159,6 +167,7 @@ export class EntityManager {
         });
         storage.Remove(entityId);
         this._QueueComponentRemoval(entityId, componentType, component);
+        this._structuralRevision += 1;
         return true;
     }
 
