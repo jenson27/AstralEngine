@@ -30,4 +30,10 @@
 
 - [Graphics](graphics/GRAPHICS_README.md) - Mesh data, materials, loaders, and the WebGPU renderer
 - [Serialization](serialization/SERIALIZATION_README.md) - Versioned records, JSON rules, and scene documents
+- [Editor Panels](editor/PANELS_README.md) - Panel registration, lifecycle, and built-in editor views
+
+## Diagnostics
+
 - [Logging](diagnostics/LOGGING_README.md) - Log entries, sinks, and server log files
+- [Profiler](diagnostics/PROFILER_README.md) - CPU scopes, frame metrics, and optional GPU timings
+- [Memory Tracker](diagnostics/MEMORY_TRACKER_README.md) - Tracked resource estimates, frame events, and snapshots

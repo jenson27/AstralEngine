@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Astral Engine Editor</title>
+    <link rel="stylesheet" href="/style.css" />
+    <link rel="stylesheet" href="/src/editor/ui/editor.css" />
+  </head>
+  <body>
+    <main id="editor-shell">
+      <header class="editor-toolbar">
+        <strong>Astral Engine</strong>
+        <span>Editor · Version 1</span>
+      </header>
+      <div class="editor-workspace">
+        <aside
+          class="editor-dock editor-dock-left"
+          data-editor-dock="left"
+          aria-label="Left editor panels"
+        ></aside>
+        <div
+          class="editor-resize-handle"
+          data-editor-splitter="left"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Resize hierarchy panel"
+          tabindex="0"
+        ></div>
+        <section class="editor-viewport" aria-label="Game viewport">
+          <canvas id="game-canvas" aria-label="Game view" tabindex="0"></canvas>
+          <output id="engine-status" aria-live="polite">Starting...</output>
+        </section>
+      </div>
+      <div
+        class="editor-bottom-resize-handle"
+        data-editor-splitter="bottom"
+        role="separator"
+        aria-orientation="horizontal"
+        aria-label="Resize bottom diagnostics panel"
+        tabindex="0"
+      ></div>
+      <section class="editor-bottom-dock" aria-label="Editor tools">
+        <nav
+          class="editor-dock-tabs"
+          data-editor-dock-tabs="bottom"
+          role="tablist"
+          aria-label="Editor tool panels"
+        ></nav>
+        <div
+          class="editor-bottom-panel-host"
+          data-editor-dock="bottom"
+        ></div>
+      </section>
+    </main>
+    <script type="module" src="/src/editor/main.js"></script>
+  </body>
+</html>

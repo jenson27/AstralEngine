@@ -14,6 +14,7 @@ export class EntityManager {
         this._entityNames = new Map();
         this._componentStores = new Map();
         this._structuralRevision = 0;
+        this._entityNameRevision = 0;
         this._activeQueryCount = 0;
         this._componentRemovalHandlers = new Map();
         this._pendingComponentRemovals = [];
@@ -21,6 +22,10 @@ export class EntityManager {
 
     get StructuralRevision() {
         return this._structuralRevision;
+    }
+
+    get EntityNameRevision() {
+        return this._entityNameRevision;
     }
 
     CreateEntity(entityId = CreateEntityId(), name = "Entity") {
@@ -86,7 +91,12 @@ export class EntityManager {
         this._RequireEntityName(name);
 
         const normalizedName = name.trim();
-        this._entityNames.set(entityId, normalizedName);
+
+        if (this._entityNames.get(entityId) !== normalizedName) {
+            this._entityNames.set(entityId, normalizedName);
+            this._entityNameRevision += 1;
+        }
+
         return normalizedName;
     }
 

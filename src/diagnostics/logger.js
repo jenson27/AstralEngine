@@ -45,6 +45,20 @@ function FileLogSink(logEntry) {
 }
 
 const logSinks = new Set([ConsoleLogSink, FileLogSink]);
+const LOG_HISTORY_CAPACITY = 2000;
+const logHistory = [];
+
+function CloneLogEntry(logEntry) {
+    return JSON.parse(JSON.stringify(logEntry));
+}
+
+function CreateErrorSummary(error) {
+    return {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+    };
+}
 
 function GetLocalIsoTimestamp(date = new Date()) {
     const offsetMinutes = -date.getTimezoneOffset();
@@ -91,6 +105,10 @@ export class AstralLogger {
         return () => logSinks.delete(logSink);
     }
 
+    static GetHistory() {
+        return logHistory.map(CloneLogEntry);
+    }
+
     static _Write(level, message, details) {
         const logEntry = {
             timestamp: GetLocalIsoTimestamp(),
@@ -100,6 +118,11 @@ export class AstralLogger {
 
         if (details !== undefined) {
             logEntry.details = AstralLogger._SerializeDetails(details);
+        }
+
+        logHistory.push(CloneLogEntry(logEntry));
+        if (logHistory.length > LOG_HISTORY_CAPACITY) {
+            logHistory.shift();
         }
 
         for (const logSink of logSinks) {
@@ -128,22 +151,15 @@ export class AstralLogger {
     }
 
     static _SerializeAggregateError(details) {
-        return {
-            name: details.name,
-            message: details.message,
-            stack: details.stack,
-            errors: Array.from(details.errors, (error) =>
-                AstralLogger._SerializeDetails(error),
-            ),
-        };
+        const serializedError = CreateErrorSummary(details);
+        serializedError.errors = Array.from(details.errors, (error) =>
+            AstralLogger._SerializeDetails(error),
+        );
+        return serializedError;
     }
 
     static _SerializeError(details) {
-        const serializedError = {
-            name: details.name,
-            message: details.message,
-            stack: details.stack,
-        };
+        const serializedError = CreateErrorSummary(details);
 
         if (details.cause !== undefined) {
             serializedError.cause = AstralLogger._SerializeDetails(

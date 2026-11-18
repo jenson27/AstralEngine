@@ -7,10 +7,34 @@ import { Mesh } from "./mesh.js";
 import { Material } from "./material.js";
 
 const shaderUrl = new URL("./shaders/triangle.wgsl", import.meta.url);
+const GPU_TIMING_SLOT_COUNT = 3;
+const GPU_TIMESTAMP_PAIR_BYTES = 16;
 
 export class WebGPURenderer {
-    constructor(canvas) {
+    constructor(canvas, memoryTracker = null, profiler = null) {
+        if (
+            memoryTracker !== null &&
+            (typeof memoryTracker.TrackResource !== "function" ||
+                typeof memoryTracker.ReleaseResource !== "function")
+        ) {
+            throw new TypeError(
+                "WebGPURenderer memory tracker must track and release resources.",
+            );
+        }
+
+        if (
+            profiler !== null &&
+            (typeof profiler.RecordGpuFrameTime !== "function" ||
+                typeof profiler.IsEnabled !== "boolean")
+        ) {
+            throw new TypeError(
+                "WebGPURenderer profiler must record GPU frame timings.",
+            );
+        }
+
         this._canvas = canvas;
+        this._memoryTracker = memoryTracker;
+        this._profiler = profiler;
         this._context = null;
         this._device = null;
         this._format = null;
@@ -23,17 +47,27 @@ export class WebGPURenderer {
         this._materialBindGroupLayout = null;
         this._textureSampler = null;
         this._transformBuffer = null;
+        this._transformBufferMemoryToken = null;
         this._transformBindGroup = null;
         this._matrixBlockSize = 16 * 3 * Float32Array.BYTES_PER_ELEMENT;
         this._uniformStride = 0;
         this._drawCapacity = 0;
         this._matrixData = new Float32Array(0);
         this._depthTexture = null;
+        this._depthTextureMemoryToken = null;
         this._depthView = null;
         this._depthWidth = 0;
         this._depthHeight = 0;
         this._depthFormat = "depth24plus";
         this._deviceLostInfo = null;
+        this._gpuTimingSupported = false;
+        this._gpuTimestampQuerySet = null;
+        this._gpuTimingSlots = [];
+        this._gpuTimingGeneration = 0;
+    }
+
+    get GpuTimingSupported() {
+        return this._gpuTimingSupported;
     }
 
     // Initialize the WebGPU renderer by requesting a GPU adapter and device, and configuring the canvas context.
@@ -64,8 +98,14 @@ export class WebGPURenderer {
             throw new Error("The browser could not access a GPU adapter.");
         }
 
-        this._device = await adapter.requestDevice();
+        const requiredFeatures = adapter.features.has("timestamp-query")
+            ? ["timestamp-query"]
+            : [];
+        this._device = await adapter.requestDevice(
+            requiredFeatures.length > 0 ? { requiredFeatures } : undefined,
+        );
         this._deviceLostInfo = null;
+        this._InitializeGpuTiming();
 
         const device = this._device;
 
@@ -75,6 +115,7 @@ export class WebGPURenderer {
             }
 
             this._deviceLostInfo = lostInfo;
+            this._DestroyGpuTimingResources();
             AstralLogger.Error("WebGPU device lost.", {
                 reason: lostInfo.reason,
                 message: lostInfo.message,
@@ -87,6 +128,128 @@ export class WebGPURenderer {
                 message: event.error.message,
             });
         });
+    }
+
+    _InitializeGpuTiming() {
+        if (
+            !this._profiler ||
+            !this._device.features.has("timestamp-query")
+        ) {
+            return;
+        }
+
+        try {
+            this._gpuTimestampQuerySet = this._device.createQuerySet({
+                type: "timestamp",
+                count: GPU_TIMING_SLOT_COUNT * 2,
+            });
+
+            for (let index = 0; index < GPU_TIMING_SLOT_COUNT; index += 1) {
+                this._CreateGpuTimingSlot(index * 2);
+            }
+
+            this._gpuTimingSupported = true;
+        } catch (error) {
+            this._DestroyGpuTimingResources();
+            AstralLogger.Warn(
+                "GPU timestamp queries could not be initialized.",
+                error,
+            );
+        }
+    }
+
+    _CreateGpuTimingSlot(queryIndex) {
+        const slot = {
+            queryIndex,
+            busy: false,
+            resolveBuffer: null,
+            readBuffer: null,
+            resolveMemoryToken: null,
+            readMemoryToken: null,
+        };
+        this._gpuTimingSlots.push(slot);
+        slot.resolveBuffer = this._device.createBuffer({
+            size: GPU_TIMESTAMP_PAIR_BYTES,
+            usage: GPUBufferUsage.QUERY_RESOLVE | GPUBufferUsage.COPY_SRC,
+        });
+        slot.readBuffer = this._device.createBuffer({
+            size: GPU_TIMESTAMP_PAIR_BYTES,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+        });
+        slot.resolveMemoryToken = this._TrackGpuResource(
+            "GPU timing resolve buffer",
+            "GPUBuffer",
+            GPU_TIMESTAMP_PAIR_BYTES,
+        );
+        slot.readMemoryToken = this._TrackGpuResource(
+            "GPU timing readback buffer",
+            "GPUBuffer",
+            GPU_TIMESTAMP_PAIR_BYTES,
+        );
+    }
+
+    _AcquireGpuTimingSlot() {
+        if (
+            !this._gpuTimingSupported ||
+            !this._profiler?.IsEnabled ||
+            this._profiler.CurrentFrameNumber === null
+        ) {
+            return null;
+        }
+
+        const slot = this._gpuTimingSlots.find((candidate) => !candidate.busy);
+
+        if (!slot) {
+            return null;
+        }
+
+        slot.busy = true;
+        return slot;
+    }
+
+    _ReadGpuTiming(slot, frameNumber) {
+        const generation = this._gpuTimingGeneration;
+
+        void slot.readBuffer
+            .mapAsync(GPUMapMode.READ)
+            .then(() => {
+                const timestamps = new BigUint64Array(
+                    slot.readBuffer.getMappedRange(),
+                );
+                const startTimestamp = timestamps[0];
+                const endTimestamp = timestamps[1];
+                slot.readBuffer.unmap();
+
+                if (
+                    generation === this._gpuTimingGeneration &&
+                    endTimestamp >= startTimestamp
+                ) {
+                    this._profiler.RecordGpuFrameTime(
+                        frameNumber,
+                        Number(endTimestamp - startTimestamp) / 1_000_000,
+                    );
+                }
+            })
+            .catch(() => {})
+            .finally(() => {
+                slot.busy = false;
+            });
+    }
+
+    _DestroyGpuTimingResources() {
+        this._gpuTimingGeneration += 1;
+        this._gpuTimingSupported = false;
+        this._gpuTimestampQuerySet?.destroy();
+        this._gpuTimestampQuerySet = null;
+
+        for (const slot of this._gpuTimingSlots) {
+            slot.resolveBuffer?.destroy();
+            slot.readBuffer?.destroy();
+            this._memoryTracker?.ReleaseResource(slot.resolveMemoryToken);
+            this._memoryTracker?.ReleaseResource(slot.readMemoryToken);
+        }
+
+        this._gpuTimingSlots.length = 0;
     }
 
     _ConfigureCanvasContext() {
@@ -124,6 +287,19 @@ export class WebGPURenderer {
             code: shaderCode,
         });
 
+        this._CreateBindGroupLayouts();
+
+        const pipelineLayout = this._device.createPipelineLayout({
+            bindGroupLayouts: [
+                this._transformBindGroupLayout,
+                this._materialBindGroupLayout,
+            ],
+        });
+
+        return this._CreateRenderPipeline(shaderModule, pipelineLayout);
+    }
+
+    _CreateBindGroupLayouts() {
         this._transformBindGroupLayout =
             this._device.createBindGroupLayout({
                 entries: [
@@ -159,14 +335,9 @@ export class WebGPURenderer {
                     },
                 ],
             });
+    }
 
-        const pipelineLayout = this._device.createPipelineLayout({
-            bindGroupLayouts: [
-                this._transformBindGroupLayout,
-                this._materialBindGroupLayout,
-            ],
-        });
-
+    _CreateRenderPipeline(shaderModule, pipelineLayout) {
         return this._device.createRenderPipelineAsync({
             layout: pipelineLayout,
             vertex: {
@@ -309,6 +480,22 @@ export class WebGPURenderer {
         }
     }
 
+    _TrackGpuResource(label, resourceType, bytes) {
+        if (!this._memoryTracker) {
+            return null;
+        }
+
+        return this._memoryTracker.TrackResource({
+            label,
+            resourceType,
+            category: "gpu-resource",
+            bytes,
+            owner:
+                this._memoryTracker.CurrentOwner ?? "WebGPURenderer",
+            estimated: true,
+        });
+    }
+
     _GetMeshResource(mesh) {
         if (!(mesh instanceof Mesh)) {
             throw new TypeError("Render item requires a Mesh.");
@@ -326,6 +513,33 @@ export class WebGPURenderer {
     }
 
     _CreateMeshResource(mesh) {
+        const vertexData = this._CreateInterleavedVertexData(mesh);
+
+        const vertexBuffer = this._device.createBuffer({
+            size: vertexData.byteLength,
+            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
+        });
+
+        try {
+            this._device.queue.writeBuffer(vertexBuffer, 0, vertexData);
+        } catch (error) {
+            vertexBuffer.destroy();
+            throw error;
+        }
+
+        return {
+            vertexBuffer,
+            memoryToken: this._TrackGpuResource(
+                "Mesh vertex buffer",
+                "GPUBuffer",
+                vertexData.byteLength,
+            ),
+            vertexCount: mesh.VertexCount,
+            submeshes: mesh.Submeshes,
+        };
+    }
+
+    _CreateInterleavedVertexData(mesh) {
         const positions = mesh.GetPositions();
         const uvs = mesh.GetUVs();
         const vertexData = new Float32Array(mesh.VertexCount * 5);
@@ -341,18 +555,7 @@ export class WebGPURenderer {
             );
         }
 
-        const vertexBuffer = this._device.createBuffer({
-            size: vertexData.byteLength,
-            usage: GPUBufferUsage.VERTEX | GPUBufferUsage.COPY_DST,
-        });
-
-        this._device.queue.writeBuffer(vertexBuffer, 0, vertexData);
-
-        return {
-            vertexBuffer,
-            vertexCount: mesh.VertexCount,
-            submeshes: mesh.Submeshes,
-        };
+        return vertexData;
     }
 
     _GetTextureResource(imageAsset) {
@@ -395,6 +598,11 @@ export class WebGPURenderer {
         textureResource = {
             texture,
             view: texture.createView(),
+            memoryToken: this._TrackGpuResource(
+                "Material base-color texture",
+                "GPUTexture",
+                imageAsset.width * imageAsset.height * 4,
+            ),
         };
         this._textureResources.set(imageAsset, textureResource);
 
@@ -430,10 +638,29 @@ export class WebGPURenderer {
         return bindGroup;
     }
 
+    _DestroyTrackedResource(resource, memoryToken) {
+        resource?.destroy();
+        this._memoryTracker?.ReleaseResource(memoryToken);
+    }
+
+    _DestroyMeshResource(meshResource) {
+        this._DestroyTrackedResource(
+            meshResource.vertexBuffer,
+            meshResource.memoryToken,
+        );
+    }
+
+    _DestroyTextureResource(textureResource) {
+        this._DestroyTrackedResource(
+            textureResource.texture,
+            textureResource.memoryToken,
+        );
+    }
+
     _PruneMeshResources(activeMeshes) {
         for (const [mesh, meshResource] of this._meshResources) {
             if (!activeMeshes.has(mesh)) {
-                meshResource.vertexBuffer.destroy();
+                this._DestroyMeshResource(meshResource);
                 this._meshResources.delete(mesh);
             }
         }
@@ -454,7 +681,7 @@ export class WebGPURenderer {
 
         for (const [imageAsset, textureResource] of this._textureResources) {
             if (!activeTextures.has(imageAsset)) {
-                textureResource.texture.destroy();
+                this._DestroyTextureResource(textureResource);
                 this._textureResources.delete(imageAsset);
             }
         }
@@ -470,7 +697,10 @@ export class WebGPURenderer {
             drawCapacity *= 2;
         }
 
-        this._transformBuffer?.destroy();
+        this._DestroyTrackedResource(
+            this._transformBuffer,
+            this._transformBufferMemoryToken,
+        );
         this._drawCapacity = drawCapacity;
         this._matrixData = new Float32Array(
             (this._uniformStride / Float32Array.BYTES_PER_ELEMENT) *
@@ -481,6 +711,11 @@ export class WebGPURenderer {
             size: this._uniformStride * drawCapacity,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
+        this._transformBufferMemoryToken = this._TrackGpuResource(
+            "Transform uniform buffer",
+            "GPUBuffer",
+            this._uniformStride * drawCapacity,
+        );
 
         this._transformBindGroup = this._device.createBindGroup({
             layout: this._transformBindGroupLayout,
@@ -509,13 +744,21 @@ export class WebGPURenderer {
             return;
         }
 
-        this._depthTexture?.destroy();
+        this._DestroyTrackedResource(
+            this._depthTexture,
+            this._depthTextureMemoryToken,
+        );
 
         this._depthTexture = this._device.createTexture({
             size: [width, height, 1],
             format: this._depthFormat,
             usage: GPUTextureUsage.RENDER_ATTACHMENT,
         });
+        this._depthTextureMemoryToken = this._TrackGpuResource(
+            "Depth attachment",
+            "GPUTexture",
+            width * height * 4,
+        );
 
         this._depthView = this._depthTexture.createView();
         this._depthWidth = width;
@@ -532,6 +775,8 @@ export class WebGPURenderer {
 
         this.EnsureDepthTexture();
 
+        const frameNumber = this._profiler?.CurrentFrameNumber;
+        const timingSlot = this._AcquireGpuTimingSlot();
         const commandEncoder = this._device.createCommandEncoder();
         const canvasTexture = this._context.getCurrentTexture();
 
@@ -550,6 +795,13 @@ export class WebGPURenderer {
                 depthLoadOp: "clear",
                 depthStoreOp: "store",
             },
+            timestampWrites: timingSlot
+                ? {
+                      querySet: this._gpuTimestampQuerySet,
+                      beginningOfPassWriteIndex: timingSlot.queryIndex,
+                      endOfPassWriteIndex: timingSlot.queryIndex + 1,
+                  }
+                : undefined,
         });
 
         renderPass.setPipeline(this._pipeline);
@@ -569,26 +821,62 @@ export class WebGPURenderer {
 
         renderPass.end();
 
-        this._device.queue.submit([commandEncoder.finish()]);
+        if (timingSlot) {
+            commandEncoder.resolveQuerySet(
+                this._gpuTimestampQuerySet,
+                timingSlot.queryIndex,
+                2,
+                timingSlot.resolveBuffer,
+                0,
+            );
+            commandEncoder.copyBufferToBuffer(
+                timingSlot.resolveBuffer,
+                0,
+                timingSlot.readBuffer,
+                0,
+                GPU_TIMESTAMP_PAIR_BYTES,
+            );
+        }
+
+        try {
+            this._device.queue.submit([commandEncoder.finish()]);
+        } catch (error) {
+            if (timingSlot) {
+                timingSlot.busy = false;
+            }
+
+            throw error;
+        }
+
+        if (timingSlot) {
+            this._ReadGpuTiming(timingSlot, frameNumber);
+        }
     }
 
     Shutdown() {
         this._context?.unconfigure();
+        this._DestroyGpuTimingResources();
 
         for (const meshResource of this._meshResources.values()) {
-            meshResource.vertexBuffer.destroy();
+            this._DestroyMeshResource(meshResource);
         }
 
         for (const textureResource of this._textureResources.values()) {
-            textureResource.texture.destroy();
+            this._DestroyTextureResource(textureResource);
         }
 
         this._meshResources.clear();
         this._textureResources.clear();
         this._materialBindGroups.clear();
         this._drawItems.length = 0;
-        this._transformBuffer?.destroy();
-        this._depthTexture?.destroy();
+        this._DestroyTrackedResource(
+            this._transformBuffer,
+            this._transformBufferMemoryToken,
+        );
+        this._DestroyTrackedResource(
+            this._depthTexture,
+            this._depthTextureMemoryToken,
+        );
         this._device?.destroy();
 
         this._context = null;
@@ -599,11 +887,13 @@ export class WebGPURenderer {
         this._materialBindGroupLayout = null;
         this._textureSampler = null;
         this._transformBuffer = null;
+        this._transformBufferMemoryToken = null;
         this._transformBindGroup = null;
         this._uniformStride = 0;
         this._drawCapacity = 0;
         this._matrixData = new Float32Array(0);
         this._depthTexture = null;
+        this._depthTextureMemoryToken = null;
         this._depthView = null;
         this._depthWidth = 0;
         this._depthHeight = 0;

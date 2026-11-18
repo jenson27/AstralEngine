@@ -51,6 +51,23 @@ test("uses UUIDs for generated and explicit entity IDs", () => {
     );
 });
 
+test("tracks entity name changes separately from structural changes", () => {
+    const entityManager = new EntityManager();
+    const entityId = entityManager.CreateEntity(undefined, "Camera");
+    const initialNameRevision = entityManager.EntityNameRevision;
+    const structuralRevision = entityManager.StructuralRevision;
+
+    assert.equal(entityManager.SetEntityName(entityId, " Camera "), "Camera");
+    assert.equal(entityManager.EntityNameRevision, initialNameRevision);
+
+    assert.equal(
+        entityManager.SetEntityName(entityId, "Main Camera"),
+        "Main Camera",
+    );
+    assert.equal(entityManager.EntityNameRevision, initialNameRevision + 1);
+    assert.equal(entityManager.StructuralRevision, structuralRevision);
+});
+
 test("queries component intersections and keeps packed storage valid after removal", () => {
     const entityManager = new EntityManager();
     const firstEntity = entityManager.CreateEntity();

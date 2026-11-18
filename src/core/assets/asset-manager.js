@@ -1,6 +1,32 @@
 import { AstralLogger } from "../../diagnostics/logger.js";
 import { AssetHandle } from "./asset-handle.js";
 
+function GetAssetMemoryDetails(asset) {
+    if (Number.isSafeInteger(asset?.MemoryUsageBytes)) {
+        return {
+            resourceType: asset.constructor?.name ?? "CPU asset",
+            bytes: asset.MemoryUsageBytes,
+            estimated: false,
+        };
+    }
+
+    if (
+        asset?.bitmap &&
+        Number.isSafeInteger(asset.width) &&
+        Number.isSafeInteger(asset.height) &&
+        asset.width > 0 &&
+        asset.height > 0
+    ) {
+        return {
+            resourceType: "ImageBitmap",
+            bytes: asset.width * asset.height * 4,
+            estimated: true,
+        };
+    }
+
+    return null;
+}
+
 class AssetLease {
     constructor(handle, release) {
         this._handle = handle;
@@ -38,7 +64,7 @@ class AssetLease {
 }
 
 export class AssetManager {
-    constructor(assetCatalog, loaderRegistry) {
+    constructor(assetCatalog, loaderRegistry, memoryTracker = null) {
         if (
             !assetCatalog ||
             typeof assetCatalog.GetRequired !== "function"
@@ -57,8 +83,18 @@ export class AssetManager {
             );
         }
 
+        if (
+            memoryTracker !== null &&
+            typeof memoryTracker.TrackResource !== "function"
+        ) {
+            throw new TypeError(
+                "AssetManager memory tracker must provide TrackResource().",
+            );
+        }
+
         this._assetCatalog = assetCatalog;
         this._loaderRegistry = loaderRegistry;
+        this._memoryTracker = memoryTracker;
         this._entriesById = new Map();
         this._statesByAssetId = new Map();
         this._validatedAssetIds = new Set();
@@ -224,29 +260,41 @@ export class AssetManager {
         const stagedAssetsById = new Map();
 
         for (const entry of transaction.entries) {
-            const dependenciesById = this._CreateStagedDependencyMap(
+            await this._LoadStagedReplacement(
                 entry,
                 stagedAssetsById,
+                transaction,
             );
-
-            const asset = await entry.loader.Load(
-                entry.descriptor,
-                this._CreateLoaderContext(entry, dependenciesById),
-            );
-
-            if (asset === undefined || asset === null) {
-                throw new TypeError(
-                    `Loader returned no replacement for asset "${entry.assetId}".`,
-                );
-            }
-
-            stagedAssetsById.set(entry.assetId, asset);
-            transaction.replacements.push({
-                entry,
-                asset,
-                previousAsset: entry.asset,
-            });
         }
+    }
+
+    async _LoadStagedReplacement(entry, stagedAssetsById, transaction) {
+        const dependenciesById = this._CreateStagedDependencyMap(
+            entry,
+            stagedAssetsById,
+        );
+
+        const asset = await entry.loader.Load(
+            entry.descriptor,
+            this._CreateLoaderContext(entry, dependenciesById),
+        );
+
+        if (asset === undefined || asset === null) {
+            throw new TypeError(
+                `Loader returned no replacement for asset "${entry.assetId}".`,
+            );
+        }
+
+        stagedAssetsById.set(entry.assetId, asset);
+        const replacement = {
+            entry,
+            asset,
+            previousAsset: entry.asset,
+            memoryToken: null,
+            previousMemoryToken: null,
+        };
+        transaction.replacements.push(replacement);
+        replacement.memoryToken = this._TrackAssetMemory(entry, asset);
     }
 
     _CreateStagedDependencyMap(entry, stagedAssetsById) {
@@ -329,7 +377,11 @@ export class AssetManager {
             replacement.previousAsset = replacement.entry.handle._Replace(
                 replacement.asset,
             );
+            replacement.previousMemoryToken =
+                replacement.entry.memoryToken;
             replacement.entry.asset = replacement.asset;
+            replacement.entry.memoryToken = replacement.memoryToken;
+            replacement.memoryToken = null;
         }
 
         transaction.state = "committed";
@@ -451,7 +503,8 @@ export class AssetManager {
             index >= 0;
             index -= 1
         ) {
-            const { entry, asset } = transaction.replacements[index];
+            const replacement = transaction.replacements[index];
+            const { entry, asset } = replacement;
 
             try {
                 if (asset !== entry.asset && entry.loader.Release) {
@@ -459,6 +512,10 @@ export class AssetManager {
                 }
             } catch (error) {
                 errors.push(error);
+            } finally {
+                this._memoryTracker?.ReleaseResource(
+                    replacement.memoryToken,
+                );
             }
         }
 
@@ -500,6 +557,10 @@ export class AssetManager {
                 }
             } catch (error) {
                 errors.push(error);
+            } finally {
+                this._memoryTracker?.ReleaseResource(
+                    replacement.previousMemoryToken,
+                );
             }
         }
 
@@ -543,6 +604,7 @@ export class AssetManager {
             state: "loading",
             referenceCount: 0,
             asset: undefined,
+            memoryToken: null,
             dependencyLeases: [],
             promise: null,
             releasePromise: null,
@@ -613,6 +675,7 @@ export class AssetManager {
             }
 
             entry.asset = asset;
+            entry.memoryToken = this._TrackAssetMemory(entry, asset);
             entry.handle._Replace(asset);
             entry.state = "loaded";
             this._statesByAssetId.set(entry.assetId, "loaded");
@@ -686,6 +749,23 @@ export class AssetManager {
             .map((result) => result.reason);
     }
 
+    _TrackAssetMemory(entry, asset) {
+        const memoryDetails = GetAssetMemoryDetails(asset);
+
+        if (!this._memoryTracker || !memoryDetails) {
+            return null;
+        }
+
+        return this._memoryTracker.TrackResource({
+            label: `Asset ${entry.assetId}`,
+            resourceType: memoryDetails.resourceType,
+            category: "cpu-asset",
+            bytes: memoryDetails.bytes,
+            owner: "AssetManager",
+            estimated: memoryDetails.estimated,
+        });
+    }
+
     _Release(entry) {
         if (entry.state !== "loaded" || entry.referenceCount <= 0) {
             return;
@@ -735,6 +815,8 @@ export class AssetManager {
                 throw error;
             })
             .finally(() => {
+                this._memoryTracker?.ReleaseResource(entry.memoryToken);
+                entry.memoryToken = null;
                 entry.handle._Clear(entry.asset);
                 entry.asset = undefined;
                 entry.state = "released";

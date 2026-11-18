@@ -16,6 +16,7 @@ const contentTypes = {
 const maxLogRequestBytes = 64 * 1024;
 const staticFiles = new Map([
     ["/index.html", path.join(rootDirectory, "index.html")],
+    ["/editor.html", path.join(rootDirectory, "editor.html")],
     ["/style.css", path.join(rootDirectory, "style.css")],
 ]);
 const staticDirectories = [

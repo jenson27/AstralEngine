@@ -135,14 +135,19 @@ export class SceneManager {
         }
     }
 
-    FixedUpdate(deltaTime, elapsedTime) {
-        this._RequireActiveScene().FixedUpdate(deltaTime, elapsedTime);
+    FixedUpdate(deltaTime, elapsedTime, diagnostics = null) {
+        this._RequireActiveScene().FixedUpdate(
+            deltaTime,
+            elapsedTime,
+            diagnostics,
+        );
     }
 
-    PrepareRender(interpolationAlpha, aspectRatio) {
+    PrepareRender(interpolationAlpha, aspectRatio, diagnostics = null) {
         this._RequireActiveScene().PrepareRender(
             interpolationAlpha,
             aspectRatio,
+            diagnostics,
         );
     }
 

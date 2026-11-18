@@ -59,7 +59,29 @@ export class SystemScheduler {
         this._isRunning = true;
         try {
             for (const system of systems) {
-                system[methodName](scene, context);
+                const systemName =
+                    typeof system.ProfileName === "string" &&
+                    system.ProfileName.trim() !== ""
+                        ? system.ProfileName
+                        : system.constructor?.name || "AnonymousSystem";
+                const profilerScope = context?.profiler?.BeginScope(
+                    `${phase}:${systemName}`,
+                    "system",
+                );
+                const memoryOwnerScope =
+                    context?.memoryTracker?.BeginOwnerScope(systemName);
+
+                try {
+                    system[methodName](scene, context);
+                } finally {
+                    try {
+                        context?.memoryTracker?.EndOwnerScope(
+                            memoryOwnerScope,
+                        );
+                    } finally {
+                        context?.profiler?.EndScope(profilerScope);
+                    }
+                }
             }
         } finally {
             this._isRunning = false;

@@ -25,6 +25,8 @@
 | Member | Behaviour |
 | --- | --- |
 | `EntityManager(beforeStructuralChange)` | Creates an empty manager and accepts an optional structural-change guard |
+| `StructuralRevision` | Returns the revision for entity or component membership changes |
+| `EntityNameRevision` | Returns the revision for entity name changes |
 | `CreateEntity(entityId, name)` | Creates a unique lowercase UUID and a trimmed non-empty name; the ID and name have defaults |
 | `DestroyEntity(entityId)` | Removes one entity and its components; it throws if the ID is unknown or a query is active |
 | `DestroyAllEntities()` | Destroys every entity, subject to the scene's structural-change guard |
@@ -39,6 +41,8 @@
 
 - Entity IDs must be lowercase UUID strings
 - Names must be non-empty strings; the manager trims them before storing
+- `EntityNameRevision` increments only when `SetEntityName()` changes the trimmed name; assigning the same trimmed name does not increment it
+- Entity and component membership changes affect `StructuralRevision`, not `EntityNameRevision`
 - Component types must be classes, and component values must be instances of that class
 - Unknown entity IDs throw `RangeError`; invalid types or values throw `TypeError`
 

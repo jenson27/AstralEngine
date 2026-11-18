@@ -1,12 +1,14 @@
 //Engine lifecycle management and frame updates for the Astral Engine, ensuring smooth rendering and update cycles with error handling and logging.
 
 import { AstralLogger } from "../diagnostics/logger.js";
+import { ProfileScope } from "../diagnostics/profiling/profiler.js";
 
 export class Engine {
     constructor(
         renderer,
         fixedUpdateCallback = () => {},
         prepareRenderCallback = () => {},
+        { profiler = null, memoryTracker = null } = {},
     ) {
         if (!renderer || typeof renderer.Render !== "function") {
             throw new TypeError(
@@ -26,9 +28,31 @@ export class Engine {
             );
         }
 
+        if (
+            profiler !== null &&
+            (typeof profiler.BeginFrame !== "function" ||
+                typeof profiler.EndFrame !== "function" ||
+                typeof profiler.BeginScope !== "function" ||
+                typeof profiler.EndScope !== "function" ||
+                typeof profiler.RecordFrameMetric !== "function")
+        ) {
+            throw new TypeError("Engine profiler does not have the required API.");
+        }
+
+        if (
+            memoryTracker !== null &&
+            (typeof memoryTracker.BeginFrame !== "function" ||
+                typeof memoryTracker.EndFrame !== "function")
+        ) {
+            throw new TypeError("Engine memory tracker does not have the required API.");
+        }
+
         this._renderer = renderer;
         this._fixedUpdateCallback = fixedUpdateCallback;
         this._prepareRenderCallback = prepareRenderCallback;
+        this._profiler = profiler;
+        this._memoryTracker = memoryTracker;
+        this._diagnosticsContext = Object.freeze({ profiler, memoryTracker });
         this._isRunning = false;
         this._animationFrameId = null;
         this._previousFrameTime = null;
@@ -39,6 +63,10 @@ export class Engine {
         this._accumulator = 0;
         this._lastStepLimitWarningTime = -Infinity;
         this._runGeneration = 0;
+        this._frameNumber = 0;
+        this._fixedStepsThisFrame = 0;
+        this._droppedTimeThisFrame = 0;
+        this._interpolationAlphaThisFrame = 0;
     }
 
     get IsRunning() {
@@ -97,6 +125,14 @@ export class Engine {
 
         this._animationFrameId = null;
 
+        const frameNumber = this._frameNumber;
+        this._frameNumber += 1;
+        this._fixedStepsThisFrame = 0;
+        this._droppedTimeThisFrame = 0;
+
+        this._profiler?.BeginFrame(frameNumber);
+        this._memoryTracker?.BeginFrame(frameNumber);
+
         const currentTime = timestamp / 1000;
         const measuredFrameDeltaTime =
             this._previousFrameTime === null
@@ -109,6 +145,15 @@ export class Engine {
         this._accumulator += frameDeltaTime;
 
         try {
+            this._profiler?.RecordFrameMetric(
+                "frame.deltaMs",
+                measuredFrameDeltaTime * 1000,
+            );
+            this._profiler?.RecordFrameMetric(
+                "frame.clampedDeltaMs",
+                frameDeltaTime * 1000,
+            );
+
             if (
                 !this._RunFixedUpdates(
                     measuredFrameDeltaTime,
@@ -126,6 +171,21 @@ export class Engine {
             this.Stop();
             AstralLogger.Error("Engine frame failed.", error);
             return;
+        } finally {
+            this._profiler?.RecordFrameMetric(
+                "simulation.fixedSteps",
+                this._fixedStepsThisFrame,
+            );
+            this._profiler?.RecordFrameMetric(
+                "simulation.droppedTimeMs",
+                this._droppedTimeThisFrame * 1000,
+            );
+            this._profiler?.RecordFrameMetric(
+                "render.interpolationAlpha",
+                this._interpolationAlphaThisFrame,
+            );
+            this._profiler?.EndFrame();
+            this._memoryTracker?.EndFrame();
         }
 
         this._ScheduleFrame();
@@ -143,10 +203,20 @@ export class Engine {
             fixedStepCount < this._maxFixedStepsPerFrame
         ) {
             this._elapsedTime += this._fixedDeltaTime;
-            this._fixedUpdateCallback(
-                this._fixedDeltaTime,
-                this._elapsedTime,
+            ProfileScope(
+                this._profiler,
+                "Engine.FixedUpdate",
+                () =>
+                    this._fixedUpdateCallback(
+                        this._fixedDeltaTime,
+                        this._elapsedTime,
+                        this._diagnosticsContext,
+                    ),
+                "phase",
             );
+
+            fixedStepCount += 1;
+            this._fixedStepsThisFrame = fixedStepCount;
 
             if (
                 !this._isRunning ||
@@ -156,7 +226,6 @@ export class Engine {
             }
 
             this._accumulator -= this._fixedDeltaTime;
-            fixedStepCount += 1;
         }
 
         if (
@@ -200,7 +269,12 @@ export class Engine {
             return false;
         }
 
-        this._accumulator %= this._fixedDeltaTime;
+        const accumulatorBeforeDropSeconds = this._accumulator;
+        const accumulatorAfterDropSeconds =
+            accumulatorBeforeDropSeconds % this._fixedDeltaTime;
+        this._droppedTimeThisFrame +=
+            accumulatorBeforeDropSeconds - accumulatorAfterDropSeconds;
+        this._accumulator = accumulatorAfterDropSeconds;
         return true;
     }
 
@@ -248,8 +322,18 @@ export class Engine {
     _PrepareAndRender(runGeneration) {
         const interpolationAlpha =
             this._accumulator / this._fixedDeltaTime;
+        this._interpolationAlphaThisFrame = interpolationAlpha;
 
-        this._prepareRenderCallback(interpolationAlpha);
+        ProfileScope(
+            this._profiler,
+            "Engine.PrepareRender",
+            () =>
+                this._prepareRenderCallback(
+                    interpolationAlpha,
+                    this._diagnosticsContext,
+                ),
+            "phase",
+        );
 
         if (
             !this._isRunning ||
@@ -258,7 +342,12 @@ export class Engine {
             return false;
         }
 
-        this._renderer.Render();
+        ProfileScope(
+            this._profiler,
+            "Engine.Render",
+            () => this._renderer.Render(),
+            "phase",
+        );
         return (
             this._isRunning &&
             runGeneration === this._runGeneration

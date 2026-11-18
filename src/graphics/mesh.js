@@ -135,6 +135,10 @@ export class Mesh {
         return this._positions.length / 3;
     }
 
+    get MemoryUsageBytes() {
+        return this._positions.byteLength + this._uvs.byteLength;
+    }
+
     get Submeshes() {
         return this._submeshes;
     }

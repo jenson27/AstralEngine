@@ -147,13 +147,15 @@ export class Scene {
         }
     }
 
-    FixedUpdate(deltaTime, elapsedTime) {
+    FixedUpdate(deltaTime, elapsedTime, diagnostics = null) {
         this._RequireActive();
         const errors = [];
         try {
             this._systemScheduler.Run(SystemPhase.FixedUpdate, this, {
                 deltaTime,
                 elapsedTime,
+                profiler: diagnostics?.profiler ?? null,
+                memoryTracker: diagnostics?.memoryTracker ?? null,
             });
         } catch (error) {
             errors.push(error);
@@ -185,11 +187,13 @@ export class Scene {
         }
     }
 
-    PrepareRender(interpolationAlpha, aspectRatio) {
+    PrepareRender(interpolationAlpha, aspectRatio, diagnostics = null) {
         this._RequireActive();
         this._systemScheduler.Run(SystemPhase.PrepareRender, this, {
             interpolationAlpha,
             aspectRatio,
+            profiler: diagnostics?.profiler ?? null,
+            memoryTracker: diagnostics?.memoryTracker ?? null,
         });
     }
 
@@ -342,24 +346,32 @@ export class Scene {
         const visited = new Set();
 
         for (const startEntityId of parentByChildId.keys()) {
-            const path = new Set();
-            let entityId = startEntityId;
+            this._ValidateParentChain(
+                startEntityId,
+                parentByChildId,
+                visited,
+            );
+        }
+    }
 
-            while (parentByChildId.has(entityId)) {
-                if (path.has(entityId)) {
-                    throw new Error("Parent hierarchy contains a cycle.");
-                }
-                if (visited.has(entityId)) {
-                    break;
-                }
+    _ValidateParentChain(startEntityId, parentByChildId, visited) {
+        const path = new Set();
+        let entityId = startEntityId;
 
-                path.add(entityId);
-                entityId = parentByChildId.get(entityId);
+        while (parentByChildId.has(entityId)) {
+            if (path.has(entityId)) {
+                throw new Error("Parent hierarchy contains a cycle.");
+            }
+            if (visited.has(entityId)) {
+                break;
             }
 
-            for (const pathEntityId of path) {
-                visited.add(pathEntityId);
-            }
+            path.add(entityId);
+            entityId = parentByChildId.get(entityId);
+        }
+
+        for (const pathEntityId of path) {
+            visited.add(pathEntityId);
         }
     }
 

@@ -1,0 +1,896 @@
+import {
+    AppendSvgGridLinesAndLabels,
+    AppendFrameRangeLabels,
+    AppendSvgText,
+    AppendTableRow,
+    BuildFilterOptions,
+    BuildFrameOptions,
+    CreateEmptyMessage,
+    CreateFrameIndexScale,
+    CreateSvgElement,
+    RenderStatCards,
+    SelectFrameOrLatest,
+    SetOptions,
+} from "./diagnostic-panel-utils.js";
+import { CreateElement } from "../ui/dom-utils.js";
+
+const REFRESH_INTERVAL_MS = 1000;
+const MAX_TIMELINE_SCOPES = 250;
+const MAX_SCOPE_ROWS = 500;
+
+function FormatMilliseconds(value) {
+    return Math.abs(value) < 0.01
+        ? `${(value * 1000).toFixed(2)} μs`
+        : `${value.toFixed(2)} ms`;
+}
+
+function AppendFrameGraphGrid(
+    svg,
+    plotLeft,
+    plotRight,
+    maxDuration,
+    yForDuration,
+    showBudgetLine,
+) {
+    AppendSvgGridLinesAndLabels(svg, {
+        ticks: [0, maxDuration / 2, maxDuration],
+        plotLeft,
+        plotRight,
+        yForValue: yForDuration,
+        formatLabel: (tick) =>
+            tick === 0 ? "0 ms" : FormatMilliseconds(tick),
+    });
+
+    if (showBudgetLine) {
+        const budgetY = yForDuration(16.67);
+        svg.append(
+            CreateSvgElement("line", {
+                x1: plotLeft,
+                y1: budgetY,
+                x2: plotRight,
+                y2: budgetY,
+                class: "profiler-chart-budget-line",
+            }),
+        );
+    }
+}
+
+function AppendFrameGraphPoints(
+    svg,
+    recentFrames,
+    selectedFrame,
+    xForIndex,
+    yForDuration,
+    plotLeft,
+    plotRight,
+    height,
+) {
+    const points = recentFrames
+        .map((frame, index) =>
+            `${xForIndex(index)},${yForDuration(frame.durationMs)}`,
+        )
+        .join(" ");
+    svg.append(
+        CreateSvgElement("polyline", {
+            points,
+            class: "profiler-chart-frame-line",
+            fill: "none",
+        }),
+    );
+
+    for (let index = 0; index < recentFrames.length; index += 1) {
+        const frame = recentFrames[index];
+        const marker = CreateSvgElement("circle", {
+            cx: xForIndex(index),
+            cy: yForDuration(frame.durationMs),
+            r: frame.frameNumber === selectedFrame?.frameNumber ? 4.5 : 2.75,
+            class: "profiler-chart-frame-point",
+            "data-over-budget": frame.durationMs > 16.67,
+            "data-selected": frame.frameNumber === selectedFrame?.frameNumber,
+        });
+        const markerTitle = CreateSvgElement("title");
+        markerTitle.textContent =
+            `Frame ${frame.frameNumber}: ` +
+            FormatMilliseconds(frame.durationMs);
+        marker.append(markerTitle);
+        svg.append(marker);
+    }
+
+    AppendFrameRangeLabels(
+        svg,
+        recentFrames[0].frameNumber,
+        recentFrames[recentFrames.length - 1].frameNumber,
+        plotLeft,
+        plotRight,
+        height,
+    );
+}
+
+function BuildSystemTimes(frame) {
+    const systemTimes = new Map();
+
+    for (const scope of frame.scopes) {
+        if (scope.category !== "system" || scope.isAsync) {
+            continue;
+        }
+
+        const systemTime = systemTimes.get(scope.name) ?? 0;
+        systemTimes.set(scope.name, systemTime + scope.durationMs);
+    }
+
+    return [...systemTimes].sort((left, right) => right[1] - left[1]);
+}
+
+function BuildChildDurationByParent(scopes) {
+    const childDurationByParent = new Map();
+
+    for (const scope of scopes) {
+        if (scope.parentScopeIndex === null) {
+            continue;
+        }
+
+        childDurationByParent.set(
+            scope.parentScopeIndex,
+            (childDurationByParent.get(scope.parentScopeIndex) ?? 0) +
+                scope.durationMs,
+        );
+    }
+
+    return childDurationByParent;
+}
+
+function GetScopeDepth(scopes, scopeIndex, selectedSystem) {
+    let parentIndex = scopeIndex;
+    let depth = 0;
+    let withinSelectedSystem = selectedSystem === "";
+
+    while (parentIndex !== null) {
+        const parentScope = scopes[parentIndex];
+
+        if (
+            parentScope.category === "system" &&
+            parentScope.name === selectedSystem
+        ) {
+            withinSelectedSystem = true;
+        }
+
+        parentIndex = parentScope.parentScopeIndex;
+
+        if (parentIndex !== null) {
+            depth += 1;
+        }
+    }
+
+    return withinSelectedSystem ? depth : -1;
+}
+
+function AppendScopeTimelineRows(svg, visibleScopes, layout) {
+    const { width, plotTop, rowHeight } = layout;
+
+    for (let index = 0; index < visibleScopes.length; index += 1) {
+        svg.append(
+            CreateSvgElement("rect", {
+                x: 0,
+                y: plotTop + index * rowHeight,
+                width,
+                height: rowHeight,
+                class: "profiler-scope-timeline-row",
+                "data-alternate": index % 2 === 1,
+            }),
+        );
+    }
+}
+
+function AppendScopeTimelineGrid(svg, layout) {
+    const {
+        plotLeft,
+        plotTop,
+        height,
+        bottomPadding,
+        plotWidth,
+        frameDuration,
+    } = layout;
+
+    for (const ratio of [0, 0.5, 1]) {
+        const x = plotLeft + ratio * plotWidth;
+        const timeLabel = CreateSvgElement("text", {
+            x,
+            y: 18,
+            class: "profiler-chart-label",
+            "text-anchor":
+                ratio === 0 ? "start" : ratio === 1 ? "end" : "middle",
+        });
+        timeLabel.textContent = FormatMilliseconds(frameDuration * ratio);
+        svg.append(
+            CreateSvgElement("line", {
+                x1: x,
+                y1: plotTop,
+                x2: x,
+                y2: height - bottomPadding,
+                class: "profiler-scope-timeline-grid-line",
+            }),
+            timeLabel,
+        );
+    }
+}
+
+function AppendScopeTimelineBars(svg, visibleScopes, frame, layout) {
+    const {
+        labelWidth,
+        plotLeft,
+        plotTop,
+        rowHeight,
+        plotWidth,
+        frameDuration,
+    } = layout;
+
+    for (let index = 0; index < visibleScopes.length; index += 1) {
+        AppendScopeTimelineBar(
+            svg,
+            visibleScopes[index],
+            index,
+            frame,
+            labelWidth,
+            plotLeft,
+            plotTop,
+            rowHeight,
+            plotWidth,
+            frameDuration,
+        );
+    }
+}
+
+function AppendScopeTimelineBar(
+    svg,
+    visibleScope,
+    index,
+    frame,
+    labelWidth,
+    plotLeft,
+    plotTop,
+    rowHeight,
+    plotWidth,
+    frameDuration,
+) {
+    const { scope, depth } = visibleScope;
+    const y = plotTop + index * rowHeight;
+    const startRatio = Math.max(
+        0,
+        Math.min(
+            1,
+            (scope.startTime - frame.startTime) / frameDuration,
+        ),
+    );
+    const endTime = scope.endTime ?? frame.endTime;
+    const endRatio = Math.max(
+        startRatio,
+        Math.min(
+            1,
+            (endTime - frame.startTime) / frameDuration,
+        ),
+    );
+    const indent = depth * 10;
+    const maxLabelLength = Math.max(
+        8,
+        Math.floor((labelWidth - 20 - indent) / 6),
+    );
+    const labelText =
+        scope.name.length > maxLabelLength
+            ? `${scope.name.slice(0, maxLabelLength - 1)}…`
+            : scope.name;
+    const label = CreateSvgElement("text", {
+        x: 8 + indent,
+        y: y + 17,
+        class: "profiler-scope-timeline-label",
+    });
+    label.textContent = labelText;
+    const bar = CreateSvgElement("rect", {
+        x: plotLeft + startRatio * plotWidth,
+        y: y + 5,
+        width: Math.max(1, (endRatio - startRatio) * plotWidth),
+        height: 16,
+        rx: 3,
+        class: "profiler-scope-timeline-bar",
+        "data-category": scope.category,
+        "data-incomplete": scope.incomplete,
+    });
+    const barTitle = CreateSvgElement("title");
+    barTitle.textContent =
+        `${scope.isAsync ? "Async elapsed · " : "CPU · "}` +
+        `${scope.name}: ${FormatMilliseconds(scope.durationMs)}` +
+        (scope.incomplete
+            ? " (incomplete; duration ends at this frame boundary)"
+            : "");
+    bar.append(barTitle);
+    svg.append(label, bar);
+}
+
+export class ProfilerPanel {
+    constructor(profiler, panelElement, renderer = null) {
+        if (!profiler || typeof profiler.GetFrames !== "function") {
+            throw new TypeError("ProfilerPanel requires a profiler.");
+        }
+
+        if (!(panelElement instanceof HTMLElement)) {
+            throw new TypeError("ProfilerPanel requires a panel element.");
+        }
+
+        this._profiler = profiler;
+        this._renderer = renderer;
+        this._root = panelElement;
+        this._root.classList.add("diagnostic-panel", "profiler-panel");
+        this._refreshTimer = null;
+        this._selectedFrameNumber = null;
+        this._frameGraphScale = "auto";
+        this._systemFilter = "";
+        this._scopeFilter = "";
+        this._lastRevision = -1;
+
+        this._root.innerHTML = `
+            <div class="profiler-toolbar profiler-capture-toolbar">
+                <span class="profiler-muted">Capture format version 1 · CPU timing is always available · <span data-role="gpu-timing-status"></span></span>
+                <button type="button" data-action="capture"></button>
+            </div>
+            <section class="profiler-view">
+                <p class="profiler-muted">Synchronous scopes show CPU time. Async scopes show elapsed time, including waits. System totals include all fixed update steps in the selected frame.</p>
+                <div class="profiler-toolbar">
+                    <label>Frame <select data-role="frame-select"></select></label>
+                    <label>System <select data-role="system-filter"></select></label>
+                    <label>Scope <input data-role="scope-filter" type="search" placeholder="Filter names" /></label>
+                </div>
+                <section class="profiler-section">
+                    <h3>CPU frame time</h3>
+                    <div class="profiler-toolbar profiler-frame-graph-toolbar">
+                        <label>Scale <select data-role="frame-graph-scale"><option value="auto">Auto</option><option value="budget">Budget</option></select></label>
+                        <p class="profiler-muted profiler-chart-caption" data-role="frame-graph-caption"></p>
+                    </div>
+                    <div class="profiler-section-body profiler-frame-graph" data-role="frame-graph"></div>
+                </section>
+                <section class="profiler-section">
+                    <h3>System CPU time</h3>
+                    <div class="profiler-section-body profiler-system-chart" data-role="system-time-graph"></div>
+                </section>
+                <section class="profiler-section">
+                    <h3>CPU and async elapsed timeline</h3>
+                    <p class="profiler-muted profiler-chart-caption" data-role="scope-timeline-count">Bars show each scope's start time and duration within the selected frame.</p>
+                    <div class="profiler-section-body profiler-scope-timeline" data-role="scope-timeline"></div>
+                </section>
+                <section class="profiler-section">
+                    <h3>Frame analysis</h3>
+                    <div class="profiler-section-body profiler-stat-grid" data-role="frame-analysis"></div>
+                </section>
+                <section class="profiler-section">
+                    <h3>CPU and async scopes <span data-role="scope-count"></span></h3>
+                    <div class="profiler-table-wrap">
+                        <table class="profiler-table">
+                            <thead><tr><th>Scope</th><th>Kind</th><th>Status</th><th>Total</th><th>Self</th></tr></thead>
+                            <tbody data-role="scope-rows"></tbody>
+                        </table>
+                    </div>
+                    <div class="profiler-empty" data-role="scope-empty" hidden>No captured scopes. Start capture to record frame timings.</div>
+                </section>
+            </section>
+        `;
+
+        this._onClick = this._HandleClick.bind(this);
+        this._onChange = this._HandleChange.bind(this);
+        this._onInput = this._HandleInput.bind(this);
+
+        this._root.addEventListener("click", this._onClick);
+        this._root.addEventListener("change", this._onChange);
+        this._root.addEventListener("input", this._onInput);
+        this._UpdateCaptureButton();
+        this._UpdateGpuTimingStatus();
+        this._Refresh(true);
+        this._refreshTimer = globalThis.setInterval(
+            () => this._Refresh(),
+            REFRESH_INTERVAL_MS,
+        );
+    }
+
+    Dispose() {
+        if (this._refreshTimer !== null) {
+            globalThis.clearInterval(this._refreshTimer);
+            this._refreshTimer = null;
+        }
+
+        this._root.removeEventListener("click", this._onClick);
+        this._root.removeEventListener("change", this._onChange);
+        this._root.removeEventListener("input", this._onInput);
+    }
+
+    _HandleClick(event) {
+        const button = event.target.closest("button");
+
+        if (!button || !this._root.contains(button)) {
+            return;
+        }
+
+        if (button.dataset.action === "capture") {
+            this._profiler.SetEnabled(!this._profiler.IsEnabled);
+            this._UpdateCaptureButton();
+            this._RefreshFrames();
+        }
+    }
+
+    _HandleChange(event) {
+        const role = event.target.dataset.role;
+
+        if (role === "frame-select") {
+            this._selectedFrameNumber = Number(event.target.value);
+            this._RefreshFrames();
+        } else if (role === "system-filter") {
+            this._systemFilter = event.target.value;
+            this._RefreshFrames();
+        } else if (role === "frame-graph-scale") {
+            this._frameGraphScale = event.target.value;
+            this._RefreshFrames();
+        }
+    }
+
+    _HandleInput(event) {
+        if (event.target.dataset.role === "scope-filter") {
+            this._scopeFilter = event.target.value.trim().toLowerCase();
+            this._RefreshFrames();
+        }
+    }
+
+    _UpdateCaptureButton() {
+        const button = this._root.querySelector('[data-action="capture"]');
+        button.textContent = this._profiler.IsEnabled
+            ? "Pause capture"
+            : "Start capture";
+    }
+
+    _Refresh(force = false) {
+        if (this._root.hidden) {
+            return;
+        }
+
+        const gpuStatusChanged = this._UpdateGpuTimingStatus();
+
+        if (
+            !force &&
+            !gpuStatusChanged &&
+            this._lastRevision === this._profiler.Revision
+        ) {
+            return;
+        }
+
+        this._UpdateCaptureButton();
+        this._RefreshFrames();
+    }
+
+    _UpdateGpuTimingStatus() {
+        const status = this._root.querySelector(
+            '[data-role="gpu-timing-status"]',
+        );
+        const nextText = this._renderer?.GpuTimingSupported
+            ? "GPU timestamps available"
+            : "GPU timestamps unavailable";
+        const didChange = status.textContent !== nextText;
+
+        status.textContent = nextText;
+        return didChange;
+    }
+
+    _RefreshFrames() {
+        const frames = this._profiler.GetFrames();
+        this._RefreshSystemFilter(frames);
+        const selectedFrame = this._RefreshFrameSelection(frames);
+
+        const visibleScopes = selectedFrame
+            ? this._BuildVisibleScopes(selectedFrame)
+            : [];
+        const timelineScopes = visibleScopes.slice(0, MAX_TIMELINE_SCOPES);
+        const tableScopes = visibleScopes.slice(0, MAX_SCOPE_ROWS);
+
+        this._RenderFrameGraph(frames, selectedFrame);
+        this._RenderSystemTimeGraph(selectedFrame);
+        this._RenderScopeTimeline(
+            selectedFrame,
+            timelineScopes,
+            visibleScopes.length,
+        );
+        this._RenderFrameAnalysis(frames, selectedFrame);
+        this._RenderScopes(selectedFrame, tableScopes, visibleScopes.length);
+        this._lastRevision = this._profiler.Revision;
+    }
+
+    _RefreshSystemFilter(frames) {
+        const systemSelect = this._root.querySelector(
+            '[data-role="system-filter"]',
+        );
+        const systemNames = new Set();
+
+        for (const frame of frames) {
+            for (const scope of frame.scopes) {
+                if (scope.category === "system") {
+                    systemNames.add(scope.name);
+                }
+            }
+        }
+
+        this._systemFilter = SetOptions(
+            systemSelect,
+            BuildFilterOptions(systemNames, "All systems"),
+            this._systemFilter,
+            (value) => {
+                this._systemFilter = value;
+                this._Refresh(true);
+            },
+        );
+    }
+
+    _RefreshFrameSelection(frames) {
+        const frameSelect = this._root.querySelector(
+            '[data-role="frame-select"]',
+        );
+        const selectedFrame = SelectFrameOrLatest(
+            frames,
+            this._selectedFrameNumber,
+        );
+
+        this._selectedFrameNumber = selectedFrame?.frameNumber ?? null;
+        SetOptions(
+            frameSelect,
+            BuildFrameOptions(frames),
+            this._selectedFrameNumber ?? "",
+            (value) => {
+                this._selectedFrameNumber =
+                    value === "" ? null : Number(value);
+                this._Refresh(true);
+            },
+        );
+        return selectedFrame;
+    }
+
+    _RenderFrameGraph(frames, selectedFrame) {
+        const graph = this._root.querySelector('[data-role="frame-graph"]');
+        const recentFrames = frames.slice(-120);
+        if (recentFrames.length === 0) {
+            graph.replaceChildren(
+                CreateEmptyMessage("Start capture to collect frame timings."),
+            );
+            return;
+        }
+
+        const width = 720;
+        const height = 220;
+        const plotLeft = 52;
+        const plotRight = width - 12;
+        const plotTop = 12;
+        const plotBottom = height - 30;
+        const plotWidth = plotRight - plotLeft;
+        const plotHeight = plotBottom - plotTop;
+        const observedMaxDuration = Math.max(
+            ...recentFrames.map((frame) => frame.durationMs),
+        );
+        const budgetMaxDuration = Math.max(
+            20,
+            Math.ceil(observedMaxDuration / 5) * 5,
+        );
+        const maxDuration =
+            this._frameGraphScale === "budget"
+                ? budgetMaxDuration
+                : Math.max(0.05, observedMaxDuration * 1.15);
+        const showBudgetLine = maxDuration >= 16.67;
+        this._root.querySelector(
+            '[data-role="frame-graph-caption"]',
+        ).textContent = showBudgetLine
+            ? "The target line marks 16.67 ms for 60 FPS."
+            : "Auto scale focuses on recent frame times. The 16.67 ms target is above this range.";
+        const xForIndex = CreateFrameIndexScale(
+            recentFrames.length,
+            plotLeft,
+            plotWidth,
+        );
+        const yForDuration = (durationMs) =>
+            plotBottom - (durationMs / maxDuration) * plotHeight;
+        const graphDescription = showBudgetLine
+            ? "CPU frame time across recent frames. The orange line marks the 16.67 millisecond target."
+            : "CPU frame time across recent frames, auto-scaled to recent frame timings.";
+        const svg = CreateSvgElement("svg", {
+            class: "profiler-svg-chart",
+            viewBox: `0 0 ${width} ${height}`,
+            role: "img",
+            "aria-label": graphDescription,
+        });
+        const title = CreateSvgElement("title");
+        title.textContent = graphDescription;
+        svg.append(title);
+
+        AppendFrameGraphGrid(
+            svg,
+            plotLeft,
+            plotRight,
+            maxDuration,
+            yForDuration,
+            showBudgetLine,
+        );
+        AppendFrameGraphPoints(
+            svg,
+            recentFrames,
+            selectedFrame,
+            xForIndex,
+            yForDuration,
+            plotLeft,
+            plotRight,
+            height,
+        );
+        graph.replaceChildren(svg);
+    }
+
+    _RenderSystemTimeGraph(frame) {
+        const graph = this._root.querySelector(
+            '[data-role="system-time-graph"]',
+        );
+        graph.setAttribute("role", "list");
+        graph.setAttribute(
+            "aria-label",
+            frame
+                ? `System CPU time for frame ${frame.frameNumber}`
+                : "System CPU time",
+        );
+
+        if (!frame) {
+            graph.replaceChildren(
+                CreateEmptyMessage("Start capture to collect system timings."),
+            );
+            return;
+        }
+
+        const sortedSystems = BuildSystemTimes(frame);
+
+        if (sortedSystems.length === 0) {
+            graph.replaceChildren(
+                CreateEmptyMessage("No system scopes were captured for this frame."),
+            );
+            return;
+        }
+
+        const maxDuration = Math.max(
+            0.001,
+            ...sortedSystems.map(([, value]) => value),
+        );
+        const fragment = document.createDocumentFragment();
+
+        for (const [name, durationMs] of sortedSystems) {
+            const row = CreateElement("div", "profiler-system-row");
+            row.setAttribute("role", "listitem");
+            row.setAttribute(
+                "aria-label",
+                `${name}: ${FormatMilliseconds(durationMs)}`,
+            );
+
+            const label = CreateElement("span", "profiler-system-name");
+            label.textContent = name;
+
+            const track = CreateElement("span", "profiler-system-track");
+            track.setAttribute("aria-hidden", "true");
+            const bar = CreateElement("span", "profiler-system-bar");
+            bar.style.width = `${(durationMs / maxDuration) * 100}%`;
+            track.append(bar);
+
+            const value = CreateElement("strong", "profiler-system-value");
+            value.textContent = FormatMilliseconds(durationMs);
+            row.append(label, track, value);
+            fragment.append(row);
+        }
+
+        const axis = CreateElement("div", "profiler-system-axis");
+        const zeroLabel = CreateElement("span");
+        const maxLabel = CreateElement("span");
+        zeroLabel.textContent = "0 ms";
+        maxLabel.textContent = FormatMilliseconds(maxDuration);
+        axis.append(zeroLabel, maxLabel);
+        fragment.append(axis);
+        graph.replaceChildren(fragment);
+    }
+
+    _RenderScopeTimeline(frame, visibleScopes, totalVisibleScopes) {
+        const timeline = this._root.querySelector(
+            '[data-role="scope-timeline"]',
+        );
+        const count = this._root.querySelector(
+            '[data-role="scope-timeline-count"]',
+        );
+
+        if (!frame) {
+            count.textContent = "No captured scopes.";
+            timeline.replaceChildren(
+                CreateEmptyMessage("Start capture to collect scope timings."),
+            );
+            return;
+        }
+
+        if (visibleScopes.length === 0) {
+            count.textContent = "0 matching scopes.";
+            timeline.replaceChildren(
+                CreateEmptyMessage("No scopes match the current filters."),
+            );
+            return;
+        }
+
+        count.textContent =
+            totalVisibleScopes > visibleScopes.length
+                ? `Showing ${visibleScopes.length} of ${totalVisibleScopes} matching scopes.`
+                : `${totalVisibleScopes} matching scopes.`;
+
+        const width = 720;
+        const labelWidth = 236;
+        const plotLeft = labelWidth;
+        const plotRight = width - 12;
+        const plotWidth = plotRight - plotLeft;
+        const plotTop = 30;
+        const rowHeight = 26;
+        const bottomPadding = 8;
+        const height =
+            plotTop + visibleScopes.length * rowHeight + bottomPadding;
+        const frameDuration = Math.max(frame.durationMs, 0.001);
+        const timelineLayout = {
+            width,
+            labelWidth,
+            plotLeft,
+            plotWidth,
+            plotTop,
+            rowHeight,
+            bottomPadding,
+            height,
+            frameDuration,
+        };
+        const svg = CreateSvgElement("svg", {
+            class: "profiler-svg-chart profiler-scope-timeline-svg",
+            viewBox: `0 0 ${width} ${height}`,
+            role: "img",
+            "aria-label": `CPU and async elapsed scopes for frame ${frame.frameNumber}`,
+        });
+        const title = CreateSvgElement("title");
+        title.textContent = `CPU and async elapsed scopes for frame ${frame.frameNumber}`;
+        svg.append(title);
+
+        AppendScopeTimelineRows(svg, visibleScopes, timelineLayout);
+        AppendScopeTimelineGrid(svg, timelineLayout);
+        AppendScopeTimelineBars(svg, visibleScopes, frame, timelineLayout);
+
+        timeline.replaceChildren(svg);
+    }
+
+    _RenderFrameAnalysis(frames, selectedFrame) {
+        const analysis = this._root.querySelector(
+            '[data-role="frame-analysis"]',
+        );
+
+        if (!selectedFrame) {
+            analysis.replaceChildren();
+            analysis.append(CreateEmptyMessage("Start capture to collect frame data."));
+            return;
+        }
+
+        const recentDurations = frames
+            .slice(-120)
+            .map((frame) => frame.durationMs)
+            .sort((left, right) => left - right);
+        const averageDuration =
+            recentDurations.reduce((total, duration) => total + duration, 0) /
+            recentDurations.length;
+        const p95Duration =
+            recentDurations[
+                Math.max(0, Math.ceil(recentDurations.length * 0.95) - 1)
+            ];
+        const metrics = selectedFrame.metrics;
+
+        const stats = [
+            ["CPU frame", FormatMilliseconds(selectedFrame.durationMs)],
+            ["GPU frame", this._FormatGpuFrameTime(selectedFrame)],
+            ["Recent average", FormatMilliseconds(averageDuration)],
+            ["Recent P95", FormatMilliseconds(p95Duration)],
+            ["Frame delta", FormatMilliseconds(metrics["frame.deltaMs"] ?? 0)],
+            ["Fixed steps", metrics["simulation.fixedSteps"] ?? 0],
+            ["Dropped simulation", FormatMilliseconds(metrics["simulation.droppedTimeMs"] ?? 0)],
+            ["Interpolation", (metrics["render.interpolationAlpha"] ?? 0).toFixed(3)],
+            ["Dropped scopes", selectedFrame.droppedScopeCount],
+        ];
+
+        RenderStatCards(analysis, stats);
+    }
+
+    _FormatGpuFrameTime(frame) {
+        if (!this._renderer?.GpuTimingSupported) {
+            return "Unavailable";
+        }
+
+        const durationMs = this._profiler.GetGpuFrameTime(frame.frameNumber);
+        return durationMs === null
+            ? "Waiting for sample"
+            : FormatMilliseconds(durationMs);
+    }
+
+    _BuildVisibleScopes(frame) {
+        const scopes = frame.scopes;
+        const childDurationByParent =
+            BuildChildDurationByParent(scopes);
+        const visibleScopes = [];
+
+        for (let index = 0; index < scopes.length; index += 1) {
+            const scope = scopes[index];
+            const depth = GetScopeDepth(
+                scopes,
+                index,
+                this._systemFilter,
+            );
+
+            if (depth < 0) {
+                continue;
+            }
+
+            if (
+                this._scopeFilter !== "" &&
+                !scope.name.toLowerCase().includes(this._scopeFilter)
+            ) {
+                continue;
+            }
+
+            visibleScopes.push({
+                scope,
+                depth,
+                selfTime: scope.isAsync
+                    ? null
+                    : Math.max(
+                          0,
+                          scope.durationMs -
+                              (childDurationByParent.get(index) ?? 0),
+                      ),
+            });
+        }
+
+        return visibleScopes;
+    }
+
+    _RenderScopes(frame, visibleScopes, totalVisibleScopes) {
+        const body = this._root.querySelector('[data-role="scope-rows"]');
+        const empty = this._root.querySelector('[data-role="scope-empty"]');
+        const count = this._root.querySelector('[data-role="scope-count"]');
+
+        if (!frame) {
+            body.replaceChildren();
+            count.textContent = "";
+            empty.hidden = false;
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+
+        for (const { scope, depth, selfTime } of visibleScopes) {
+            const row = CreateElement(
+                "tr",
+                scope.incomplete ? "profiler-warning" : "",
+            );
+            const nameCell = CreateElement("td", "profiler-scope-name");
+            nameCell.style.paddingInlineStart = `${0.45 + depth * 1.1}rem`;
+            nameCell.textContent = scope.name;
+            row.append(nameCell);
+
+            for (const value of [
+                scope.isAsync ? "Async elapsed" : scope.category,
+                scope.incomplete ? "Partial (frame ended)" : "Complete",
+                FormatMilliseconds(scope.durationMs),
+                selfTime === null ? "—" : FormatMilliseconds(selfTime),
+            ]) {
+                const cell = CreateElement("td");
+                cell.textContent = value;
+                row.append(cell);
+            }
+
+            fragment.append(row);
+        }
+
+        body.replaceChildren(fragment);
+        empty.hidden = visibleScopes.length !== 0;
+        count.textContent =
+            totalVisibleScopes > visibleScopes.length
+                ? `Showing ${visibleScopes.length} of ${totalVisibleScopes}`
+                : `${totalVisibleScopes}`;
+    }
+
+}
