@@ -160,6 +160,66 @@ test("marks unfinished async scopes incomplete at frame end", async () => {
     await task;
 });
 
+test("tracks async spans across frames", () => {
+    const profiler = new Profiler();
+    profiler.BeginFrame(10);
+    const token = profiler.BeginAsyncScope("AssetLoad", "asset");
+    const startFrame = profiler.EndFrame();
+
+    assert.equal(startFrame.scopes[0].incomplete, true);
+    assert.equal(profiler.GetAsyncSpans()[0].status, "running");
+
+    profiler.BeginFrame(11);
+    profiler.EndAsyncScope(token);
+    profiler.EndFrame();
+
+    assert.deepEqual(
+        profiler.GetAsyncSpans().map(
+            ({ startFrameNumber, endFrameNumber, status }) => ({
+                startFrameNumber,
+                endFrameNumber,
+                status,
+            }),
+        ),
+        [
+            {
+                startFrameNumber: 10,
+                endFrameNumber: 11,
+                status: "complete",
+            },
+        ],
+    );
+});
+
+test("marks active async spans incomplete when capture stops", () => {
+    const profiler = new Profiler();
+    profiler.BeginFrame(12);
+    profiler.BeginAsyncScope("AssetLoad", "asset");
+
+    profiler.SetEnabled(false);
+
+    assert.deepEqual(
+        profiler.GetAsyncSpans().map(
+            ({ endFrameNumber, status }) => ({ endFrameNumber, status }),
+        ),
+        [{ endFrameNumber: 12, status: "incomplete" }],
+    );
+});
+
+test("counts async spans dropped at the active span limit", () => {
+    const profiler = new Profiler({ maxAsyncSpans: 1 });
+    profiler.BeginFrame(13);
+    const token = profiler.BeginAsyncScope("Kept");
+
+    assert.equal(profiler.BeginAsyncScope("Dropped"), null);
+    assert.equal(profiler.DroppedAsyncSpanCount, 1);
+
+    profiler.EndAsyncScope(token);
+    profiler.EndFrame();
+
+    assert.equal(profiler.GetAsyncSpans().length, 1);
+});
+
 test("ProfileAsyncFunction preserves its receiver and waits for completion", async () => {
     const profiler = new Profiler();
     profiler.BeginFrame(7);

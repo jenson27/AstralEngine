@@ -11,8 +11,9 @@
 | `EditorShell.RegisterPanel()` | Registers a panel ID, title, dock, and factory before mounting |
 | `EditorShell.Mount()` | Creates panel elements and calls each registered factory |
 | `EditorShell.Dispose()` | Disposes mounted panels and removes their elements |
+| `OnShow()` / `OnHide()` | Start or stop panel work when the shell changes panel visibility |
 | `ConsolePanel` | Displays and filters recent log entries |
-| `ProfilerPanel` | Displays CPU frames, synchronous CPU scopes, async elapsed scopes, metrics, and available GPU timings |
+| `ProfilerPanel` | Displays CPU frames and scopes, async spans, metrics, and available GPU timings |
 | `MemoryTrackerPanel` | Displays tracked resources, complete frame totals, retained event details, snapshots, and browser samples |
 | `SceneHierarchyPanel` | Displays the active scene's entity hierarchy |
 | `BuildSnapshotComparisonModel()` | Applies an owner filter to a snapshot comparison |
@@ -28,6 +29,7 @@
 - `Mount(context)` creates each panel and passes the same context to its factory
 - If mounting fails, the shell disposes panels already created and rethrows the original error
 - `Dispose()` calls panel `Dispose()` methods in reverse mount order and removes their elements
+- Optional `OnShow()` and `OnHide()` hooks run when a panel becomes visible or hidden
 - The left dock shows its registered panel directly; bottom dock panels use tabs
 - Bottom tabs support click, left/right arrow, Home, and End keys
 - Dock splitters support pointer resizing and keyboard resizing
@@ -37,15 +39,15 @@
 - `console` uses `AstralLogger`; it shows up to 2,000 entries and supports level and text filters
 - Clearing the console panel clears its displayed entries; it does not clear logger history
 - `profiler` uses `Profiler` and the renderer; it shows CPU timings and GPU timing availability
-- The profiler panel refreshes once per second while visible and capture data has changed
-- Async scopes appear as elapsed time; their self time is not reported as CPU time
+- The profiler and memory panels refresh once per second while visible
+- Async spans show elapsed time across frames; they are not CPU time
 - GPU timestamp availability refreshes when the renderer loses timestamp-query resources
 - `memory-tracker` uses `MemoryTracker`; it shows explicitly tracked resources and their supplied size estimates
 - Memory totals include events whose detail rows were dropped at the per-frame event limit
 - The memory owner filter applies to live totals and complete frame totals
 - The memory panel can capture and compare snapshots and request a browser memory sample
 - `hierarchy` uses `SceneManager`; it displays the active scene's entities and parent-child links
-- The hierarchy panel polls while visible and while the viewport is wider than 1,100 pixels
+- The hierarchy panel polls while visible and skips DOM rebuilds when scene revisions are unchanged
 - Each panel stops its timers and removes its listeners in `Dispose()`
 - If `pagehide` occurs during application startup, the editor disposes the application when startup resolves instead of mounting panels
 

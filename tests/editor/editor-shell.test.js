@@ -236,3 +236,40 @@ test("editor shell switches tabs and supports keyboard dock resizing", (context)
     shell.Dispose();
     assert.deepEqual(disposed, ["profiler", "console"]);
 });
+
+test("editor shell completes a tab switch when a lifecycle hook throws", (context) => {
+    InstallFakeDom(context);
+    const { shell, elements } = CreateEditorShell();
+    const expectedError = new Error("Panel hide failed.");
+    const events = [];
+
+    shell.RegisterPanel("console", {
+        title: "Console",
+        create: () => ({
+            OnHide() {
+                throw expectedError;
+            },
+            Dispose() {},
+        }),
+    });
+    shell.RegisterPanel("profiler", {
+        title: "Profiler",
+        create: () => ({
+            OnShow: () => events.push("profiler shown"),
+            Dispose() {},
+        }),
+    });
+    shell.Mount();
+    events.length = 0;
+
+    const [consoleTab, profilerTab] = elements.tabs.children;
+    assert.throws(
+        () => elements.tabs.Dispatch("click", { target: profilerTab }),
+        (error) => error === expectedError,
+    );
+
+    assert.equal(consoleTab.getAttribute("aria-selected"), "false");
+    assert.equal(profilerTab.getAttribute("aria-selected"), "true");
+    assert.deepEqual(events, ["profiler shown"]);
+    shell.Dispose();
+});

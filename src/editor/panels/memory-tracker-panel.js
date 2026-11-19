@@ -3,14 +3,13 @@ import {
     AppendFrameRangeLabels,
     AppendTableRow,
     BuildFilterOptions,
-    BuildFrameOptions,
     CreateEmptyMessage,
     CreateFrameIndexScale,
     CreateSvgElement,
     CreateDataTable,
     FormatBytes,
+    RefreshFrameSelection,
     RenderStatCards,
-    SelectFrameOrLatest,
     SetOptions,
 } from "./diagnostic-panel-utils.js";
 import { CreateElement } from "../ui/dom-utils.js";
@@ -367,18 +366,31 @@ export class MemoryTrackerPanel {
         this._root.addEventListener("click", this._onClick);
         this._root.addEventListener("change", this._onChange);
         this._Refresh(true);
+    }
+
+    OnShow() {
+        if (this._refreshTimer !== null) {
+            return;
+        }
+
+        this._Refresh(true);
         this._refreshTimer = globalThis.setInterval(
             () => this._Refresh(),
             REFRESH_INTERVAL_MS,
         );
     }
 
-    Dispose() {
-        if (this._refreshTimer !== null) {
-            globalThis.clearInterval(this._refreshTimer);
-            this._refreshTimer = null;
+    OnHide() {
+        if (this._refreshTimer === null) {
+            return;
         }
 
+        globalThis.clearInterval(this._refreshTimer);
+        this._refreshTimer = null;
+    }
+
+    Dispose() {
+        this.OnHide();
         this._root.removeEventListener("click", this._onClick);
         this._root.removeEventListener("change", this._onChange);
     }
@@ -432,28 +444,32 @@ export class MemoryTrackerPanel {
 
         const usage = this._memoryTracker.GetLiveUsage();
         const frames = this._memoryTracker.GetFrames();
-        const selectedFrame = SelectFrameOrLatest(
+        this._RefreshFrameViews(frames, usage);
+        this._RefreshLiveResourcesIfChanged();
+        this._RefreshSnapshots();
+        this._RenderBrowserMemory();
+        this._lastRevision = this._memoryTracker.Revision;
+    }
+
+    _RefreshFrameViews(frames, usage) {
+        const selectedFrame = RefreshFrameSelection(
+            this._root.querySelector('[data-role="memory-frame"]'),
             frames,
             this._selectedFrameNumber,
-        );
-
-        this._selectedFrameNumber = selectedFrame?.frameNumber ?? null;
-        SetOptions(
-            this._root.querySelector('[data-role="memory-frame"]'),
-            BuildFrameOptions(frames),
-            this._selectedFrameNumber ?? "",
-            (value) => {
-                this._selectedFrameNumber =
-                    value === "" ? null : Number(value);
+            (frameNumber) => {
+                this._selectedFrameNumber = frameNumber;
                 this._Refresh(true);
             },
         );
+        this._selectedFrameNumber = selectedFrame?.frameNumber ?? null;
 
         this._RefreshMemoryOwnerFilter(frames, usage);
         this._RenderMemoryGraph(frames);
         this._RenderMemoryAnalysis(usage, selectedFrame);
         this._RenderMemoryEvents(selectedFrame);
+    }
 
+    _RefreshLiveResourcesIfChanged() {
         if (
             this._lastLiveResourceRevision !==
                 this._memoryTracker.ResourceRevision ||
@@ -464,10 +480,6 @@ export class MemoryTrackerPanel {
                 this._memoryTracker.ResourceRevision;
             this._lastLiveResourceFilter = this._ownerFilter;
         }
-
-        this._RefreshSnapshots();
-        this._RenderBrowserMemory();
-        this._lastRevision = this._memoryTracker.Revision;
     }
 
     _RefreshMemoryOwnerFilter(frames, usage) {

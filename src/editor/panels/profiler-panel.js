@@ -2,19 +2,20 @@ import {
     AppendSvgGridLinesAndLabels,
     AppendFrameRangeLabels,
     AppendSvgText,
+    AppendTableCells,
     AppendTableRow,
     BuildFilterOptions,
-    BuildFrameOptions,
     CreateEmptyMessage,
     CreateFrameIndexScale,
     CreateSvgElement,
+    RefreshFrameSelection,
     RenderStatCards,
-    SelectFrameOrLatest,
     SetOptions,
 } from "./diagnostic-panel-utils.js";
 import { CreateElement } from "../ui/dom-utils.js";
 
 const REFRESH_INTERVAL_MS = 1000;
+const MAX_RECENT_FRAMES = 120;
 const MAX_TIMELINE_SCOPES = 250;
 const MAX_SCOPE_ROWS = 500;
 
@@ -22,6 +23,51 @@ function FormatMilliseconds(value) {
     return Math.abs(value) < 0.01
         ? `${(value * 1000).toFixed(2)} μs`
         : `${value.toFixed(2)} ms`;
+}
+
+function CreateFrameGraphLayout(recentFrames, scale) {
+    const width = 720;
+    const height = 220;
+    const plotLeft = 52;
+    const plotRight = width - 12;
+    const plotTop = 12;
+    const plotBottom = height - 30;
+    const plotWidth = plotRight - plotLeft;
+    const plotHeight = plotBottom - plotTop;
+    const observedMaxDuration = Math.max(
+        ...recentFrames.map((frame) => frame.durationMs),
+    );
+    const budgetMaxDuration = Math.max(
+        20,
+        Math.ceil(observedMaxDuration / 5) * 5,
+    );
+    const maxDuration =
+        scale === "budget"
+            ? budgetMaxDuration
+            : Math.max(0.05, observedMaxDuration * 1.15);
+    const showBudgetLine = maxDuration >= 16.67;
+
+    return {
+        width,
+        height,
+        plotLeft,
+        plotRight,
+        maxDuration,
+        showBudgetLine,
+        xForIndex: CreateFrameIndexScale(
+            recentFrames.length,
+            plotLeft,
+            plotWidth,
+        ),
+        yForDuration: (durationMs) =>
+            plotBottom - (durationMs / maxDuration) * plotHeight,
+        graphDescription: showBudgetLine
+            ? "CPU frame time across recent frames. The orange line marks the 16.67 millisecond target."
+            : "CPU frame time across recent frames, auto-scaled to recent frame timings.",
+        caption: showBudgetLine
+            ? "The target line marks 16.67 ms for 60 FPS."
+            : "Auto scale focuses on recent frame times. The 16.67 ms target is above this range.",
+    };
 }
 
 function AppendFrameGraphGrid(
@@ -162,6 +208,32 @@ function GetScopeDepth(scopes, scopeIndex, selectedSystem) {
     }
 
     return withinSelectedSystem ? depth : -1;
+}
+
+function CreateScopeTimelineLayout(frame, visibleScopes) {
+    const width = 720;
+    const labelWidth = 236;
+    const plotLeft = labelWidth;
+    const plotRight = width - 12;
+    const plotWidth = plotRight - plotLeft;
+    const plotTop = 30;
+    const rowHeight = 26;
+    const bottomPadding = 8;
+    const height =
+        plotTop + visibleScopes.length * rowHeight + bottomPadding;
+    const frameDuration = Math.max(frame.durationMs, 0.001);
+
+    return {
+        width,
+        labelWidth,
+        plotLeft,
+        plotWidth,
+        plotTop,
+        rowHeight,
+        bottomPadding,
+        height,
+        frameDuration,
+    };
 }
 
 function AppendScopeTimelineRows(svg, visibleScopes, layout) {
@@ -307,7 +379,12 @@ function AppendScopeTimelineBar(
 
 export class ProfilerPanel {
     constructor(profiler, panelElement, renderer = null) {
-        if (!profiler || typeof profiler.GetFrames !== "function") {
+        if (
+            !profiler ||
+            typeof profiler.GetFrames !== "function" ||
+            typeof profiler.GetAsyncSpans !== "function" ||
+            !Number.isSafeInteger(profiler.DroppedAsyncSpanCount)
+        ) {
             throw new TypeError("ProfilerPanel requires a profiler.");
         }
 
@@ -331,8 +408,17 @@ export class ProfilerPanel {
                 <span class="profiler-muted">Capture format version 1 · CPU timing is always available · <span data-role="gpu-timing-status"></span></span>
                 <button type="button" data-action="capture"></button>
             </div>
+            <section class="profiler-section">
+                <h3>Performance</h3>
+                <div
+                    class="profiler-section-body profiler-stat-grid profiler-performance-cards"
+                    data-role="performance-strip"
+                    role="group"
+                    aria-label="Frame performance"
+                ></div>
+            </section>
             <section class="profiler-view">
-                <p class="profiler-muted">Synchronous scopes show CPU time. Async scopes show elapsed time, including waits. System totals include all fixed update steps in the selected frame.</p>
+                <p class="profiler-muted">Synchronous scopes show CPU time. Async spans show elapsed time across frames, including waits. System totals include all fixed update steps in the selected frame.</p>
                 <div class="profiler-toolbar">
                     <label>Frame <select data-role="frame-select"></select></label>
                     <label>System <select data-role="system-filter"></select></label>
@@ -351,7 +437,7 @@ export class ProfilerPanel {
                     <div class="profiler-section-body profiler-system-chart" data-role="system-time-graph"></div>
                 </section>
                 <section class="profiler-section">
-                    <h3>CPU and async elapsed timeline</h3>
+                    <h3>CPU scope timeline</h3>
                     <p class="profiler-muted profiler-chart-caption" data-role="scope-timeline-count">Bars show each scope's start time and duration within the selected frame.</p>
                     <div class="profiler-section-body profiler-scope-timeline" data-role="scope-timeline"></div>
                 </section>
@@ -360,7 +446,7 @@ export class ProfilerPanel {
                     <div class="profiler-section-body profiler-stat-grid" data-role="frame-analysis"></div>
                 </section>
                 <section class="profiler-section">
-                    <h3>CPU and async scopes <span data-role="scope-count"></span></h3>
+                    <h3>CPU scopes <span data-role="scope-count"></span></h3>
                     <div class="profiler-table-wrap">
                         <table class="profiler-table">
                             <thead><tr><th>Scope</th><th>Kind</th><th>Status</th><th>Total</th><th>Self</th></tr></thead>
@@ -368,6 +454,17 @@ export class ProfilerPanel {
                         </table>
                     </div>
                     <div class="profiler-empty" data-role="scope-empty" hidden>No captured scopes. Start capture to record frame timings.</div>
+                </section>
+                <section class="profiler-section">
+                    <h3>Async operation spans <span data-role="async-span-count"></span></h3>
+                    <p class="profiler-muted profiler-chart-caption">Elapsed time can include waits. Frame numbers show where each operation started and completed.</p>
+                    <div class="profiler-table-wrap">
+                        <table class="profiler-table">
+                            <thead><tr><th>Operation</th><th>Category</th><th>Frames</th><th>Status</th><th>Elapsed</th></tr></thead>
+                            <tbody data-role="async-span-rows"></tbody>
+                        </table>
+                    </div>
+                    <div class="profiler-empty" data-role="async-span-empty" hidden>No async spans were captured.</div>
                 </section>
             </section>
         `;
@@ -382,18 +479,31 @@ export class ProfilerPanel {
         this._UpdateCaptureButton();
         this._UpdateGpuTimingStatus();
         this._Refresh(true);
+    }
+
+    OnShow() {
+        if (this._refreshTimer !== null) {
+            return;
+        }
+
+        this._Refresh(true);
         this._refreshTimer = globalThis.setInterval(
             () => this._Refresh(),
             REFRESH_INTERVAL_MS,
         );
     }
 
-    Dispose() {
-        if (this._refreshTimer !== null) {
-            globalThis.clearInterval(this._refreshTimer);
-            this._refreshTimer = null;
+    OnHide() {
+        if (this._refreshTimer === null) {
+            return;
         }
 
+        globalThis.clearInterval(this._refreshTimer);
+        this._refreshTimer = null;
+    }
+
+    Dispose() {
+        this.OnHide();
         this._root.removeEventListener("click", this._onClick);
         this._root.removeEventListener("change", this._onChange);
         this._root.removeEventListener("input", this._onInput);
@@ -448,17 +558,24 @@ export class ProfilerPanel {
         }
 
         const gpuStatusChanged = this._UpdateGpuTimingStatus();
+        const asyncSpans = this._profiler.GetAsyncSpans();
+        const hasRunningAsyncSpans = asyncSpans.some(
+            (span) => span.status === "running",
+        );
 
-        if (
-            !force &&
-            !gpuStatusChanged &&
-            this._lastRevision === this._profiler.Revision
-        ) {
+        const profilerRevisionChanged =
+            this._lastRevision !== this._profiler.Revision;
+
+        if (!force && !gpuStatusChanged && !profilerRevisionChanged) {
+            if (hasRunningAsyncSpans) {
+                this._RenderAsyncSpans(asyncSpans);
+            }
+
             return;
         }
 
         this._UpdateCaptureButton();
-        this._RefreshFrames();
+        this._RefreshFrames(asyncSpans);
     }
 
     _UpdateGpuTimingStatus() {
@@ -474,10 +591,20 @@ export class ProfilerPanel {
         return didChange;
     }
 
-    _RefreshFrames() {
+    _RefreshFrames(asyncSpans = this._profiler.GetAsyncSpans()) {
         const frames = this._profiler.GetFrames();
         this._RefreshSystemFilter(frames);
-        const selectedFrame = this._RefreshFrameSelection(frames);
+        const selectedFrame = RefreshFrameSelection(
+            this._root.querySelector('[data-role="frame-select"]'),
+            frames,
+            this._selectedFrameNumber,
+            (frameNumber) => {
+                this._selectedFrameNumber = frameNumber;
+                this._Refresh(true);
+            },
+        );
+        this._selectedFrameNumber = selectedFrame?.frameNumber ?? null;
+        const recentFrames = frames.slice(-MAX_RECENT_FRAMES);
 
         const visibleScopes = selectedFrame
             ? this._BuildVisibleScopes(selectedFrame)
@@ -485,15 +612,16 @@ export class ProfilerPanel {
         const timelineScopes = visibleScopes.slice(0, MAX_TIMELINE_SCOPES);
         const tableScopes = visibleScopes.slice(0, MAX_SCOPE_ROWS);
 
-        this._RenderFrameGraph(frames, selectedFrame);
+        this._RenderFrameGraph(recentFrames, selectedFrame);
         this._RenderSystemTimeGraph(selectedFrame);
         this._RenderScopeTimeline(
             selectedFrame,
             timelineScopes,
             visibleScopes.length,
         );
-        this._RenderFrameAnalysis(frames, selectedFrame);
+        this._RenderFrameAnalysis(recentFrames, selectedFrame);
         this._RenderScopes(selectedFrame, tableScopes, visibleScopes.length);
+        this._RenderAsyncSpans(asyncSpans);
         this._lastRevision = this._profiler.Revision;
     }
 
@@ -505,7 +633,7 @@ export class ProfilerPanel {
 
         for (const frame of frames) {
             for (const scope of frame.scopes) {
-                if (scope.category === "system") {
+                if (scope.category === "system" && !scope.isAsync) {
                     systemNames.add(scope.name);
                 }
             }
@@ -522,32 +650,8 @@ export class ProfilerPanel {
         );
     }
 
-    _RefreshFrameSelection(frames) {
-        const frameSelect = this._root.querySelector(
-            '[data-role="frame-select"]',
-        );
-        const selectedFrame = SelectFrameOrLatest(
-            frames,
-            this._selectedFrameNumber,
-        );
-
-        this._selectedFrameNumber = selectedFrame?.frameNumber ?? null;
-        SetOptions(
-            frameSelect,
-            BuildFrameOptions(frames),
-            this._selectedFrameNumber ?? "",
-            (value) => {
-                this._selectedFrameNumber =
-                    value === "" ? null : Number(value);
-                this._Refresh(true);
-            },
-        );
-        return selectedFrame;
-    }
-
-    _RenderFrameGraph(frames, selectedFrame) {
+    _RenderFrameGraph(recentFrames, selectedFrame) {
         const graph = this._root.querySelector('[data-role="frame-graph"]');
-        const recentFrames = frames.slice(-120);
         if (recentFrames.length === 0) {
             graph.replaceChildren(
                 CreateEmptyMessage("Start capture to collect frame timings."),
@@ -555,68 +659,40 @@ export class ProfilerPanel {
             return;
         }
 
-        const width = 720;
-        const height = 220;
-        const plotLeft = 52;
-        const plotRight = width - 12;
-        const plotTop = 12;
-        const plotBottom = height - 30;
-        const plotWidth = plotRight - plotLeft;
-        const plotHeight = plotBottom - plotTop;
-        const observedMaxDuration = Math.max(
-            ...recentFrames.map((frame) => frame.durationMs),
+        const layout = CreateFrameGraphLayout(
+            recentFrames,
+            this._frameGraphScale,
         );
-        const budgetMaxDuration = Math.max(
-            20,
-            Math.ceil(observedMaxDuration / 5) * 5,
-        );
-        const maxDuration =
-            this._frameGraphScale === "budget"
-                ? budgetMaxDuration
-                : Math.max(0.05, observedMaxDuration * 1.15);
-        const showBudgetLine = maxDuration >= 16.67;
         this._root.querySelector(
             '[data-role="frame-graph-caption"]',
-        ).textContent = showBudgetLine
-            ? "The target line marks 16.67 ms for 60 FPS."
-            : "Auto scale focuses on recent frame times. The 16.67 ms target is above this range.";
-        const xForIndex = CreateFrameIndexScale(
-            recentFrames.length,
-            plotLeft,
-            plotWidth,
-        );
-        const yForDuration = (durationMs) =>
-            plotBottom - (durationMs / maxDuration) * plotHeight;
-        const graphDescription = showBudgetLine
-            ? "CPU frame time across recent frames. The orange line marks the 16.67 millisecond target."
-            : "CPU frame time across recent frames, auto-scaled to recent frame timings.";
+        ).textContent = layout.caption;
         const svg = CreateSvgElement("svg", {
             class: "profiler-svg-chart",
-            viewBox: `0 0 ${width} ${height}`,
+            viewBox: `0 0 ${layout.width} ${layout.height}`,
             role: "img",
-            "aria-label": graphDescription,
+            "aria-label": layout.graphDescription,
         });
         const title = CreateSvgElement("title");
-        title.textContent = graphDescription;
+        title.textContent = layout.graphDescription;
         svg.append(title);
 
         AppendFrameGraphGrid(
             svg,
-            plotLeft,
-            plotRight,
-            maxDuration,
-            yForDuration,
-            showBudgetLine,
+            layout.plotLeft,
+            layout.plotRight,
+            layout.maxDuration,
+            layout.yForDuration,
+            layout.showBudgetLine,
         );
         AppendFrameGraphPoints(
             svg,
             recentFrames,
             selectedFrame,
-            xForIndex,
-            yForDuration,
-            plotLeft,
-            plotRight,
-            height,
+            layout.xForIndex,
+            layout.yForDuration,
+            layout.plotLeft,
+            layout.plotRight,
+            layout.height,
         );
         graph.replaceChildren(svg);
     }
@@ -717,36 +793,15 @@ export class ProfilerPanel {
                 ? `Showing ${visibleScopes.length} of ${totalVisibleScopes} matching scopes.`
                 : `${totalVisibleScopes} matching scopes.`;
 
-        const width = 720;
-        const labelWidth = 236;
-        const plotLeft = labelWidth;
-        const plotRight = width - 12;
-        const plotWidth = plotRight - plotLeft;
-        const plotTop = 30;
-        const rowHeight = 26;
-        const bottomPadding = 8;
-        const height =
-            plotTop + visibleScopes.length * rowHeight + bottomPadding;
-        const frameDuration = Math.max(frame.durationMs, 0.001);
-        const timelineLayout = {
-            width,
-            labelWidth,
-            plotLeft,
-            plotWidth,
-            plotTop,
-            rowHeight,
-            bottomPadding,
-            height,
-            frameDuration,
-        };
+        const timelineLayout = CreateScopeTimelineLayout(frame, visibleScopes);
         const svg = CreateSvgElement("svg", {
             class: "profiler-svg-chart profiler-scope-timeline-svg",
-            viewBox: `0 0 ${width} ${height}`,
+            viewBox: `0 0 ${timelineLayout.width} ${timelineLayout.height}`,
             role: "img",
-            "aria-label": `CPU and async elapsed scopes for frame ${frame.frameNumber}`,
+            "aria-label": `CPU scopes for frame ${frame.frameNumber}`,
         });
         const title = CreateSvgElement("title");
-        title.textContent = `CPU and async elapsed scopes for frame ${frame.frameNumber}`;
+        title.textContent = `CPU scopes for frame ${frame.frameNumber}`;
         svg.append(title);
 
         AppendScopeTimelineRows(svg, visibleScopes, timelineLayout);
@@ -756,7 +811,8 @@ export class ProfilerPanel {
         timeline.replaceChildren(svg);
     }
 
-    _RenderFrameAnalysis(frames, selectedFrame) {
+    _RenderFrameAnalysis(recentFrames, selectedFrame) {
+        this._RenderPerformanceStrip(recentFrames, selectedFrame);
         const analysis = this._root.querySelector(
             '[data-role="frame-analysis"]',
         );
@@ -767,8 +823,7 @@ export class ProfilerPanel {
             return;
         }
 
-        const recentDurations = frames
-            .slice(-120)
+        const recentDurations = recentFrames
             .map((frame) => frame.durationMs)
             .sort((left, right) => left - right);
         const averageDuration =
@@ -795,6 +850,90 @@ export class ProfilerPanel {
         RenderStatCards(analysis, stats);
     }
 
+    _RenderAsyncSpans(spans = this._profiler.GetAsyncSpans()) {
+        const body = this._root.querySelector(
+            '[data-role="async-span-rows"]',
+        );
+        const empty = this._root.querySelector(
+            '[data-role="async-span-empty"]',
+        );
+        const count = this._root.querySelector(
+            '[data-role="async-span-count"]',
+        );
+
+        if (!body || !empty || !count) {
+            return;
+        }
+
+        const fragment = document.createDocumentFragment();
+
+        for (const span of spans) {
+            const endFrame =
+                span.endFrameNumber === null
+                    ? "…"
+                    : String(span.endFrameNumber);
+            const row = CreateElement("tr");
+            row.className = span.status === "incomplete" ? "profiler-warning" : "";
+
+            AppendTableCells(row, [
+                span.name,
+                span.category,
+                `Frame ${span.startFrameNumber} → ${endFrame}`,
+                span.status,
+                FormatMilliseconds(span.durationMs),
+            ]);
+
+            fragment.append(row);
+        }
+
+        body.replaceChildren(fragment);
+        count.textContent =
+            spans.length === 0 && this._profiler.DroppedAsyncSpanCount === 0
+                ? ""
+                : `· ${spans.length} captured · ${this._profiler.DroppedAsyncSpanCount} dropped`;
+        empty.hidden =
+            spans.length !== 0 || this._profiler.DroppedAsyncSpanCount !== 0;
+        empty.textContent =
+            this._profiler.DroppedAsyncSpanCount === 0
+                ? "No async spans were captured."
+                : "No spans are retained. New spans reached the active span limit.";
+    }
+
+    _RenderPerformanceStrip(recentFrames, selectedFrame) {
+        const frameTimeMs = selectedFrame?.metrics["frame.deltaMs"];
+        const recentFrameTimes = recentFrames
+            .map((frame) => frame.metrics["frame.deltaMs"])
+            .filter((value) => Number.isFinite(value) && value >= 0);
+        const averageFrameTimeMs = recentFrameTimes.length
+            ? recentFrameTimes.reduce((total, value) => total + value, 0) /
+              recentFrameTimes.length
+            : null;
+        const fps =
+            Number.isFinite(frameTimeMs) && frameTimeMs > 0
+                ? 1000 / frameTimeMs
+                : null;
+
+        const stats = [
+            ["FPS", fps === null ? "—" : `${fps.toFixed(1)} FPS`],
+            [
+                "Frame time",
+                Number.isFinite(frameTimeMs)
+                    ? FormatMilliseconds(frameTimeMs)
+                    : "—",
+            ],
+            [
+                "Average frame time",
+                averageFrameTimeMs === null
+                    ? "—"
+                    : FormatMilliseconds(averageFrameTimeMs),
+            ],
+        ];
+        RenderStatCards(
+            this._root.querySelector('[data-role="performance-strip"]'),
+            stats,
+        );
+    }
+
     _FormatGpuFrameTime(frame) {
         if (!this._renderer?.GpuTimingSupported) {
             return "Unavailable";
@@ -814,6 +953,11 @@ export class ProfilerPanel {
 
         for (let index = 0; index < scopes.length; index += 1) {
             const scope = scopes[index];
+
+            if (scope.isAsync) {
+                continue;
+            }
+
             const depth = GetScopeDepth(
                 scopes,
                 index,
@@ -834,13 +978,11 @@ export class ProfilerPanel {
             visibleScopes.push({
                 scope,
                 depth,
-                selfTime: scope.isAsync
-                    ? null
-                    : Math.max(
-                          0,
-                          scope.durationMs -
-                              (childDurationByParent.get(index) ?? 0),
-                      ),
+                selfTime: Math.max(
+                    0,
+                    scope.durationMs -
+                        (childDurationByParent.get(index) ?? 0),
+                ),
             });
         }
 
@@ -871,16 +1013,12 @@ export class ProfilerPanel {
             nameCell.textContent = scope.name;
             row.append(nameCell);
 
-            for (const value of [
+            AppendTableCells(row, [
                 scope.isAsync ? "Async elapsed" : scope.category,
                 scope.incomplete ? "Partial (frame ended)" : "Complete",
                 FormatMilliseconds(scope.durationMs),
                 selfTime === null ? "—" : FormatMilliseconds(selfTime),
-            ]) {
-                const cell = CreateElement("td");
-                cell.textContent = value;
-                row.append(cell);
-            }
+            ]);
 
             fragment.append(row);
         }

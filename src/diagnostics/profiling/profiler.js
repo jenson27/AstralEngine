@@ -2,10 +2,21 @@ export const ProfilerCaptureVersion = 1;
 
 const DEFAULT_FRAME_CAPACITY = 600;
 const DEFAULT_SCOPE_CAPACITY = 2048;
+const DEFAULT_ASYNC_SPAN_CAPACITY = 256;
 
 function RequirePositiveInteger(value, name) {
     if (!Number.isSafeInteger(value) || value < 1) {
         throw new TypeError(name + " must be a positive integer.");
+    }
+}
+
+function RequireScopeMetadata(name, category) {
+    if (typeof name !== "string" || name.trim() === "") {
+        throw new TypeError("Profiler scope name must be non-empty.");
+    }
+
+    if (typeof category !== "string" || category.trim() === "") {
+        throw new TypeError("Profiler scope category must be non-empty.");
     }
 }
 
@@ -14,6 +25,7 @@ export class Profiler {
         enabled = true,
         maxFrames = DEFAULT_FRAME_CAPACITY,
         maxScopesPerFrame = DEFAULT_SCOPE_CAPACITY,
+        maxAsyncSpans = DEFAULT_ASYNC_SPAN_CAPACITY,
     } = {}) {
         if (typeof enabled !== "boolean") {
             throw new TypeError("Profiler enabled must be a boolean.");
@@ -21,16 +33,24 @@ export class Profiler {
 
         RequirePositiveInteger(maxFrames, "maxFrames");
         RequirePositiveInteger(maxScopesPerFrame, "maxScopesPerFrame");
+        RequirePositiveInteger(maxAsyncSpans, "maxAsyncSpans");
 
         this._isEnabled = enabled;
         this._maxFrames = maxFrames;
         this._maxScopesPerFrame = maxScopesPerFrame;
+        this._maxAsyncSpans = maxAsyncSpans;
         this._frames = new Array(maxFrames);
         this._nextFrameIndex = 0;
         this._frameCount = 0;
         this._currentFrame = null;
         this._scopeStack = [];
         this._asyncScopeIndexes = new Set();
+        this._asyncScopeTokensBySpanId = new Map();
+        this._activeAsyncSpans = new Map();
+        this._completedAsyncSpans = [];
+        this._nextAsyncSpanId = 1;
+        this._droppedAsyncSpanCount = 0;
+        this._lastCompletedFrameNumber = null;
         this._gpuFrameTimeMsByFrameNumber = new Map();
         this._revision = 0;
     }
@@ -47,15 +67,28 @@ export class Profiler {
         return this._revision;
     }
 
+    get DroppedAsyncSpanCount() {
+        return this._droppedAsyncSpanCount;
+    }
+
     SetEnabled(enabled) {
         if (typeof enabled !== "boolean") {
             throw new TypeError("Profiler enabled must be a boolean.");
         }
 
         if (!enabled) {
+            const endFrameNumber =
+                this._currentFrame?.frameNumber ??
+                this._lastCompletedFrameNumber;
             this._currentFrame = null;
             this._scopeStack.length = 0;
             this._asyncScopeIndexes.clear();
+            this._asyncScopeTokensBySpanId.clear();
+            this._CloseActiveAsyncSpans(
+                performance.now(),
+                endFrameNumber,
+                "incomplete",
+            );
         }
 
         if (this._isEnabled !== enabled) {
@@ -91,6 +124,7 @@ export class Profiler {
 
         this._scopeStack.length = 0;
         this._asyncScopeIndexes.clear();
+        this._asyncScopeTokensBySpanId.clear();
         return true;
     }
 
@@ -98,6 +132,8 @@ export class Profiler {
         if (!this._isEnabled || this._currentFrame === null) {
             return null;
         }
+
+        RequireScopeMetadata(name, category);
 
         const parentScopeIndex =
             this._scopeStack.length === 0
@@ -122,7 +158,17 @@ export class Profiler {
             return null;
         }
 
-        const token = this._CreateScope(
+        RequireScopeMetadata(name, category);
+
+        if (this._activeAsyncSpans.size >= this._maxAsyncSpans) {
+            this._droppedAsyncSpanCount += 1;
+            this._revision += 1;
+            return null;
+        }
+
+        const spanId = this._nextAsyncSpanId;
+        this._nextAsyncSpanId += 1;
+        const scopeToken = this._CreateScope(
             this._currentFrame,
             name,
             category,
@@ -130,22 +176,23 @@ export class Profiler {
             true,
         );
 
-        if (token !== null) {
-            this._asyncScopeIndexes.add(token.scopeIndex);
+        if (scopeToken !== null) {
+            this._asyncScopeIndexes.add(scopeToken.scopeIndex);
+            this._asyncScopeTokensBySpanId.set(spanId, scopeToken);
         }
 
-        return token;
+        this._activeAsyncSpans.set(spanId, {
+            spanId,
+            name,
+            category,
+            startFrameNumber: this._currentFrame.frameNumber,
+            startTime: performance.now(),
+        });
+        this._revision += 1;
+        return { spanId };
     }
 
     _CreateScope(frame, name, category, parentScopeIndex, isAsync = false) {
-        if (typeof name !== "string" || name.trim() === "") {
-            throw new TypeError("Profiler scope name must be non-empty.");
-        }
-
-        if (typeof category !== "string" || category.trim() === "") {
-            throw new TypeError("Profiler scope category must be non-empty.");
-        }
-
         if (frame.scopes.length >= this._maxScopesPerFrame) {
             frame.droppedScopeCount += 1;
             return null;
@@ -167,21 +214,39 @@ export class Profiler {
     }
 
     EndAsyncScope(token) {
-        if (
-            token === null ||
-            token === undefined ||
-            token.frame !== this._currentFrame ||
-            !this._asyncScopeIndexes.has(token.scopeIndex)
-        ) {
+        if (token === null || token === undefined) {
             return;
         }
 
-        this._asyncScopeIndexes.delete(token.scopeIndex);
-        this._CloseScope(
-            token.frame,
-            token.scopeIndex,
-            performance.now(),
-            false,
+        const span = this._activeAsyncSpans.get(token.spanId);
+
+        if (!span) {
+            return;
+        }
+
+        const endTime = performance.now();
+        const scopeToken = this._asyncScopeTokensBySpanId.get(token.spanId);
+
+        if (
+            scopeToken &&
+            scopeToken.frame === this._currentFrame &&
+            this._asyncScopeIndexes.has(scopeToken.scopeIndex)
+        ) {
+            this._asyncScopeIndexes.delete(scopeToken.scopeIndex);
+            this._CloseScope(
+                this._currentFrame,
+                scopeToken.scopeIndex,
+                endTime,
+                false,
+            );
+        }
+
+        this._asyncScopeTokensBySpanId.delete(token.spanId);
+        this._CompleteAsyncSpan(
+            span,
+            endTime,
+            this._currentFrame?.frameNumber ?? this._lastCompletedFrameNumber,
+            "complete",
         );
     }
 
@@ -286,6 +351,7 @@ export class Profiler {
         );
 
         this._currentFrame = null;
+        this._lastCompletedFrameNumber = frame.frameNumber;
         this._revision += 1;
         return frame;
     }
@@ -301,6 +367,7 @@ export class Profiler {
         }
 
         this._asyncScopeIndexes.clear();
+        this._asyncScopeTokensBySpanId.clear();
     }
 
     GetFrames() {
@@ -316,6 +383,50 @@ export class Profiler {
         }
 
         return frames;
+    }
+
+    GetAsyncSpans() {
+        const now = performance.now();
+        const spans = this._completedAsyncSpans.slice();
+
+        for (const span of this._activeAsyncSpans.values()) {
+            spans.push(
+                Object.freeze({
+                    ...span,
+                    endFrameNumber: null,
+                    endTime: null,
+                    durationMs: Math.max(0, now - span.startTime),
+                    status: "running",
+                }),
+            );
+        }
+
+        return spans.sort((left, right) => left.startTime - right.startTime);
+    }
+
+    _CompleteAsyncSpan(span, endTime, endFrameNumber, status) {
+        this._activeAsyncSpans.delete(span.spanId);
+        this._completedAsyncSpans.push(
+            Object.freeze({
+                ...span,
+                endFrameNumber,
+                endTime,
+                durationMs: Math.max(0, endTime - span.startTime),
+                status,
+            }),
+        );
+
+        if (this._completedAsyncSpans.length > this._maxAsyncSpans) {
+            this._completedAsyncSpans.shift();
+        }
+
+        this._revision += 1;
+    }
+
+    _CloseActiveAsyncSpans(endTime, endFrameNumber, status) {
+        for (const span of this._activeAsyncSpans.values()) {
+            this._CompleteAsyncSpan(span, endTime, endFrameNumber, status);
+        }
     }
 
     _CloseScope(frame, scopeIndex, endTime, incomplete) {

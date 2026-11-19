@@ -784,6 +784,11 @@ body {
     background: #151a22;
 }
 
+.profiler-performance-cards {
+    grid-template-columns: repeat(auto-fit, minmax(8rem, 14rem));
+    padding: 0.6rem 0.75rem;
+}
+
 .hierarchy-scene-label {
     display: flex;
     align-items: center;

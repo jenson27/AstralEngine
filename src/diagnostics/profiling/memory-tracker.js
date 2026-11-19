@@ -109,6 +109,41 @@ function BuildOwnerChanges(baseBytesByOwner, targetBytesByOwner) {
     return Object.freeze(ownerChanges);
 }
 
+function CreateCompletedFrame(frame, endingBytesByOwner) {
+    for (const change of frame.changesByOwner.values()) {
+        Object.freeze(change);
+    }
+
+    for (const totals of frame.ownerFilterTotals.values()) {
+        Object.freeze(totals);
+    }
+
+    const frozenEvents = frame.events.map((event) =>
+        Object.freeze({ ...event }),
+    );
+
+    return Object.freeze({
+        frameNumber: frame.frameNumber,
+        startingBytesByOwner: CreateFrozenObjectFromMap(
+            frame.startingBytesByOwner,
+        ),
+        endingBytesByOwner: CreateFrozenObjectFromMap(endingBytesByOwner),
+        liveBytes: GetTotalBytes(endingBytesByOwner),
+        liveBytesByOwner: CreateFrozenObjectFromMap(endingBytesByOwner),
+        allocatedBytes: frame.allocatedBytes,
+        releasedBytes: frame.releasedBytes,
+        netBytes:
+            GetTotalBytes(endingBytesByOwner) -
+            GetTotalBytes(frame.startingBytesByOwner),
+        changesByOwner: CreateFrozenObjectFromMap(frame.changesByOwner),
+        ownerFilterTotals: CreateFrozenObjectFromMap(
+            frame.ownerFilterTotals,
+        ),
+        events: Object.freeze(frozenEvents),
+        droppedEventCount: frame.droppedEventCount,
+    });
+}
+
 export class MemoryTracker {
     constructor({
         maxFrames = DEFAULT_FRAME_CAPACITY,
@@ -182,40 +217,10 @@ export class MemoryTracker {
 
         const frame = this._currentFrame;
         const endingBytesByOwner = this._GetLiveBytesByOwner();
-        for (const change of frame.changesByOwner.values()) {
-            Object.freeze(change);
-        }
-
-        for (const totals of frame.ownerFilterTotals.values()) {
-            Object.freeze(totals);
-        }
-
-        const frozenEvents = frame.events.map((event) =>
-            Object.freeze({ ...event }),
+        const completedFrame = CreateCompletedFrame(
+            frame,
+            endingBytesByOwner,
         );
-        const completedFrame = Object.freeze({
-            frameNumber: frame.frameNumber,
-            startingBytesByOwner: CreateFrozenObjectFromMap(
-                frame.startingBytesByOwner,
-            ),
-            endingBytesByOwner: CreateFrozenObjectFromMap(
-                endingBytesByOwner,
-            ),
-            liveBytes: GetTotalBytes(endingBytesByOwner),
-            liveBytesByOwner:
-                CreateFrozenObjectFromMap(endingBytesByOwner),
-            allocatedBytes: frame.allocatedBytes,
-            releasedBytes: frame.releasedBytes,
-            netBytes:
-                GetTotalBytes(endingBytesByOwner) -
-                GetTotalBytes(frame.startingBytesByOwner),
-            changesByOwner: CreateFrozenObjectFromMap(frame.changesByOwner),
-            ownerFilterTotals: CreateFrozenObjectFromMap(
-                frame.ownerFilterTotals,
-            ),
-            events: Object.freeze(frozenEvents),
-            droppedEventCount: frame.droppedEventCount,
-        });
 
         this._frames[this._nextFrameIndex] = completedFrame;
         this._nextFrameIndex =

@@ -4,6 +4,12 @@ function RequireNonEmptyString(value, name) {
     }
 }
 
+function GetDockPointerCoordinate(dockName, event) {
+    return DOCK_RESIZE_CONFIG[dockName].axis === "x"
+        ? event.clientX
+        : event.clientY;
+}
+
 const DOCK_RESIZE_CONFIG = Object.freeze({
     left: Object.freeze({
         initial: 272,
@@ -180,6 +186,12 @@ export class EditorShell {
                 `Editor panel '${definition.id}' must provide Dispose().`,
             );
         }
+
+        if (isActive) {
+            mountedPanel.instance.OnShow?.();
+        } else {
+            mountedPanel.instance.OnHide?.();
+        }
     }
 
     Mount(context = {}) {
@@ -213,6 +225,14 @@ export class EditorShell {
 
         for (let index = this._mountedPanels.length - 1; index >= 0; index -= 1) {
             const mountedPanel = this._mountedPanels[index];
+
+            if (!mountedPanel.element.hidden) {
+                try {
+                    mountedPanel.instance?.OnHide?.();
+                } catch (error) {
+                    disposeError ??= error;
+                }
+            }
 
             try {
                 mountedPanel.instance?.Dispose();
@@ -379,8 +399,39 @@ export class EditorShell {
             return;
         }
 
-        this._activePanelIds.set("bottom", panelId);
+        const previousPanelId = this._activePanelIds.get("bottom");
 
+        if (previousPanelId === panelId) {
+            return;
+        }
+
+        const previousPanel = this._mountedPanels.find(
+            (panel) => panel.definition.id === previousPanelId,
+        );
+        let lifecycleError = null;
+
+        try {
+            previousPanel?.instance?.OnHide?.();
+        } catch (error) {
+            lifecycleError = error;
+        }
+
+        this._activePanelIds.set("bottom", panelId);
+        this._UpdateDockPanelVisibility(panelId);
+        this._UpdateDockTabSelection(panelId);
+
+        try {
+            mountedPanel.instance.OnShow?.();
+        } catch (error) {
+            lifecycleError ??= error;
+        }
+
+        if (lifecycleError) {
+            throw lifecycleError;
+        }
+    }
+
+    _UpdateDockPanelVisibility(panelId) {
         for (const panel of this._mountedPanels) {
             if (panel.definition.dock !== "bottom") {
                 continue;
@@ -390,7 +441,9 @@ export class EditorShell {
             panel.element.hidden = !isActive;
             panel.contentElement.hidden = !isActive;
         }
+    }
 
+    _UpdateDockTabSelection(panelId) {
         for (const tab of this._dockTabs
             .get("bottom")
             .querySelectorAll("[data-editor-panel-tab]")) {
@@ -412,10 +465,7 @@ export class EditorShell {
             return;
         }
 
-        const coordinate =
-            DOCK_RESIZE_CONFIG[dockName].axis === "x"
-                ? event.clientX
-                : event.clientY;
+        const coordinate = GetDockPointerCoordinate(dockName, event);
         event.preventDefault();
         this._activeResize = {
             dockName,
@@ -433,10 +483,10 @@ export class EditorShell {
             return;
         }
 
-        const coordinate =
-            DOCK_RESIZE_CONFIG[activeResize.dockName].axis === "x"
-                ? event.clientX
-                : event.clientY;
+        const coordinate = GetDockPointerCoordinate(
+            activeResize.dockName,
+            event,
+        );
         const distance = coordinate - activeResize.startCoordinate;
         const direction = activeResize.dockName === "bottom" ? -1 : 1;
         this._SetDockSize(

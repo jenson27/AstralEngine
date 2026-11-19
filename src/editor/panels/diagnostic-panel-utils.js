@@ -161,14 +161,36 @@ export function SetOptions(
     return ApplyOptions(select, options, selectedValue);
 }
 
-export function AppendTableRow(body, values, className = "") {
-    const row = CreateElement("tr", className);
+export function RefreshFrameSelection(
+    select,
+    frames,
+    selectedFrameNumber,
+    onSelectionChange,
+) {
+    const selectedFrame = SelectFrameOrLatest(frames, selectedFrameNumber);
 
+    SetOptions(
+        select,
+        BuildFrameOptions(frames),
+        selectedFrame?.frameNumber ?? "",
+        (value) =>
+            onSelectionChange(value === "" ? null : Number(value)),
+    );
+
+    return selectedFrame;
+}
+
+export function AppendTableCells(row, values) {
     for (const value of values) {
         const cell = CreateElement("td");
         cell.textContent = String(value);
         row.append(cell);
     }
+}
+
+export function AppendTableRow(body, values, className = "") {
+    const row = CreateElement("tr", className);
+    AppendTableCells(row, values);
 
     body.append(row);
 }

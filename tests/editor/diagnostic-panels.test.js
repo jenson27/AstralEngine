@@ -406,11 +406,14 @@ test("profiler panel toggles capture from its toolbar", (context) => {
     profiler.BeginFrame(1);
     const scope = profiler.BeginScope("RenderSystem", "system");
     profiler.EndScope(scope);
+    profiler.RecordFrameMetric("frame.deltaMs", 10.5);
+    profiler.BeginAsyncScope("AssetLoad", "asset");
     profiler.EndFrame();
 
     const root = CreateRoot([
         ['[data-action="capture"]', "button"],
         ['[data-role="gpu-timing-status"]'],
+        ['[data-role="performance-strip"]'],
         ['[data-role="frame-select"]', "select"],
         ['[data-role="system-filter"]', "select"],
         ['[data-role="scope-filter"]', "input"],
@@ -424,6 +427,9 @@ test("profiler panel toggles capture from its toolbar", (context) => {
         ['[data-role="scope-count"]'],
         ['[data-role="scope-rows"]'],
         ['[data-role="scope-empty"]'],
+        ['[data-role="async-span-count"]'],
+        ['[data-role="async-span-rows"]', "tbody"],
+        ['[data-role="async-span-empty"]'],
     ]);
     let gpuTimingSupported = true;
     const panel = new ProfilerPanel(profiler, root, {
@@ -439,7 +445,31 @@ test("profiler panel toggles capture from its toolbar", (context) => {
         root.querySelector('[data-role="gpu-timing-status"]').textContent,
         "GPU timestamps available",
     );
+    const performanceCards = root.querySelector(
+        '[data-role="performance-strip"]',
+    );
+    assert.match(performanceCards.textContent, /FPS95\.2 FPS/);
+    assert.match(performanceCards.textContent, /Frame time10\.50 ms/);
+    assert.match(performanceCards.textContent, /Average frame time10\.50 ms/);
     assert.equal(root.querySelector('[data-role="scope-rows"]').children.length, 1);
+
+    let frameRefreshCount = 0;
+    let asyncSpanRefreshCount = 0;
+    const refreshFrames = panel._RefreshFrames.bind(panel);
+    const renderAsyncSpans = panel._RenderAsyncSpans.bind(panel);
+    panel._RefreshFrames = () => {
+        frameRefreshCount += 1;
+        refreshFrames();
+    };
+    panel._RenderAsyncSpans = () => {
+        asyncSpanRefreshCount += 1;
+        renderAsyncSpans();
+    };
+    panel._Refresh();
+
+    assert.equal(frameRefreshCount, 0);
+    assert.equal(asyncSpanRefreshCount, 1);
+
     gpuTimingSupported = false;
     panel._Refresh();
     assert.equal(
