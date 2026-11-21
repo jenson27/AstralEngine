@@ -80,6 +80,13 @@ export class EditorShell {
 
             this._docks.set("right", rightDock);
             this._splitters.set("right", rightSplitter);
+
+            const rightDockTabs = this._root.querySelector(
+                '[data-editor-dock-tabs="right"]',
+            );
+            if (rightDockTabs) {
+                this._dockTabs.set("right", rightDockTabs);
+            }
         }
         this._dockSizes = {
             left: DOCK_RESIZE_CONFIG.left.initial,
@@ -131,6 +138,7 @@ export class EditorShell {
 
     _CreatePanelElement(definition) {
         const isBottomPanel = definition.dock === "bottom";
+        const isTabbedPanel = this._dockTabs.has(definition.dock);
         const panelElement = document.createElement("section");
         panelElement.className = isBottomPanel
             ? "editor-bottom-panel"
@@ -138,7 +146,7 @@ export class EditorShell {
         panelElement.id = `editor-panel-${definition.id}`;
         panelElement.dataset.panelId = definition.id;
 
-        if (isBottomPanel) {
+        if (isTabbedPanel) {
             panelElement.setAttribute("role", "tabpanel");
             panelElement.setAttribute(
                 "aria-labelledby",
@@ -180,11 +188,11 @@ export class EditorShell {
     _MountPanel(definition, context) {
         const { panelElement, contentElement } =
             this._CreatePanelElement(definition);
+        const isTabbedPanel = this._dockTabs.has(definition.dock);
         const isActive =
-            definition.dock !== "bottom" ||
-            !this._activePanelIds.has(definition.dock);
+            !isTabbedPanel || !this._activePanelIds.has(definition.dock);
 
-        if (isActive && definition.dock === "bottom") {
+        if (isActive && isTabbedPanel) {
             this._activePanelIds.set(definition.dock, definition.id);
         }
 
@@ -192,7 +200,7 @@ export class EditorShell {
         contentElement.hidden = !isActive;
         this._docks.get(definition.dock).append(panelElement);
 
-        if (definition.dock === "bottom") {
+        if (isTabbedPanel) {
             this._CreateDockTab(definition, panelElement, isActive);
         }
 
@@ -429,11 +437,15 @@ export class EditorShell {
             (panel) => panel.definition.id === panelId,
         );
 
-        if (!mountedPanel || mountedPanel.definition.dock !== "bottom") {
+        if (
+            !mountedPanel ||
+            !this._dockTabs.has(mountedPanel.definition.dock)
+        ) {
             return;
         }
 
-        const previousPanelId = this._activePanelIds.get("bottom");
+        const dockName = mountedPanel.definition.dock;
+        const previousPanelId = this._activePanelIds.get(dockName);
 
         if (previousPanelId === panelId) {
             return;
@@ -450,9 +462,9 @@ export class EditorShell {
             lifecycleError = error;
         }
 
-        this._activePanelIds.set("bottom", panelId);
-        this._UpdateDockPanelVisibility(panelId);
-        this._UpdateDockTabSelection(panelId);
+        this._activePanelIds.set(dockName, panelId);
+        this._UpdateDockPanelVisibility(panelId, dockName);
+        this._UpdateDockTabSelection(panelId, dockName);
 
         try {
             mountedPanel.instance.OnShow?.();
@@ -465,9 +477,9 @@ export class EditorShell {
         }
     }
 
-    _UpdateDockPanelVisibility(panelId) {
+    _UpdateDockPanelVisibility(panelId, dockName) {
         for (const panel of this._mountedPanels) {
-            if (panel.definition.dock !== "bottom") {
+            if (panel.definition.dock !== dockName) {
                 continue;
             }
 
@@ -477,9 +489,9 @@ export class EditorShell {
         }
     }
 
-    _UpdateDockTabSelection(panelId) {
+    _UpdateDockTabSelection(panelId, dockName) {
         for (const tab of this._dockTabs
-            .get("bottom")
+            .get(dockName)
             .querySelectorAll("[data-editor-panel-tab]")) {
             const isActive = tab.dataset.editorPanelTab === panelId;
             tab.setAttribute("aria-selected", String(isActive));

@@ -4,6 +4,7 @@
 const http = require("node:http");
 const fs = require("node:fs");
 const path = require("node:path");
+const { HandleAssetDirectoryRequest } = require("./server/asset-directory-api.cjs");
 
 const rootDirectory = process.cwd();
 const logDirectory = path.join(rootDirectory, "logs");
@@ -12,6 +13,13 @@ const contentTypes = {
     ".html": "text/html; charset=utf-8",
     ".css": "text/css; charset=utf-8",
     ".js": "text/javascript; charset=utf-8",
+    ".avif": "image/avif",
+    ".bmp": "image/bmp",
+    ".gif": "image/gif",
+    ".jpeg": "image/jpeg",
+    ".jpg": "image/jpeg",
+    ".png": "image/png",
+    ".webp": "image/webp",
 };
 const maxLogRequestBytes = 64 * 1024;
 const staticFiles = new Map([
@@ -359,6 +367,16 @@ function HandleRequest(request, response) {
             requestUrl.pathname === "/api/hot-reload"
         ) {
             HandleHotReloadStream(request, response);
+            return;
+        }
+
+        if (requestUrl.pathname === "/api/assets") {
+            void HandleAssetDirectoryRequest(
+                request,
+                response,
+                requestUrl,
+                assetDirectory,
+            );
             return;
         }
 

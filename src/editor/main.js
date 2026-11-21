@@ -15,6 +15,7 @@ import { EditorDocumentSession } from "./editor-document-session.js";
 import { CreateEditorComponentAuthoringCatalog } from "./component-authoring-catalog.js";
 import { EditorSceneAuthoringController } from "./scene-authoring-controller.js";
 import { InspectorPanel } from "./panels/inspector/panel.js";
+import { AssetBrowserPanel } from "./panels/asset-browser/asset-browser-panel.js";
 import { MemoryTrackerPanel } from "./panels/diagnostics/memory-tracker/panel.js";
 import { ProfilerPanel } from "./panels/diagnostics/profiler/panel.js";
 import { SceneHierarchyPanel } from "./panels/scene-hierarchy-panel.js";
@@ -276,6 +277,15 @@ editorShell.RegisterPanel("inspector", {
             context.sceneAuthoringController,
             context.assetTracker,
         ),
+});
+editorShell.RegisterPanel("asset-browser", {
+    title: "Asset Browser",
+    dock: "right",
+    create: (contentElement, context) =>
+        new AssetBrowserPanel(contentElement, {
+            logger: context.logger,
+            getAssetCatalog: context.getAssetCatalog,
+        }),
 });
 
 window.addEventListener(

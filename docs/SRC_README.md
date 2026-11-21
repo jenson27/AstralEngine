@@ -35,6 +35,7 @@
 
 - [Editor Panels](editor/PANELS_README.md) - Panel registration, lifecycle, and built-in editor views
 - [Inspector](editor/INSPECTOR_README.md) - Selected entity editing, component authoring, and undo/redo
+- [Asset Browser](editor/ASSET_BROWSER_README.md) - Browses asset files and displays catalog metadata
 
 ## Diagnostics
 

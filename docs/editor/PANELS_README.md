@@ -2,7 +2,7 @@
 
 ## Purpose
 
-`EditorShell` registers and mounts editor panels in the browser editor's left, right, and bottom docks. Each panel owns its view and releases its event listeners or timers through `Dispose()`. The shell does not create engine services; `src/editor/main.js` passes those services into panel factories. See [Logging](../diagnostics/LOGGING_README.md), [Profiler](../diagnostics/PROFILER_README.md), [Memory Tracker](../diagnostics/MEMORY_TRACKER_README.md), and [Inspector](INSPECTOR_README.md).
+`EditorShell` registers and mounts editor panels in the browser editor's left, right, and bottom docks. Each panel owns its view and releases its event listeners or timers through `Dispose()`. The shell does not create engine services; `src/editor/main.js` passes those services into panel factories. See [Logging](../diagnostics/LOGGING_README.md), [Profiler](../diagnostics/PROFILER_README.md), [Memory Tracker](../diagnostics/MEMORY_TRACKER_README.md), [Inspector](INSPECTOR_README.md), and [Asset Browser](ASSET_BROWSER_README.md) for built-in panel details.
 
 ## Main parts and responsibilities
 
@@ -17,6 +17,7 @@
 | `MemoryTrackerPanel` | Displays tracked resources, complete frame totals, retained event details, snapshots, and browser samples |
 | `SceneHierarchyPanel` | Displays the active scene's entity hierarchy |
 | `InspectorPanel` | Displays the selected entity and its component fields |
+| `AssetBrowserPanel` | Browses files and folders under `assets/` and displays file and catalog details |
 | `EditorSceneAssetTracker` | Retains active scene assets used by components or editor history |
 | `BuildSnapshotComparisonModel()` | Applies an owner filter to a snapshot comparison |
 | `diagnostic-panel-utils.js` | Provides shared frame, table, byte-formatting, and SVG helpers |
@@ -32,7 +33,7 @@
 - If mounting fails, the shell disposes panels already created and rethrows the original error
 - `Dispose()` calls panel `Dispose()` methods in reverse mount order and removes their elements
 - Optional `OnShow()` and `OnHide()` hooks run when a panel becomes visible or hidden
-- The left and right docks show their panels directly; bottom dock panels use tabs
+- The left dock shows its panel directly; the right and bottom docks use tabs
 - Bottom tabs support click, left/right arrow, Home, and End keys
 - Dock splitters support pointer resizing and keyboard resizing
 
@@ -52,6 +53,8 @@
 - The hierarchy panel polls while visible and skips DOM rebuilds when scene revisions are unchanged
 - `inspector` uses editor selection, component authoring, and command history to edit the selected entity
 - The inspector is mounted in the right dock
+- `asset-browser` lists files and folders through `/api/assets`, with search, type filters, file details, and image previews
+- The Asset Browser panel is mounted in the right dock and refreshes when it becomes visible
 - `EditorSceneAssetTracker` retains asset IDs from live component definitions and undo or redo entries; it releases other leases from the active scene scope
 - Components that reference assets provide those IDs through `EditorComponentAuthoringCatalog.Register()`
 - Each panel stops its timers and removes its listeners in `Dispose()`
@@ -77,7 +80,10 @@
 - `src/editor/panels/scene-hierarchy-panel.js`
 - `src/editor/panels/inspector/panel.js`
 - `src/editor/panels/inspector/component-view.js`
+- `src/editor/panels/asset-browser/asset-browser-panel.js`
+- `src/editor/panels/asset-browser/asset-browser-model.js`
 - `src/editor/editor-scene-asset-tracker.js`
 - `src/editor/component-authoring-catalog.js`
 - `src/editor/panels/diagnostics/snapshot-comparison-model.js`
 - `src/editor/panels/diagnostics/diagnostic-panel-utils.js`
+- `server/asset-directory-api.cjs`
