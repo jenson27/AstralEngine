@@ -5,15 +5,17 @@ import { AssetLoaderRegistry } from "../src/core/assets/asset-loader-registry.js
 import { AssetManager } from "../src/core/assets/asset-manager.js";
 import { AssetScope } from "../src/core/assets/asset-scope.js";
 
-function CreateAssetManager(loader) {
+function CreateAssetManager(loader, assetIds = ["mesh:cube"]) {
     const assetCatalog = new AssetCatalog();
-    assetCatalog.Register({
-        id: "mesh:cube",
-        typeId: "mesh",
-        loaderId: "test:mesh",
-        source: { kind: "test" },
-        version: 1,
-    });
+    for (const id of assetIds) {
+        assetCatalog.Register({
+            id,
+            typeId: "mesh",
+            loaderId: "test:mesh",
+            source: { kind: "test" },
+            version: 1,
+        });
+    }
 
     const loaderRegistry = new AssetLoaderRegistry();
     loaderRegistry.Register("test:mesh", loader);
@@ -75,6 +77,34 @@ test("exposes a stable handle while the scope holds the asset", async () => {
         () => handle.Current,
         /not currently loaded/,
     );
+});
+
+test("releases scoped assets that are no longer retained", async () => {
+    const releasedAssetIds = [];
+    const assetManager = CreateAssetManager(
+        {
+            Load(descriptor) {
+                return { id: descriptor.id };
+            },
+            Release(asset, descriptor) {
+                releasedAssetIds.push(descriptor.id);
+            },
+        },
+        ["mesh:cube", "mesh:sphere"],
+    );
+    const scope = new AssetScope(assetManager);
+
+    const cube = await scope.Acquire("mesh:cube");
+    await scope.Acquire("mesh:sphere");
+    await scope.RetainOnly(["mesh:cube"]);
+
+    assert.strictEqual(scope.GetRequired("mesh:cube"), cube);
+    assert.equal(scope.GetHandle("mesh:sphere"), undefined);
+    assert.deepEqual(releasedAssetIds, ["mesh:sphere"]);
+    assert.equal(assetManager.GetState("mesh:sphere"), "unloaded");
+
+    await scope.ReleaseAll();
+    assert.deepEqual(releasedAssetIds, ["mesh:sphere", "mesh:cube"]);
 });
 
 test("keeps an asset loaded until all scopes release it", async () => {

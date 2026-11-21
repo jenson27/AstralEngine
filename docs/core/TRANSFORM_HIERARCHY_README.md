@@ -70,7 +70,7 @@
 
 - `src/components/parent.js`
 - `src/components/transform.js`
-- `src/core/scene.js`
-- `src/core/scene-loader.js`
+- `src/core/scene/scene.js`
+- `src/core/scene/scene-loader.js`
 - `src/systems/transform-snapshot-system.js`
 - `src/systems/transform-hierarchy-system.js`

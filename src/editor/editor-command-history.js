@@ -32,6 +32,16 @@ export class EditorCommandHistory {
         return this._redoStack.at(-1)?.label ?? "";
     }
 
+    GetRetainedAssetIds() {
+        return [
+            ...new Set(
+                [...this._undoStack, ...this._redoStack].flatMap(
+                    (command) => command.retainedAssetIds,
+                ),
+            ),
+        ];
+    }
+
     SetScene(scene) {
         if (scene === this._scene) {
             return false;
@@ -44,13 +54,18 @@ export class EditorCommandHistory {
         return true;
     }
 
-    RecordApplied({ scene, label, undo, redo }) {
+    RecordApplied({ scene, label, undo, redo, retainedAssetIds = [] }) {
         if (
             scene !== this._scene ||
             typeof label !== "string" ||
             label.trim() === "" ||
             typeof undo !== "function" ||
-            typeof redo !== "function"
+            typeof redo !== "function" ||
+            !Array.isArray(retainedAssetIds) ||
+            !retainedAssetIds.every(
+                (assetId) =>
+                    typeof assetId === "string" && assetId.trim() !== "",
+            )
         ) {
             throw new TypeError("Invalid editor history command.");
         }
@@ -64,6 +79,7 @@ export class EditorCommandHistory {
             label: label.trim(),
             undo,
             redo,
+            retainedAssetIds: [...new Set(retainedAssetIds)],
         });
         if (this._undoStack.length > this._maxEntries) {
             this._undoStack.shift();

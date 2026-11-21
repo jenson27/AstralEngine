@@ -11,11 +11,16 @@ export class AssetScope {
         this._acquisitionsByAssetId = new Map();
         this._state = "open";
         this._releasePromise = null;
+        this._retainedAssetIds = null;
+        this._retentionRevision = 0;
+        this._retentionPromise = null;
     }
 
     Acquire(assetId) {
         this._RequireOpen();
         this._RequireAssetId(assetId);
+        this._retentionRevision += 1;
+        this._retainedAssetIds?.add(assetId);
 
         const existingLease = this._leasesByAssetId.get(assetId);
         if (existingLease) {
@@ -96,6 +101,28 @@ export class AssetScope {
         return handle;
     }
 
+    RetainOnly(assetIds) {
+        this._RequireOpen();
+        if (
+            !Array.isArray(assetIds) ||
+            !assetIds.every(
+                (assetId) =>
+                    typeof assetId === "string" && assetId.trim() !== "",
+            )
+        ) {
+            throw new TypeError("Retained asset IDs must be an array of strings.");
+        }
+
+        this._retainedAssetIds = new Set(assetIds);
+        this._retentionRevision += 1;
+        if (!this._retentionPromise) {
+            this._retentionPromise = this._DrainRetainedAssets().finally(() => {
+                this._retentionPromise = null;
+            });
+        }
+        return this._retentionPromise;
+    }
+
     ReleaseAll() {
         if (this._state === "disposed") {
             return Promise.resolve();
@@ -117,6 +144,7 @@ export class AssetScope {
         );
 
         await Promise.allSettled(pendingAcquisitions);
+        await Promise.allSettled([this._retentionPromise]);
 
         const leases = Array.from(this._leasesByAssetId.values());
         this._leasesByAssetId.clear();
@@ -136,6 +164,53 @@ export class AssetScope {
                 errors,
                 "One or more scoped assets failed to release.",
             );
+        }
+    }
+
+    async _DrainRetainedAssets() {
+        while (this._state === "open") {
+            const revision = this._retentionRevision;
+            const pendingAcquisitions = Array.from(
+                this._acquisitionsByAssetId.values(),
+                (acquisition) => acquisition.promise,
+            );
+            if (pendingAcquisitions.length > 0) {
+                await Promise.allSettled(pendingAcquisitions);
+            }
+            if (this._state !== "open") {
+                return;
+            }
+            if (revision !== this._retentionRevision) {
+                continue;
+            }
+
+            const leasesToRelease = [];
+            for (const [assetId, lease] of this._leasesByAssetId) {
+                if (!this._retainedAssetIds.has(assetId)) {
+                    this._leasesByAssetId.delete(assetId);
+                    leasesToRelease.push(lease);
+                }
+            }
+
+            const releaseResults = await Promise.allSettled(
+                leasesToRelease.map((lease) => lease.Release()),
+            );
+            const errors = releaseResults
+                .filter((result) => result.status === "rejected")
+                .map((result) => result.reason);
+            if (errors.length > 0) {
+                throw new AggregateError(
+                    errors,
+                    "One or more unused scoped assets failed to release.",
+                );
+            }
+
+            if (
+                revision === this._retentionRevision &&
+                this._acquisitionsByAssetId.size === 0
+            ) {
+                return;
+            }
         }
     }
 

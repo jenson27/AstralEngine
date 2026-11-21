@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Transform } from "../../src/components/transform.js";
-import { Scene } from "../../src/core/scene.js";
-import { SystemPhase } from "../../src/core/system-scheduler.js";
+import { Scene } from "../../src/core/scene/scene.js";
+import { SystemPhase } from "../../src/core/scene/system-scheduler.js";
 import { TransformSnapshotSystem } from "../../src/systems/transform-snapshot-system.js";
 
 test("captures transforms before other fixed-update systems change them", () => {

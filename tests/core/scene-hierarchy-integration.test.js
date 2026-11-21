@@ -3,8 +3,8 @@ import test from "node:test";
 import { Parent } from "../../src/components/parent.js";
 import { CreateSceneComponentRegistry } from "../../src/components/register-scene-components.js";
 import { Transform } from "../../src/components/transform.js";
-import { SceneLoader } from "../../src/core/scene-loader.js";
-import { SystemPhase } from "../../src/core/system-scheduler.js";
+import { SceneLoader } from "../../src/core/scene/scene-loader.js";
+import { SystemPhase } from "../../src/core/scene/system-scheduler.js";
 import { JsonFormat } from "../../src/serialization/json-format.js";
 import { TransformHierarchySystem } from "../../src/systems/transform-hierarchy-system.js";
 

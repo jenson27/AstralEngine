@@ -3,8 +3,8 @@ import test from "node:test";
 import { Camera } from "../src/components/graphics/camera.js";
 import { Parent } from "../src/components/parent.js";
 import { Transform } from "../src/components/transform.js";
-import { Scene } from "../src/core/scene.js";
-import { SystemPhase } from "../src/core/system-scheduler.js";
+import { Scene } from "../src/core/scene/scene.js";
+import { SystemPhase } from "../src/core/scene/system-scheduler.js";
 
 class Marker {}
 

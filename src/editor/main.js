@@ -7,15 +7,16 @@ import { Profiler } from "../diagnostics/profiling/profiler.js";
 import { CreateSceneComponentRegistry } from "../components/register-scene-components.js";
 import { EcsDocumentAdapter } from "../serialization/adapters/ecs-document-adapter.js";
 import { JsonFormat } from "../serialization/json-format.js";
-import { ConsolePanel } from "./panels/console-panel.js";
+import { ConsolePanel } from "./panels/diagnostics/console-panel.js";
 import { EditorSelection } from "./editor-selection.js";
 import { EditorCommandHistory } from "./editor-command-history.js";
+import { EditorSceneAssetTracker } from "./editor-scene-asset-tracker.js";
 import { EditorDocumentSession } from "./editor-document-session.js";
 import { CreateEditorComponentAuthoringCatalog } from "./component-authoring-catalog.js";
 import { EditorSceneAuthoringController } from "./scene-authoring-controller.js";
-import { InspectorPanel } from "./panels/inspector-panel.js";
-import { MemoryTrackerPanel } from "./panels/memory-tracker-panel.js";
-import { ProfilerPanel } from "./panels/profiler-panel.js";
+import { InspectorPanel } from "./panels/inspector/panel.js";
+import { MemoryTrackerPanel } from "./panels/diagnostics/memory-tracker/panel.js";
+import { ProfilerPanel } from "./panels/diagnostics/profiler/panel.js";
 import { SceneHierarchyPanel } from "./panels/scene-hierarchy-panel.js";
 import { EditorShell } from "./ui/editor-shell.js";
 
@@ -41,6 +42,7 @@ const editorDocumentStatus = document.querySelector(
 );
 let application = null;
 let editorSceneAuthoringController = null;
+let editorSceneAssetTracker = null;
 let editorDocumentSession = null;
 let unsubscribeEditorDocument = null;
 let isDisposed = false;
@@ -158,6 +160,7 @@ function DisposeEditor() {
     isDisposed = true;
     unsubscribeEditorDocument?.();
     editorDocumentSession?.Dispose();
+    editorSceneAssetTracker?.Dispose();
     exportSceneButton?.removeEventListener("click", DownloadEditorScene);
     importSceneButton?.removeEventListener("click", OpenEditorScenePicker);
     importSceneFileInput?.removeEventListener("change", ImportEditorSceneFile);
@@ -176,12 +179,18 @@ async function MountRunningApplication(runningApplication) {
     }
 
     application = runningApplication;
+    editorSceneAssetTracker = new EditorSceneAssetTracker({
+        sceneManager: runningApplication.SceneManager,
+        history: editorCommandHistory,
+        componentCatalog: editorComponentCatalog,
+    });
     editorSceneAuthoringController = new EditorSceneAuthoringController({
         sceneManager: runningApplication.SceneManager,
         selection: editorSelection,
         history: editorCommandHistory,
         componentCatalog: editorComponentCatalog,
         getAssetCatalog: runningApplication.GetAssetCatalog,
+        assetTracker: editorSceneAssetTracker,
     });
     editorDocumentSession = new EditorDocumentSession(
         editorCommandHistory,
@@ -196,6 +205,7 @@ async function MountRunningApplication(runningApplication) {
         selection: editorSelection,
         commandHistory: editorCommandHistory,
         componentCatalog: editorComponentCatalog,
+        assetTracker: editorSceneAssetTracker,
         sceneAuthoringController: editorSceneAuthoringController,
         logger: AstralLogger,
         sceneManager: runningApplication.SceneManager,
@@ -260,11 +270,11 @@ editorShell.RegisterPanel("inspector", {
             context.sceneManager,
             context.selection,
             contentElement,
-            null,
             context.getAssetCatalog,
             context.commandHistory,
             context.componentCatalog,
             context.sceneAuthoringController,
+            context.assetTracker,
         ),
 });
 

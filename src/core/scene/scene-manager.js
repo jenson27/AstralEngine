@@ -1,4 +1,4 @@
-import { AstralLogger } from "../diagnostics/logger.js";
+import { AstralLogger } from "../../diagnostics/logger.js";
 
 function IsSceneCandidate(scene) {
     return (
@@ -74,6 +74,14 @@ export class SceneManager {
         }
 
         return assetScope.GetHandleRequired(assetId);
+    }
+
+    RetainActiveAssetHandles(scene, assetIds) {
+        if (scene !== this._activeScene || !this._activeAssetScope) {
+            return Promise.resolve(false);
+        }
+
+        return this._activeAssetScope.RetainOnly(assetIds).then(() => true);
     }
 
     LoadScene(url) {

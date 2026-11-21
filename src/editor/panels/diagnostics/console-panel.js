@@ -1,4 +1,4 @@
-import { CreateElement } from "../ui/dom-utils.js";
+import { CreateElement } from "../../ui/dom-utils.js";
 
 const MAX_CONSOLE_ENTRIES = 2000;
 

@@ -4,7 +4,7 @@ import { AngularVelocity } from "../../src/components/angular-velocity.js";
 import { Parent } from "../../src/components/parent.js";
 import { Transform } from "../../src/components/transform.js";
 import { CreateSceneComponentRegistry } from "../../src/components/register-scene-components.js";
-import { SceneLoader } from "../../src/core/scene-loader.js";
+import { SceneLoader } from "../../src/core/scene/scene-loader.js";
 import { EditorCommandHistory } from "../../src/editor/editor-command-history.js";
 import { EditorSelection } from "../../src/editor/editor-selection.js";
 import {

@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Parent } from "../../src/components/parent.js";
 import { Transform } from "../../src/components/transform.js";
-import { Scene } from "../../src/core/scene.js";
-import { SystemPhase } from "../../src/core/system-scheduler.js";
+import { Scene } from "../../src/core/scene/scene.js";
+import { SystemPhase } from "../../src/core/scene/system-scheduler.js";
 import { TransformHierarchySystem } from "../../src/systems/transform-hierarchy-system.js";
 
 test("composes interpolated parent and child world matrices", () => {

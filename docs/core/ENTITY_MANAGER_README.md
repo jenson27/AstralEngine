@@ -101,4 +101,4 @@
 - `src/core/ecs/entity-manager.js`
 - `src/core/ecs/component-storage.js`
 - `src/core/ecs/command-buffer.js`
-- `src/core/scene.js`
+- `src/core/scene/scene.js`

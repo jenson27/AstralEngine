@@ -8,13 +8,16 @@ export class EditorSceneAuthoringController {
         history,
         componentCatalog,
         getAssetCatalog = null,
+        assetTracker = null,
     }) {
         if (
             !sceneManager ||
             !selection ||
             !history ||
             !componentCatalog ||
-            (getAssetCatalog !== null && typeof getAssetCatalog !== "function")
+            typeof componentCatalog.GetAssetIdsForComponent !== "function" ||
+            (getAssetCatalog !== null && typeof getAssetCatalog !== "function") ||
+            (assetTracker !== null && typeof assetTracker.Refresh !== "function")
         ) {
             throw new TypeError(
                 "Editor scene authoring requires scene, selection, history, and component services.",
@@ -26,6 +29,7 @@ export class EditorSceneAuthoringController {
         this._history = history;
         this._componentCatalog = componentCatalog;
         this._getAssetCatalog = getAssetCatalog;
+        this._assetTracker = assetTracker;
         this._pendingOperations = 0;
     }
 
@@ -132,9 +136,16 @@ export class EditorSceneAuthoringController {
                         definition.componentType,
                         component,
                     ),
+                retainedAssetIds: this._GetComponentAssetIds(
+                    scene,
+                    entityId,
+                    definition.componentType,
+                    component,
+                ),
             });
         } finally {
             this._pendingOperations -= 1;
+            this._assetTracker?.Refresh();
         }
     }
 
@@ -169,6 +180,16 @@ export class EditorSceneAuthoringController {
                 }
                 this._ClearSubtreeSelection(scene, subtreeEntityIds);
             },
+            retainedAssetIds: snapshots.flatMap((snapshot) =>
+                snapshot.components.flatMap(({ componentType, component }) =>
+                    this._GetComponentAssetIds(
+                        scene,
+                        snapshot.entityId,
+                        componentType,
+                        component,
+                    ),
+                ),
+            ),
         });
         this._ClearSubtreeSelection(scene, subtreeEntityIds);
     }
@@ -383,6 +404,12 @@ export class EditorSceneAuthoringController {
             },
             redo: () =>
                 entityManager.RemoveComponent(entityId, definition.componentType),
+            retainedAssetIds: this._GetComponentAssetIds(
+                scene,
+                entityId,
+                definition.componentType,
+                component,
+            ),
         });
     }
 
@@ -394,6 +421,14 @@ export class EditorSceneAuthoringController {
             throw new Error("Wait for the current editor action to finish.");
         }
         this._history.SetScene(scene);
+    }
+
+    _GetComponentAssetIds(scene, entityId, componentType, component) {
+        return this._componentCatalog.GetAssetIdsForComponent(
+            componentType,
+            component,
+            { scene, entityId },
+        );
     }
 
     _CreateEntityName(entityManager) {

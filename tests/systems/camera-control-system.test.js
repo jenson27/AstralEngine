@@ -5,8 +5,8 @@ import { CameraController } from "../../src/components/graphics/camera-controlle
 import { Parent } from "../../src/components/parent.js";
 import { Transform } from "../../src/components/transform.js";
 import { InputManager } from "../../src/core/input/input-manager.js";
-import { Scene } from "../../src/core/scene.js";
-import { SystemPhase } from "../../src/core/system-scheduler.js";
+import { Scene } from "../../src/core/scene/scene.js";
+import { SystemPhase } from "../../src/core/scene/system-scheduler.js";
 import { MultiplyMatrix4 } from "../../src/math/matrix4.js";
 import { CameraControlSystem } from "../../src/systems/camera-control-system.js";
 

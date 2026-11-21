@@ -78,5 +78,5 @@
 
 - `src/diagnostics/profiling/profiler.js`
 - `src/core/engine.js`
-- `src/core/system-scheduler.js`
+- `src/core/scene/system-scheduler.js`
 - `src/graphics/webgpu-renderer.js`

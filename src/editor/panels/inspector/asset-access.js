@@ -6,9 +6,8 @@ function GetAssetOptionLabel(descriptor) {
 }
 
 export class InspectorAssetAccess {
-    constructor(sceneManager, selection, getAssetCatalog) {
+    constructor(sceneManager, getAssetCatalog) {
         this._sceneManager = sceneManager;
-        this._selection = selection;
         this._getAssetCatalog = getAssetCatalog;
     }
 
@@ -43,14 +42,5 @@ export class InspectorAssetAccess {
 
     AcquireHandle(assetId) {
         return this._sceneManager.AcquireAssetHandle(assetId);
-    }
-
-    IsSceneActive(scene) {
-        return this._sceneManager.ActiveScene === scene;
-    }
-
-    IsSelectionCurrent(scene, entityId) {
-        const selection = this._selection.Current;
-        return selection?.scene === scene && selection.entityId === entityId;
     }
 }

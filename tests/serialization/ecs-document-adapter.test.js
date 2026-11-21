@@ -8,8 +8,8 @@ import { AngularVelocity } from "../../src/components/angular-velocity.js";
 import { Transform } from "../../src/components/transform.js";
 import { AssetHandle } from "../../src/core/assets/asset-handle.js";
 import { CreateSceneComponentRegistry } from "../../src/components/register-scene-components.js";
-import { SceneLoader } from "../../src/core/scene-loader.js";
-import { Scene } from "../../src/core/scene.js";
+import { SceneLoader } from "../../src/core/scene/scene-loader.js";
+import { Scene } from "../../src/core/scene/scene.js";
 import { EcsDocumentAdapter } from "../../src/serialization/adapters/ecs-document-adapter.js";
 import { JsonFormat } from "../../src/serialization/json-format.js";
 

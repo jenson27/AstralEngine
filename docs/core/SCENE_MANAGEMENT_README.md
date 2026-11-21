@@ -2,14 +2,17 @@
 
 ## Purpose
 
-`SceneLoader` builds a scene from a versioned JSON document, and `SceneManager` owns the active scene and its asset scope. A `Scene` runs systems and coordinates deferred structural changes. These classes do not implement rendering or component-specific behavior; systems and the renderer do that. See [Entity Manager](ENTITY_MANAGER_README.md) and [Serialization](../serialization/SERIALIZATION_README.md) for related data handling.
+`SceneLoader` fetches and parses a versioned JSON document. `SceneDocumentValidator` checks the document, and `SceneBuilder` creates and initializes the scene. `SceneManager` owns the active scene and its asset scope. A `Scene` runs systems and coordinates deferred structural changes through `SceneHierarchy`. These classes do not implement rendering or component-specific behavior; systems and the renderer do that. See [Entity Manager](ENTITY_MANAGER_README.md) and [Serialization](../serialization/SERIALIZATION_README.md) for related data handling.
 
 ## Main parts and responsibilities
 
 | Part | Responsibility |
 | --- | --- |
-| `Scene` | Owns scene state and exposes system, camera, hierarchy, update, and disposal methods |
-| `SceneLoader` | Fetches, validates, and builds scenes with `Load()`, `LoadData()`, and `LoadDataAsync()` |
+| `Scene` | Owns scene state, system scheduling, camera policy, updates, and disposal |
+| `SceneHierarchy` | Owns parent links, hierarchy checks, deferred changes, and subtree traversal |
+| `SceneLoader` | Fetches and parses scene data, then coordinates validation, asset loading, and scene building |
+| `SceneDocumentValidator` | Validates scene format, entities, components, hierarchy, camera, and asset references |
+| `SceneBuilder` | Creates entities and components, sets the active camera, and initializes the scene |
 | `SceneManager` | Switches and updates the active scene with `LoadScene()`, `FixedUpdate()`, `PrepareRender()`, and `Dispose()` |
 | `SystemPhase` / `SystemScheduler` | Name and execute the fixed-update and render-preparation phases |
 | `Scene.Name`, `EntityManager`, `CommandBuffer`, and `ActiveCameraEntityId` | Expose the scene's name and runtime services |
@@ -18,7 +21,7 @@
 ## Ownership
 
 - A `SceneManager` owns its active scene and optional `AssetScope`
-- A `Scene` owns its `EntityManager`, `CommandBuffer`, scheduler, and initialized systems
+- A `Scene` owns its `EntityManager`, `CommandBuffer`, scheduler, `SceneHierarchy`, and initialized systems
 - Scene data and load services are supplied by the caller; component constructors may retain service-backed asset handles
 - A failed candidate load is disposed and its asset scope is released; the active scene remains in place
 
@@ -40,9 +43,9 @@
 | `Scene(name)` | Creates a scene in the `created` state |
 | `SceneLoader(componentRegistry, fetcher)` | Creates a loader with a component registry and fetch function |
 | `SceneManager(sceneLoader, createLoadOptions, createAssetScope)` | Creates a manager with load-option and optional asset-scope factories |
-| `SceneLoader.Load(url, options)` | Fetches the document, parses JSON, validates it, loads assets, and builds the scene |
-| `SceneLoader.LoadData(data, options)` | Builds from an object synchronously; when scene assets are listed, `options.assetScope` must provide them |
-| `SceneLoader.LoadDataAsync(data, options)` | Validates scene structure and the active camera before acquiring declared assets and building |
+| `SceneLoader.Load(url, options)` | Fetches and parses the document, validates it through `SceneDocumentValidator`, loads assets, then builds through `SceneBuilder` |
+| `SceneLoader.LoadData(data, options)` | Validates and builds from an object synchronously; when scene assets are listed, `options.assetScope` must provide them |
+| `SceneLoader.LoadDataAsync(data, options)` | Validates scene structure and the active camera before acquiring declared assets, then builds the scene |
 | `SceneManager.LoadScene(url)` | Loads one candidate at a time and activates it only after the loader returns a valid scene |
 | `SceneManager.ActiveScene` / `ActiveSceneUrl` | Return the active scene and its URL, or `null` before a scene is active |
 
@@ -54,11 +57,11 @@
 
 ## System and scene lifecycle
 
-1. `SceneLoader` registers supplied systems before initialization
-2. It creates entities and deserializes their component records
-3. It validates and sets the active camera, then calls `Scene.Initialize(services)`
+1. `SceneLoader` coordinates document validation, asset loading, and scene building
+2. `SceneDocumentValidator` validates the document; `SceneBuilder` registers supplied systems, creates entities, and deserializes their component records
+3. `SceneBuilder` sets the active camera and calls `Scene.Initialize(services)`
 4. `Initialize()` calls each unique system's optional `Initialize(scene, services)` in scheduler order
-5. Each fixed update runs fixed systems, applies queued parent changes, flushes ECS commands, and dispatches component removals
+5. Each fixed update runs fixed systems, applies queued parent changes through `SceneHierarchy`, flushes ECS commands, and dispatches component removals
 6. Render preparation runs the `PrepareRender` systems with interpolation alpha and aspect ratio
 7. `Dispose()` destroys entities, dispatches removal notifications, then calls system `Shutdown(scene)` in reverse initialization order
 
@@ -80,7 +83,10 @@
 
 ## Source
 
-- `src/core/scene.js`
-- `src/core/scene-loader.js`
-- `src/core/scene-manager.js`
-- `src/core/system-scheduler.js`
+- `src/core/scene/scene.js`
+- `src/core/scene/scene-hierarchy.js`
+- `src/core/scene/scene-loader.js`
+- `src/core/scene/scene-document-validator.js`
+- `src/core/scene/scene-builder.js`
+- `src/core/scene/scene-manager.js`
+- `src/core/scene/system-scheduler.js`

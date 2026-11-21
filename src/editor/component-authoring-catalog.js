@@ -4,15 +4,50 @@ import { Camera } from "../components/graphics/camera.js";
 import { MeshRenderer } from "../components/graphics/mesh-renderer.js";
 import { Parent } from "../components/parent.js";
 import { Transform } from "../components/transform.js";
+import { InspectorComponentRegistry } from "./panels/inspector/component-registry.js";
+import { AngularVelocityInspector } from "./panels/inspector/components/angular-velocity-inspector.js";
+import { CameraControllerInspector } from "./panels/inspector/components/camera-controller-inspector.js";
+import { CameraInspector } from "./panels/inspector/components/camera-inspector.js";
+import { MeshRendererInspector } from "./panels/inspector/components/mesh-renderer-inspector.js";
+import { ParentInspector } from "./panels/inspector/components/parent-inspector.js";
+import { TransformInspector } from "./panels/inspector/components/transform-inspector.js";
 import {
     CreateMeshRenderer,
     RenderMeshRendererAddFields,
 } from "./component-authoring/mesh-renderer-authoring.js";
 
+function ValidateAssetIds(assetIds) {
+    if (
+        !Array.isArray(assetIds) ||
+        !assetIds.every(
+            (assetId) =>
+                typeof assetId === "string" && assetId.trim() !== "",
+        )
+    ) {
+        throw new TypeError("Component asset references must be asset ID strings.");
+    }
+    return [...new Set(assetIds)];
+}
+
+function GetMeshRendererAssetIds({ component, state }) {
+    const meshHandle = state?.meshHandle ?? component?.MeshHandle;
+    if (!meshHandle) {
+        return [];
+    }
+
+    const materialHandlesBySlot =
+        state?.materialHandlesBySlot ?? component.MaterialHandlesBySlot;
+    return [
+        meshHandle.AssetId,
+        ...Object.values(materialHandlesBySlot).map((handle) => handle.AssetId),
+    ];
+}
+
 export class EditorComponentAuthoringCatalog {
     constructor() {
         this._definitionsById = new Map();
         this._definitionsByType = new Map();
+        this._inspectorRegistry = new InspectorComponentRegistry();
     }
 
     Register(typeId, componentType, options = {}) {
@@ -32,6 +67,8 @@ export class EditorComponentAuthoringCatalog {
         const renderAddFields = options.renderAddFields ?? null;
         const canRemove = options.canRemove ?? true;
         const requiredComponentTypes = options.requiredComponentTypes ?? [];
+        const inspector = options.inspector ?? null;
+        const getAssetIds = options.getAssetIds ?? null;
         if (typeof title !== "string" || title.trim() === "") {
             throw new TypeError("Component authoring title is required.");
         }
@@ -60,11 +97,18 @@ export class EditorComponentAuthoringCatalog {
         ) {
             throw new TypeError("Required component types must be classes.");
         }
+        if (getAssetIds !== null && typeof getAssetIds !== "function") {
+            throw new TypeError("Component asset reference provider must be a function.");
+        }
         if (
             this._definitionsById.has(normalizedTypeId) ||
             this._definitionsByType.has(componentType)
         ) {
             throw new Error("Component authoring definition is already registered.");
+        }
+
+        if (inspector !== null) {
+            this._inspectorRegistry.Register(componentType, inspector);
         }
 
         const definition = {
@@ -75,6 +119,7 @@ export class EditorComponentAuthoringCatalog {
             renderAddFields,
             canRemove,
             requiredComponentTypes: [...requiredComponentTypes],
+            getAssetIds,
         };
         this._definitionsById.set(definition.typeId, definition);
         this._definitionsByType.set(componentType, definition);
@@ -86,6 +131,50 @@ export class EditorComponentAuthoringCatalog {
 
     GetByType(componentType) {
         return this._definitionsByType.get(componentType);
+    }
+
+    GetInspectorByType(componentType) {
+        return this._inspectorRegistry.Get(componentType);
+    }
+
+    GetAssetIdsForComponent(componentType, component, context = {}) {
+        const provider = this.GetByType(componentType)?.getAssetIds;
+        return provider
+            ? ValidateAssetIds(provider({ ...context, component, state: null }))
+            : [];
+    }
+
+    GetAssetIdsForState(componentType, state, context = {}) {
+        const provider = this.GetByType(componentType)?.getAssetIds;
+        return provider
+            ? ValidateAssetIds(provider({ ...context, component: null, state }))
+            : [];
+    }
+
+    GetAssetIds(scene) {
+        const entityManager = scene?.EntityManager;
+        if (
+            !entityManager ||
+            typeof entityManager.GetEntityIds !== "function" ||
+            typeof entityManager.GetComponentEntries !== "function"
+        ) {
+            throw new TypeError("Component asset collection requires a scene.");
+        }
+
+        const assetIds = new Set();
+        for (const entityId of entityManager.GetEntityIds()) {
+            for (const { componentType, component } of
+                entityManager.GetComponentEntries(entityId)) {
+                for (const assetId of this.GetAssetIdsForComponent(
+                    componentType,
+                    component,
+                    { scene, entityId },
+                )) {
+                    assetIds.add(assetId);
+                }
+            }
+        }
+        return [...assetIds];
     }
 
     GetAddable(entityManager, entityId) {
@@ -128,15 +217,18 @@ export function CreateEditorComponentAuthoringCatalog() {
     catalog.Register("transform", Transform, {
         title: "Transform",
         canRemove: false,
+        inspector: TransformInspector,
     });
     catalog.Register("parent", Parent, {
         title: "Parent",
         canRemove: false,
+        inspector: ParentInspector,
     });
     catalog.Register("angularVelocity", AngularVelocity, {
         title: "Angular Velocity",
         create: () => new AngularVelocity(),
         requiredComponentTypes: [Transform],
+        inspector: AngularVelocityInspector,
     });
     catalog.Register("camera", Camera, {
         title: "Camera",
@@ -144,6 +236,7 @@ export function CreateEditorComponentAuthoringCatalog() {
         canRemove: ({ scene, entityId }) =>
             scene.ActiveCameraEntityId !== entityId,
         requiredComponentTypes: [Transform],
+        inspector: CameraInspector,
     });
     catalog.Register("cameraController", CameraController, {
         title: "Camera Controller",
@@ -155,12 +248,15 @@ export function CreateEditorComponentAuthoringCatalog() {
                 maxPitchRadians: Math.PI * 0.495,
             }),
         requiredComponentTypes: [Transform, Camera],
+        inspector: CameraControllerInspector,
     });
     catalog.Register("meshRenderer", MeshRenderer, {
         title: "Mesh Renderer",
         create: CreateMeshRenderer,
         renderAddFields: RenderMeshRendererAddFields,
         requiredComponentTypes: [Transform],
+        inspector: MeshRendererInspector,
+        getAssetIds: GetMeshRendererAssetIds,
     });
     return catalog;
 }

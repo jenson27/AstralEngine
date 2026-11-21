@@ -8,9 +8,12 @@
 
 | Part | Responsibility |
 | --- | --- |
-| `AssetManager(assetCatalog, loaderRegistry)` | Loads, tracks, reloads, and releases asset instances |
+| `AssetManager(assetCatalog, loaderRegistry)` | Loads and releases assets, manages leases, and coordinates reload transactions |
+| `AssetDependencyResolver(assetCatalog)` | Validates dependency graphs and orders loaded assets for reload |
 | `AssetHandle(assetId)` | Exposes `AssetId`, `Version`, and the current replaceable asset |
+| `AssetLease` | Holds access to one asset reference and releases it once |
 | `AssetScope(assetManager)` | Groups acquisitions and releases leases for one scene |
+| `AssetScope.RetainOnly(assetIds)` | Keeps leases for listed IDs and releases other acquired leases |
 | `HotReloadClient(assetRuntime, sceneManager)` | Receives file events and coordinates asset, manifest, and scene reloads |
 | `AssetLoaderRegistry` | Provides the loader selected by a descriptor's `loaderId` |
 
@@ -48,11 +51,13 @@
 | --- | --- |
 | `AssetScope(assetManager)` | Creates an open scope for the supplied manager |
 | `AssetScope.Acquire(assetId)` | Acquires once per scope; repeated or concurrent requests for that ID share the same acquisition |
+| `AssetScope.RetainOnly(assetIds)` | Waits for pending acquisitions and releases leases outside the retained ID set |
 | `Get(assetId)` / `GetRequired(assetId)` | Returns an acquired asset or throws if it is missing for `GetRequired()` |
 | `GetHandle(assetId)` / `GetHandleRequired(assetId)` | Returns an acquired handle or throws if it is missing for `GetHandleRequired()` |
 | `ReleaseAll()` | Closes the scope, waits for pending acquisitions, releases all leases, and aggregates release failures |
 
 - A scope cannot acquire or look up assets after release begins
+- `RetainOnly()` waits for pending acquisitions before it releases leases; a later `Acquire()` remains retained until the next `RetainOnly()` call
 - Repeated calls while release is in progress share the release promise; calls after disposal resolve immediately
 - An acquisition that completes after scope closure releases its lease and rejects
 
@@ -99,6 +104,8 @@
 ## Source
 
 - `src/core/assets/asset-manager.js`
+- `src/core/assets/asset-lease.js`
+- `src/core/assets/asset-dependency-resolver.js`
 - `src/core/assets/asset-handle.js`
 - `src/core/assets/asset-scope.js`
 - `src/core/hot-reload-client.js`

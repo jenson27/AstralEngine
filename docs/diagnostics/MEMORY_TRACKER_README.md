@@ -76,4 +76,4 @@
 
 - `src/diagnostics/profiling/memory-tracker.js`
 - `src/core/engine.js`
-- `src/core/system-scheduler.js`
+- `src/core/scene/system-scheduler.js`

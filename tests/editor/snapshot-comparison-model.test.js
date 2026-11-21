@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { BuildSnapshotComparisonModel } from "../../src/editor/panels/snapshot-comparison-model.js";
+import { BuildSnapshotComparisonModel } from "../../src/editor/panels/diagnostics/snapshot-comparison-model.js";
 
 const comparison = {
     deltaBytes: 64,

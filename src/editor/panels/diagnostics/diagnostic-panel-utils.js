@@ -1,4 +1,4 @@
-import { CreateElement } from "../ui/dom-utils.js";
+import { CreateElement } from "../../ui/dom-utils.js";
 
 export function FormatBytes(value) {
     if (value < 1024) {

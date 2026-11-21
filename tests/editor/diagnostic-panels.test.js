@@ -2,12 +2,12 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { MemoryTracker } from "../../src/diagnostics/profiling/memory-tracker.js";
 import { Profiler } from "../../src/diagnostics/profiling/profiler.js";
-import { ConsolePanel } from "../../src/editor/panels/console-panel.js";
-import { MemoryTrackerPanel } from "../../src/editor/panels/memory-tracker-panel.js";
-import { ProfilerPanel } from "../../src/editor/panels/profiler-panel.js";
+import { ConsolePanel } from "../../src/editor/panels/diagnostics/console-panel.js";
+import { MemoryTrackerPanel } from "../../src/editor/panels/diagnostics/memory-tracker/panel.js";
+import { ProfilerPanel } from "../../src/editor/panels/diagnostics/profiler/panel.js";
 import { SceneHierarchyPanel } from "../../src/editor/panels/scene-hierarchy-panel.js";
 import { EditorSelection } from "../../src/editor/editor-selection.js";
-import { SetOptions } from "../../src/editor/panels/diagnostic-panel-utils.js";
+import { SetOptions } from "../../src/editor/panels/diagnostics/diagnostic-panel-utils.js";
 
 class FakeElement {
     constructor(tagName = "div") {

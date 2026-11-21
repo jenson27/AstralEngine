@@ -1,10 +1,3 @@
-import { AngularVelocityInspector } from "./components/angular-velocity-inspector.js";
-import { CameraControllerInspector } from "./components/camera-controller-inspector.js";
-import { CameraInspector } from "./components/camera-inspector.js";
-import { MeshRendererInspector } from "./components/mesh-renderer-inspector.js";
-import { ParentInspector } from "./components/parent-inspector.js";
-import { TransformInspector } from "./components/transform-inspector.js";
-
 function ValidateCallback(callback, label) {
     if (callback !== null && typeof callback !== "function") {
         throw new TypeError(`Inspector component ${label} must be a function.`);
@@ -14,7 +7,9 @@ function ValidateCallback(callback, label) {
 function ValidateDefinition(definition) {
     if (
         (definition.capture === null) !== (definition.restore === null) ||
-        (definition.apply !== null && definition.capture === null)
+        ((definition.apply !== null || definition.prepareApply !== null) &&
+            definition.capture === null) ||
+        (definition.apply !== null && definition.prepareApply !== null)
     ) {
         throw new TypeError(
             "Editable Inspector components must define capture and restore handlers.",
@@ -22,9 +17,6 @@ function ValidateDefinition(definition) {
     }
     if (typeof definition.canDisable !== "boolean") {
         throw new TypeError("Inspector component disable state must be a boolean.");
-    }
-    if (definition.asyncApply !== null && typeof definition.asyncApply !== "boolean") {
-        throw new TypeError("Inspector component async state must be a boolean.");
     }
     if (
         definition.refreshOnChange !== null &&
@@ -56,10 +48,10 @@ export class InspectorComponentRegistry {
             sync: options.sync ?? null,
             capture: options.capture ?? null,
             restore: options.restore ?? null,
+            prepareApply: options.prepareApply ?? null,
             equals: options.equals ?? null,
             getEditLabel: options.getEditLabel ?? null,
             canDisable: options.canDisable ?? true,
-            asyncApply: options.asyncApply ?? null,
             refreshOnChange: options.refreshOnChange ?? null,
             restoreInput: options.restoreInput ?? null,
             isEnabledToggleDisabled:
@@ -80,6 +72,7 @@ export class InspectorComponentRegistry {
         for (const [key, label] of [
             ["render", "renderer"],
             ["apply", "editor"],
+            ["prepareApply", "async preparation handler"],
             ["sync", "synchronizer"],
             ["capture", "capture handler"],
             ["restore", "restore handler"],
@@ -103,19 +96,4 @@ export class InspectorComponentRegistry {
     Get(componentType) {
         return this._definitionsByType.get(componentType);
     }
-}
-
-export function CreateInspectorComponentRegistry() {
-    const registry = new InspectorComponentRegistry();
-    for (const definition of [
-        TransformInspector,
-        ParentInspector,
-        CameraInspector,
-        CameraControllerInspector,
-        MeshRendererInspector,
-        AngularVelocityInspector,
-    ]) {
-        registry.Register(definition.componentType, definition);
-    }
-    return registry;
 }

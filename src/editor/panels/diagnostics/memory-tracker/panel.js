@@ -1,291 +1,28 @@
 import {
-    AppendSvgGridLinesAndLabels,
-    AppendFrameRangeLabels,
-    AppendTableRow,
     BuildFilterOptions,
     CreateEmptyMessage,
-    CreateFrameIndexScale,
     CreateSvgElement,
-    CreateDataTable,
     FormatBytes,
     RefreshFrameSelection,
     RenderStatCards,
     SetOptions,
-} from "./diagnostic-panel-utils.js";
-import { CreateElement } from "../ui/dom-utils.js";
-import { BuildSnapshotComparisonModel } from "./snapshot-comparison-model.js";
+} from "../diagnostic-panel-utils.js";
+import {
+    BuildMemoryFrameChanges,
+    BuildMemoryMetrics,
+    CreateMemoryGraphLayout,
+    MatchesOwnerFilter,
+} from "./model.js";
+import {
+    AppendMemoryGraphGrid,
+    AppendMemoryGraphSeries,
+    BuildBrowserMemoryBreakdownContent,
+    BuildSnapshotComparisonContent,
+    CreateBrowserMemorySummary,
+    RenderMemoryRows,
+} from "./view.js";
 
 const REFRESH_INTERVAL_MS = 1000;
-
-function MatchesOwnerFilter(owner, resourceOwner, ownerFilter) {
-    return (
-        ownerFilter === "" ||
-        owner === ownerFilter ||
-        resourceOwner === ownerFilter
-    );
-}
-
-function BuildMemoryFrameChanges(recentFrames, ownerFilter) {
-    return recentFrames.map((frame) => {
-        const totals = ownerFilter === ""
-            ? frame
-            : frame.ownerFilterTotals[ownerFilter];
-
-        return {
-            frameNumber: frame.frameNumber,
-            allocatedBytes: totals?.allocatedBytes ?? 0,
-            releasedBytes: totals?.releasedBytes ?? 0,
-        };
-    });
-}
-
-function BuildMemoryMetrics(usage, frame, ownerFilter) {
-    const filteredTotals =
-        ownerFilter === "" ? frame : frame?.ownerFilterTotals[ownerFilter];
-    const liveBytes =
-        ownerFilter === ""
-            ? usage.totalBytes
-            : usage.bytesByOwner[ownerFilter] ?? 0;
-    const liveResourceCount =
-        ownerFilter === ""
-            ? usage.resourceCount
-            : usage.resourceCountByOwner[ownerFilter] ?? 0;
-    const metrics = [
-        ["Live tracked", FormatBytes(liveBytes)],
-        ["Live resources", liveResourceCount],
-    ];
-
-    if (!frame) {
-        metrics.push(["Frame changes", "No frame captured"]);
-        return metrics;
-    }
-
-    const allocatedBytes = filteredTotals?.allocatedBytes ?? 0;
-    const releasedBytes = filteredTotals?.releasedBytes ?? 0;
-
-    metrics.push(
-        ["Frame allocated", FormatBytes(allocatedBytes)],
-        ["Frame released", FormatBytes(releasedBytes)],
-        [
-            "Frame net",
-            FormatBytes(
-                ownerFilter === ""
-                    ? frame.netBytes
-                    : allocatedBytes - releasedBytes,
-            ),
-        ],
-        [
-            "Dropped events",
-            ownerFilter === ""
-                ? frame.droppedEventCount
-                : filteredTotals?.droppedEventCount ?? 0,
-        ],
-    );
-
-    return metrics;
-}
-
-function RenderMemoryRows(body, records, getRowValues) {
-    const fragment = document.createDocumentFragment();
-
-    for (const record of records) {
-        AppendTableRow(fragment, getRowValues(record));
-    }
-
-    body.replaceChildren(fragment);
-}
-
-function AppendMemoryGraphGrid(
-    svg,
-    plotLeft,
-    plotRight,
-    maxKilobytes,
-    yForKilobytes,
-) {
-    AppendSvgGridLinesAndLabels(svg, {
-        ticks: [maxKilobytes, 0, -maxKilobytes],
-        plotLeft,
-        plotRight,
-        yForValue: yForKilobytes,
-        formatLabel: (tick) =>
-            tick > 0 ? `+${tick} KB` : tick < 0 ? `${tick} KB` : "0",
-        lineClassForTick: (tick) =>
-            tick === 0
-                ? "profiler-chart-zero-line"
-                : "profiler-chart-grid-line",
-    });
-}
-
-function AppendMemoryGraphSeries(
-    svg,
-    frameChanges,
-    selectedFrameNumber,
-    xForIndex,
-    yForKilobytes,
-    plotLeft,
-    plotRight,
-    height,
-) {
-    const series = [
-        {
-            key: "allocatedBytes",
-            sign: 1,
-            className: "profiler-chart-memory-allocated",
-            label: "allocated",
-        },
-        {
-            key: "releasedBytes",
-            sign: -1,
-            className: "profiler-chart-memory-released",
-            label: "released",
-        },
-    ];
-
-    for (const { key, sign, className, label } of series) {
-        const values = frameChanges.map(
-            (frame) => (frame[key] / 1024) * sign,
-        );
-        const points = values
-            .map(
-                (value, index) =>
-                    `${xForIndex(index)},${yForKilobytes(value)}`,
-            )
-            .join(" ");
-        svg.append(
-            CreateSvgElement("polyline", {
-                points,
-                class: className,
-                fill: "none",
-            }),
-        );
-
-        for (let index = 0; index < frameChanges.length; index += 1) {
-            const frame = frameChanges[index];
-            const marker = CreateSvgElement("circle", {
-                cx: xForIndex(index),
-                cy: yForKilobytes(values[index]),
-                r: frame.frameNumber === selectedFrameNumber ? 3.75 : 2.25,
-                class: `${className}-point`,
-                "data-selected": frame.frameNumber === selectedFrameNumber,
-            });
-            const markerTitle = CreateSvgElement("title");
-            markerTitle.textContent =
-                `Frame ${frame.frameNumber}: ` +
-                `${FormatBytes(frame[key])} ${label}`;
-            marker.append(markerTitle);
-            svg.append(marker);
-        }
-    }
-
-    AppendFrameRangeLabels(
-        svg,
-        frameChanges[0].frameNumber,
-        frameChanges[frameChanges.length - 1].frameNumber,
-        plotLeft,
-        plotRight,
-        height,
-    );
-}
-
-function BuildOwnerChangesTable(ownerChanges) {
-    const { table, body } = CreateDataTable([
-        "Owner",
-        "Base",
-        "Compare",
-        "Change",
-    ]);
-
-    for (const change of ownerChanges) {
-        const delta = change.deltaBytes;
-        AppendTableRow(body, [
-            change.owner,
-            FormatBytes(change.beforeBytes),
-            FormatBytes(change.afterBytes),
-            `${delta > 0 ? "+" : delta < 0 ? "-" : ""}${FormatBytes(Math.abs(delta))}`,
-        ]);
-    }
-
-    return table;
-}
-
-function BuildResourceChangesTable(added, released) {
-    const { table, body } = CreateDataTable([
-        "Resource",
-        "Change",
-        "Owner",
-        "Bytes",
-    ]);
-
-    AppendResourceChangeRows(body, added, "Added");
-    AppendResourceChangeRows(body, released, "Released");
-
-    return table;
-}
-
-function AppendResourceChangeRows(body, resources, changeLabel) {
-    for (const resource of resources) {
-        AppendTableRow(body, [
-            resource.label,
-            changeLabel,
-            resource.owner,
-            FormatBytes(resource.bytes),
-        ]);
-    }
-}
-
-function CreateBrowserMemorySummary(sample) {
-    const total = CreateElement("p");
-    total.textContent =
-        `Page-wide browser estimate: ${FormatBytes(sample.bytes)}. ` +
-        "This value is not assigned to a system.";
-    return total;
-}
-
-function BuildBrowserMemoryBreakdownContent(breakdown) {
-    if (breakdown.length === 0) {
-        const empty = CreateElement("p", "profiler-muted");
-        empty.textContent = "No breakdown entries were returned.";
-        return empty;
-    }
-
-    const details = CreateElement("details");
-    const summary = CreateElement("summary");
-    summary.textContent = `Breakdown (${breakdown.length})`;
-
-    const { table, body } = CreateDataTable([
-        "Bytes",
-        "Attribution",
-        "Types",
-    ]);
-
-    for (const item of breakdown) {
-        AppendTableRow(body, [
-            FormatBytes(item.bytes),
-            item.attribution ?? "Unknown",
-            Array.isArray(item.types) ? item.types.join(", ") : "",
-        ]);
-    }
-
-    const tableWrap = CreateElement("div", "profiler-table-wrap");
-    tableWrap.append(table);
-    details.append(summary, tableWrap);
-    return details;
-}
-
-function BuildSnapshotComparisonContent(comparison, ownerFilter) {
-    const model = BuildSnapshotComparisonModel(comparison, ownerFilter);
-    const summary = CreateElement("p");
-    summary.textContent =
-        `${model.ownerLabel}: Net change: ${FormatBytes(model.deltaBytes)}; ` +
-        `${FormatBytes(model.addedBytes)} added; ` +
-        `${FormatBytes(model.releasedBytes)} released.`;
-
-    return [
-        summary,
-        BuildOwnerChangesTable(model.ownerChanges),
-        BuildResourceChangesTable(model.added, model.released),
-    ];
-}
 
 export class MemoryTrackerPanel {
     constructor(memoryTracker, panelElement) {
@@ -528,36 +265,11 @@ export class MemoryTrackerPanel {
             recentFrames,
             this._ownerFilter,
         );
-
-        const width = 720;
-        const height = 220;
-        const plotLeft = 58;
-        const plotRight = width - 12;
-        const plotTop = 12;
-        const plotBottom = height - 30;
-        const plotWidth = plotRight - plotLeft;
-        const plotHeight = plotBottom - plotTop;
-        const maxBytes = Math.max(
-            1024,
-            ...frameChanges.flatMap((frame) => [
-                frame.allocatedBytes,
-                frame.releasedBytes,
-            ]),
-        );
-        const maxKilobytes = Math.max(1, Math.ceil(maxBytes / 1024));
-        const xForIndex = CreateFrameIndexScale(
-            frameChanges.length,
-            plotLeft,
-            plotWidth,
-        );
-        const yForKilobytes = (kilobytes) =>
-            plotTop +
-            ((maxKilobytes - kilobytes) / (maxKilobytes * 2)) * plotHeight;
-        const selectedFrameNumber = this._selectedFrameNumber;
+        const layout = CreateMemoryGraphLayout(frameChanges);
         const ownerLabel = this._ownerFilter || "all owners";
         const svg = CreateSvgElement("svg", {
             class: "profiler-svg-chart",
-            viewBox: `0 0 ${width} ${height}`,
+            viewBox: `0 0 ${layout.width} ${layout.height}`,
             role: "img",
             "aria-label":
                 `Tracked memory allocations and releases per frame for ${ownerLabel}.`,
@@ -568,20 +280,20 @@ export class MemoryTrackerPanel {
 
         AppendMemoryGraphGrid(
             svg,
-            plotLeft,
-            plotRight,
-            maxKilobytes,
-            yForKilobytes,
+            layout.plotLeft,
+            layout.plotRight,
+            layout.maxKilobytes,
+            layout.yForKilobytes,
         );
         AppendMemoryGraphSeries(
             svg,
             frameChanges,
-            selectedFrameNumber,
-            xForIndex,
-            yForKilobytes,
-            plotLeft,
-            plotRight,
-            height,
+            this._selectedFrameNumber,
+            layout.xForIndex,
+            layout.yForKilobytes,
+            layout.plotLeft,
+            layout.plotRight,
+            layout.height,
         );
         graph.replaceChildren(svg);
     }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { SceneManager } from "../src/core/scene-manager.js";
+import { SceneManager } from "../src/core/scene/scene-manager.js";
 
 function CreateScene(name, calls = []) {
     return {

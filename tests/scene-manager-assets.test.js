@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { SceneManager } from "../src/core/scene-manager.js";
+import { SceneManager } from "../src/core/scene/scene-manager.js";
 
 function CreateScene(name, calls = []) {
     return {
@@ -54,6 +54,36 @@ test("creates a scope and forwards it to scene loading", async () => {
 
     await manager.Dispose();
     assert.equal(manager.ActiveSceneUrl, null);
+});
+
+test("retains asset handles only for the active scene", async () => {
+    const retainedAssetIds = [];
+    const scope = {
+        ...CreateAssetScope("scope", []),
+        RetainOnly(assetIds) {
+            retainedAssetIds.push(assetIds);
+            return Promise.resolve();
+        },
+    };
+    const scene = CreateScene("scene");
+    const manager = new SceneManager(
+        { async Load() { return scene; } },
+        () => ({}),
+        () => scope,
+    );
+    await manager.LoadScene("/scenes/scene.json");
+
+    assert.equal(
+        await manager.RetainActiveAssetHandles(scene, ["mesh:cube"]),
+        true,
+    );
+    assert.equal(
+        await manager.RetainActiveAssetHandles(CreateScene("other"), []),
+        false,
+    );
+    assert.deepEqual(retainedAssetIds, [["mesh:cube"]]);
+
+    await manager.Dispose();
 });
 
 test("releases the previous scope after replacing its scene", async () => {

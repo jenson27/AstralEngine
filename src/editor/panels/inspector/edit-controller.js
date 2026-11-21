@@ -28,7 +28,7 @@ export class InspectorEditController {
         sceneManager,
         selection,
         history,
-        componentRegistry,
+        componentCatalog,
         getAssetCatalog,
         componentTypesByKey = new Map(),
         onPendingChange = () => {},
@@ -36,12 +36,8 @@ export class InspectorEditController {
         this._sceneManager = sceneManager;
         this._selection = selection;
         this._history = history;
-        this._componentRegistry = componentRegistry;
-        this._assetAccess = new InspectorAssetAccess(
-            sceneManager,
-            selection,
-            getAssetCatalog,
-        );
+        this._componentCatalog = componentCatalog;
+        this._assetAccess = new InspectorAssetAccess(sceneManager, getAssetCatalog);
         this._componentTypesByKey = componentTypesByKey;
         this._onPendingChange = onPendingChange;
         this._pendingEdits = 0;
@@ -68,13 +64,13 @@ export class InspectorEditController {
     }
 
     GetDefinition(componentType) {
-        return this._componentRegistry.Get(componentType);
+        return this._componentCatalog.GetInspectorByType(componentType);
     }
 
     async ApplyInput(scene, entityId, input) {
         const fieldId = input.dataset.inspectorField;
         const definition = this._GetDefinitionForField(input, fieldId)?.definition;
-        const isPending = definition?.asyncApply === true;
+        const isPending = typeof definition?.prepareApply === "function";
         if (isPending) {
             this._SetPendingEdit(1);
         }
@@ -127,13 +123,13 @@ export class InspectorEditController {
             return;
         }
 
-        const context = this._CreateFieldContext(
-            scene,
-            entityId,
-            input,
-            fieldId,
-        );
         try {
+            const context = this._CreateFieldContext(
+                scene,
+                entityId,
+                input,
+                fieldId,
+            );
             context.definition?.restoreInput?.(context);
         } catch {
             // Keep the validation message visible if the component disappeared.
@@ -142,7 +138,7 @@ export class InspectorEditController {
 
     _SetPendingEdit(delta) {
         this._pendingEdits += delta;
-        this._onPendingChange();
+        this._onPendingChange(delta, this._pendingEdits);
     }
 
     async _ApplyField(scene, entityId, input, fieldId) {
@@ -172,10 +168,54 @@ export class InspectorEditController {
             input,
             fieldId,
         );
+        if (typeof context.definition?.prepareApply === "function") {
+            const prepared = await context.definition.prepareApply(context);
+            if (!prepared || typeof prepared.Commit !== "function") {
+                throw new TypeError(
+                    "Inspector preparation must return a Commit function.",
+                );
+            }
+            this._RequireCurrentTarget(
+                scene,
+                entityId,
+                input,
+                context.componentType,
+                context.component,
+            );
+            prepared.Commit();
+            return;
+        }
         if (typeof context.definition?.apply !== "function") {
             throw new Error("This Inspector field cannot be edited.");
         }
         await context.definition.apply(context);
+    }
+
+    _RequireCurrentTarget(scene, entityId, input, componentType, component) {
+        const selection = this._selection.Current;
+        if (
+            this._sceneManager.ActiveScene !== scene ||
+            selection?.scene !== scene ||
+            selection.entityId !== entityId ||
+            !input.isConnected
+        ) {
+            throw new Error(
+                "Scene, selection, or Inspector field changed before the edit completed.",
+            );
+        }
+
+        try {
+            if (
+                scene.EntityManager.GetComponent(entityId, componentType) ===
+                component
+            ) {
+                return;
+            }
+        } catch {
+            // Treat removed entities and components as stale edit targets.
+        }
+
+        throw new Error("Inspector component changed before the edit completed.");
     }
 
     _CaptureState(scene, entityId, input, fieldId) {
@@ -234,7 +274,24 @@ export class InspectorEditController {
                 this._ApplyState(scene, entityId, input, fieldId, previousState),
             redo: () =>
                 this._ApplyState(scene, entityId, input, fieldId, nextState),
+            retainedAssetIds: [
+                ...new Set([
+                    ...this._GetStateAssetIds(previousState, scene, entityId),
+                    ...this._GetStateAssetIds(nextState, scene, entityId),
+                ]),
+            ],
         });
+    }
+
+    _GetStateAssetIds(state, scene, entityId) {
+        if (state.kind !== "component") {
+            return [];
+        }
+        return this._componentCatalog.GetAssetIdsForState(
+            state.componentType,
+            state.value,
+            { scene, entityId },
+        );
     }
 
     async _ApplyState(scene, entityId, input, fieldId, state) {

@@ -67,5 +67,5 @@
 - `src/components/graphics/camera-controller.js`
 - `src/systems/camera-control-system.js`
 - `src/math/matrix4.js`
-- `src/core/scene.js`
+- `src/core/scene/scene.js`
 - `src/systems/render-system.js`

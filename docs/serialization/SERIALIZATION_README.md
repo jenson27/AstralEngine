@@ -108,4 +108,4 @@ The serialization layer converts registered JavaScript objects to versioned reco
 - `src/serialization/adapters/ecs-document-adapter.js`
 - `src/core/ecs/component-registry.js`
 - `src/components/register-scene-components.js`
-- `src/core/scene-loader.js`
+- `src/core/scene/scene-loader.js`

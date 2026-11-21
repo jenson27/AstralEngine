@@ -30,7 +30,11 @@
 
 - [Graphics](graphics/GRAPHICS_README.md) - Mesh data, materials, loaders, and the WebGPU renderer
 - [Serialization](serialization/SERIALIZATION_README.md) - Versioned records, JSON rules, and scene documents
+
+## Editor
+
 - [Editor Panels](editor/PANELS_README.md) - Panel registration, lifecycle, and built-in editor views
+- [Inspector](editor/INSPECTOR_README.md) - Selected entity editing, component authoring, and undo/redo
 
 ## Diagnostics
 

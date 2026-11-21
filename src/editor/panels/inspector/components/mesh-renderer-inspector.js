@@ -96,10 +96,7 @@ function ApplyMaterialAsset(component, materialSlot, assetHandle) {
     component.SetAssets(component.MeshHandle, nextMaterials);
 }
 
-async function Apply({
-    scene,
-    entityId,
-    entityManager,
+async function PrepareApply({
     component,
     input,
     fieldId,
@@ -114,24 +111,16 @@ async function Apply({
     assetAccess.RequireType(input.value, assetType);
     const assetHandle = await assetAccess.AcquireHandle(input.value);
 
-    if (!assetAccess.IsSceneActive(scene)) {
-        throw new Error("Active scene changed before the edit completed.");
-    }
-    if (!assetAccess.IsSelectionCurrent(scene, entityId)) {
-        throw new Error("Selection changed before the asset edit completed.");
-    }
-    if (entityManager.GetComponent(entityId, MeshRenderer) !== component) {
-        throw new Error(
-            "Mesh Renderer changed before the asset edit completed.",
-        );
-    }
+    return {
+        Commit() {
+            if (target.type === "mesh") {
+                ApplyMeshAsset(component, assetHandle);
+                return;
+            }
 
-    if (target.type === "mesh") {
-        ApplyMeshAsset(component, assetHandle);
-        return;
-    }
-
-    ApplyMaterialAsset(component, target.materialSlot, assetHandle);
+            ApplyMaterialAsset(component, target.materialSlot, assetHandle);
+        },
+    };
 }
 
 function RestoreInput({ component, input, fieldId }) {
@@ -188,10 +177,9 @@ function GetEditLabel(fieldId) {
 export const MeshRendererInspector = {
     title: "Mesh Renderer",
     fieldPrefix: "meshRenderer.",
-    asyncApply: true,
     refreshOnChange: [MESH_FIELD_ID],
     render: Render,
-    apply: Apply,
+    prepareApply: PrepareApply,
     capture: ({ component }) => Capture(component),
     restore: ({ component, value }) =>
         component.SetAssets(value.meshHandle, value.materialHandlesBySlot),

@@ -10,6 +10,7 @@ import { Material } from "../src/graphics/material.js";
 import { Mesh } from "../src/graphics/mesh.js";
 import { CreateCubeMesh } from "../src/graphics/primitives/cube.js";
 import { WebGPURenderer } from "../src/graphics/webgpu-renderer.js";
+import { WebGpuResourceCache } from "../src/graphics/webgpu-resource-cache.js";
 
 function CreateLoadedHandle(assetId, asset) {
     const handle = new AssetHandle(assetId);
@@ -134,16 +135,19 @@ test("renderer resolves current handles into draw items per material slot", () =
     renderer._uniformStride = 256;
     renderer._drawCapacity = 1;
     renderer._matrixData = new Float32Array(64);
-    renderer._GetMeshResource = (mesh) => {
-        resolvedMesh = mesh;
-        return {
-            vertexBuffer: {},
-            submeshes: mesh.Submeshes,
-        };
+    renderer._gpuResourceCache = {
+        GetMeshResource(mesh) {
+            resolvedMesh = mesh;
+            return {
+                vertexBuffer: {},
+                submeshes: mesh.Submeshes,
+            };
+        },
+        GetMaterialBindGroup(material) {
+            return { material };
+        },
+        Prune() {},
     };
-    renderer._GetMaterialBindGroup = (material) => ({ material });
-    renderer._PruneMeshResources = () => {};
-    renderer._PruneMaterialResources = () => {};
 
     renderer.SetRenderItems(
         [
@@ -291,7 +295,6 @@ test("material acquisition loads and releases its image dependency", async () =>
 
 test("GPU texture upload includes required usages and reuses its cache entry", () => {
     WithGpuTextureUsage(() => {
-        const renderer = new WebGPURenderer({});
         const { device, state } = CreateFakeDevice();
         const bitmap = {};
         const imageAsset = {
@@ -299,11 +302,16 @@ test("GPU texture upload includes required usages and reuses its cache entry", (
             width: 16,
             height: 8,
         };
+        const resourceCache = new WebGpuResourceCache({
+            device,
+            materialBindGroupLayout: {},
+            textureSampler: {},
+            trackGpuResource: () => null,
+            destroyGpuResource: (resource) => resource?.destroy(),
+        });
 
-        renderer._device = device;
-
-        const first = renderer._GetTextureResource(imageAsset);
-        const second = renderer._GetTextureResource(imageAsset);
+        const first = resourceCache.GetTextureResource(imageAsset);
+        const second = resourceCache.GetTextureResource(imageAsset);
 
         assert.strictEqual(first, second);
         assert.equal(state.textureDescriptors.length, 1);
@@ -326,7 +334,6 @@ test("GPU texture upload includes required usages and reuses its cache entry", (
 
 test("material bind group is cached and connects texture and sampler", () => {
     WithGpuTextureUsage(() => {
-        const renderer = new WebGPURenderer({});
         const { device, state } = CreateFakeDevice();
         const layout = {};
         const sampler = {};
@@ -336,13 +343,16 @@ test("material bind group is cached and connects texture and sampler", () => {
             height: 4,
         };
         const material = new Material(imageAsset);
+        const resourceCache = new WebGpuResourceCache({
+            device,
+            materialBindGroupLayout: layout,
+            textureSampler: sampler,
+            trackGpuResource: () => null,
+            destroyGpuResource: (resource) => resource?.destroy(),
+        });
 
-        renderer._device = device;
-        renderer._materialBindGroupLayout = layout;
-        renderer._textureSampler = sampler;
-
-        const first = renderer._GetMaterialBindGroup(material);
-        const second = renderer._GetMaterialBindGroup(material);
+        const first = resourceCache.GetMaterialBindGroup(material);
+        const second = resourceCache.GetMaterialBindGroup(material);
 
         assert.strictEqual(first, second);
         assert.equal(state.bindGroupDescriptors.length, 1);
@@ -361,8 +371,14 @@ test("material bind group is cached and connects texture and sampler", () => {
     });
 });
 
-test("renderer destroys GPU textures unused by active materials", () => {
-    const renderer = new WebGPURenderer({});
+test("resource cache releases GPU textures unused by active materials", () => {
+    const resourceCache = new WebGpuResourceCache({
+        device: {},
+        materialBindGroupLayout: {},
+        textureSampler: {},
+        trackGpuResource: () => null,
+        destroyGpuResource: (resource) => resource?.destroy(),
+    });
     const activeImage = { bitmap: {}, width: 2, height: 2 };
     const inactiveImage = { bitmap: {}, width: 2, height: 2 };
     const activeMaterial = new Material(activeImage);
@@ -380,21 +396,21 @@ test("renderer destroys GPU textures unused by active materials", () => {
         },
     };
 
-    renderer._textureResources.set(activeImage, {
+    resourceCache._textureResources.set(activeImage, {
         texture: activeTexture,
     });
-    renderer._textureResources.set(inactiveImage, {
+    resourceCache._textureResources.set(inactiveImage, {
         texture: inactiveTexture,
     });
-    renderer._materialBindGroups.set(activeMaterial, {});
-    renderer._materialBindGroups.set(inactiveMaterial, {});
+    resourceCache._materialBindGroups.set(activeMaterial, {});
+    resourceCache._materialBindGroups.set(inactiveMaterial, {});
 
-    renderer._PruneMaterialResources(new Set([activeMaterial]));
+    resourceCache.Prune(new Set(), new Set([activeMaterial]));
 
     assert.equal(activeTexture.destroyCount, 0);
     assert.equal(inactiveTexture.destroyCount, 1);
-    assert.equal(renderer._textureResources.has(activeImage), true);
-    assert.equal(renderer._textureResources.has(inactiveImage), false);
-    assert.equal(renderer._materialBindGroups.has(activeMaterial), true);
-    assert.equal(renderer._materialBindGroups.has(inactiveMaterial), false);
+    assert.equal(resourceCache._textureResources.has(activeImage), true);
+    assert.equal(resourceCache._textureResources.has(inactiveImage), false);
+    assert.equal(resourceCache._materialBindGroups.has(activeMaterial), true);
+    assert.equal(resourceCache._materialBindGroups.has(inactiveMaterial), false);
 });

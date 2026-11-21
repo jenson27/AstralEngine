@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { Parent } from "../../src/components/parent.js";
 import { CreateSceneComponentRegistry } from "../../src/components/register-scene-components.js";
-import { SceneLoader } from "../../src/core/scene-loader.js";
+import { SceneLoader } from "../../src/core/scene/scene-loader.js";
 
 const cameraEntityId = "10203040-aaaa-4aaa-8aaa-102030405060";
 const rootEntityId = "20304050-bbbb-4bbb-9bbb-203040506070";

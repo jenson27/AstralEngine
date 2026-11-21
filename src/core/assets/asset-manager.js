@@ -1,5 +1,7 @@
 import { AstralLogger } from "../../diagnostics/logger.js";
 import { AssetHandle } from "./asset-handle.js";
+import { AssetLease } from "./asset-lease.js";
+import { AssetDependencyResolver } from "./asset-dependency-resolver.js";
 
 function GetAssetMemoryDetails(asset) {
     if (Number.isSafeInteger(asset?.MemoryUsageBytes)) {
@@ -25,42 +27,6 @@ function GetAssetMemoryDetails(asset) {
     }
 
     return null;
-}
-
-class AssetLease {
-    constructor(handle, release) {
-        this._handle = handle;
-        this._release = release;
-        this._isReleased = false;
-    }
-
-    get Asset() {
-        if (this._isReleased) {
-            throw new Error("Cannot access a released asset lease.");
-        }
-
-        return this._handle.Current;
-    }
-
-    get Handle() {
-        if (this._isReleased) {
-            throw new Error("Cannot access a released asset lease.");
-        }
-
-        return this._handle;
-    }
-
-    Release() {
-        if (this._isReleased) {
-            return;
-        }
-
-        this._isReleased = true;
-        const release = this._release;
-        this._release = null;
-
-        return release();
-    }
 }
 
 export class AssetManager {
@@ -95,9 +61,9 @@ export class AssetManager {
         this._assetCatalog = assetCatalog;
         this._loaderRegistry = loaderRegistry;
         this._memoryTracker = memoryTracker;
+        this._dependencyResolver = new AssetDependencyResolver(assetCatalog);
         this._entriesById = new Map();
         this._statesByAssetId = new Map();
-        this._validatedAssetIds = new Set();
         this._stagedReload = null;
     }
 
@@ -108,7 +74,7 @@ export class AssetManager {
             await this._stagedReload.completionPromise;
         }
 
-        this._ValidateDependencyGraph(assetId);
+        this._dependencyResolver.Validate(assetId);
 
         return this._Acquire(assetId);
     }
@@ -169,7 +135,7 @@ export class AssetManager {
 
         for (const assetId of requestedIds) {
             this._RequireAssetId(assetId);
-            this._ValidateDependencyGraph(assetId);
+            this._dependencyResolver.Validate(assetId);
         }
 
         const transaction = this._CreateReloadTransaction(requestedIds);
@@ -220,8 +186,9 @@ export class AssetManager {
 
         await Promise.allSettled(pendingLoads);
 
-        transaction.entries = this._CollectReloadEntries(
+        transaction.entries = this._dependencyResolver.CollectReloadEntries(
             transaction.requestedIds,
+            this._entriesById,
         );
 
         const leaseResults = await Promise.allSettled(
@@ -389,96 +356,6 @@ export class AssetManager {
         transaction.resolveCompletion();
 
         return this._ReleaseCommittedReload(transaction);
-    }
-
-    _CollectReloadEntries(requestedIds) {
-        const affectedIds = this._CollectAffectedReloadIds(requestedIds);
-        return this._OrderReloadEntries(affectedIds);
-    }
-
-    _CollectAffectedReloadIds(requestedIds) {
-        const affectedIds = new Set(requestedIds);
-
-        for (const assetId of requestedIds) {
-            const entry = this._entriesById.get(assetId);
-
-            if (!entry || entry.state !== "loaded") {
-                throw new Error(
-                    `Asset "${assetId}" must be loaded before it can be reloaded.`,
-                );
-            }
-        }
-
-        let foundDependent;
-
-        do {
-            foundDependent = false;
-
-            for (const entry of this._entriesById.values()) {
-                if (
-                    entry.state !== "loaded" ||
-                    affectedIds.has(entry.assetId)
-                ) {
-                    continue;
-                }
-
-                if (
-                    entry.descriptor.dependencies.some((dependencyId) =>
-                        affectedIds.has(dependencyId),
-                    )
-                ) {
-                    affectedIds.add(entry.assetId);
-                    foundDependent = true;
-                }
-            }
-        } while (foundDependent);
-
-        return affectedIds;
-    }
-
-    _OrderReloadEntries(affectedIds) {
-        const orderedEntries = [];
-        const visitedIds = new Set();
-
-        const visit = (entry) => {
-            if (visitedIds.has(entry.assetId)) {
-                return;
-            }
-
-            visitedIds.add(entry.assetId);
-
-            for (const dependencyId of entry.descriptor.dependencies) {
-                if (!affectedIds.has(dependencyId)) {
-                    continue;
-                }
-
-                const dependencyEntry = this._entriesById.get(dependencyId);
-
-                if (!dependencyEntry || dependencyEntry.state !== "loaded") {
-                    throw new Error(
-                        `Dependency "${dependencyId}" must be loaded before reload.`,
-                    );
-                }
-
-                visit(dependencyEntry);
-            }
-
-            orderedEntries.push(entry);
-        };
-
-        for (const assetId of affectedIds) {
-            const entry = this._entriesById.get(assetId);
-
-            if (!entry || entry.state !== "loaded") {
-                throw new Error(
-                    `Dependent asset "${assetId}" is not loaded.`,
-                );
-            }
-
-            visit(entry);
-        }
-
-        return orderedEntries;
     }
 
     _CreateLoaderContext(entry, dependenciesById) {
@@ -694,46 +571,6 @@ export class AssetManager {
 
             throw error;
         }
-    }
-
-    _ValidateDependencyGraph(rootAssetId) {
-        const visiting = new Set();
-        const path = [];
-
-        const visit = (assetId) => {
-            if (visiting.has(assetId)) {
-                const cycleStart = path.indexOf(assetId);
-                const cycle = [
-                    ...path.slice(cycleStart),
-                    assetId,
-                ];
-
-                throw new Error(
-                    "Asset dependency cycle detected: " +
-                        cycle.join(" -> "),
-                );
-            }
-
-            if (this._validatedAssetIds.has(assetId)) {
-                return;
-            }
-
-            const descriptor =
-                this._assetCatalog.GetRequired(assetId);
-
-            visiting.add(assetId);
-            path.push(assetId);
-
-            for (const dependencyId of descriptor.dependencies) {
-                visit(dependencyId);
-            }
-
-            path.pop();
-            visiting.delete(assetId);
-            this._validatedAssetIds.add(assetId);
-        };
-
-        visit(rootAssetId);
     }
 
     async _ReleaseDependencyLeases(entry) {

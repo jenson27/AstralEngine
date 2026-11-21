@@ -11,9 +11,9 @@ import { TransformSnapshotSystem } from "./systems/transform-snapshot-system.js"
 import { CameraControlSystem } from "./systems/camera-control-system.js";
 import { TransformHierarchySystem } from "./systems/transform-hierarchy-system.js";
 import { RenderSystem } from "./systems/render-system.js";
-import { SceneLoader } from "./core/scene-loader.js";
-import { SceneManager } from "./core/scene-manager.js";
-import { SystemPhase } from "./core/system-scheduler.js";
+import { SceneLoader } from "./core/scene/scene-loader.js";
+import { SceneManager } from "./core/scene/scene-manager.js";
+import { SystemPhase } from "./core/scene/system-scheduler.js";
 import { CreateSceneComponentRegistry } from "./components/register-scene-components.js";
 import { AssetCatalog } from "./core/assets/asset-catalog.js";
 import { AssetLoaderRegistry } from "./core/assets/asset-loader-registry.js";
