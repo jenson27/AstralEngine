@@ -12,9 +12,13 @@ export class EntityManager {
         this._beforeStructuralChange = beforeStructuralChange;
         this._entities = new Set();
         this._entityNames = new Map();
+        this._inactiveEntities = new Set();
+        this._disabledComponents = new Map();
         this._componentStores = new Map();
         this._structuralRevision = 0;
         this._entityNameRevision = 0;
+        this._entityStateRevision = 0;
+        this._componentEnabledRevision = 0;
         this._activeQueryCount = 0;
         this._componentRemovalHandlers = new Map();
         this._pendingComponentRemovals = [];
@@ -26,6 +30,14 @@ export class EntityManager {
 
     get EntityNameRevision() {
         return this._entityNameRevision;
+    }
+
+    get EntityStateRevision() {
+        return this._entityStateRevision;
+    }
+
+    get ComponentEnabledRevision() {
+        return this._componentEnabledRevision;
     }
 
     CreateEntity(entityId = CreateEntityId(), name = "Entity") {
@@ -52,6 +64,8 @@ export class EntityManager {
         this._beforeStructuralChange({ type: "destroy-entity", entityId });
         this._entities.delete(entityId);
         this._entityNames.delete(entityId);
+        this._inactiveEntities.delete(entityId);
+        this._disabledComponents.delete(entityId);
         this._RemoveEntityComponents(entityId);
         this._structuralRevision += 1;
     }
@@ -98,6 +112,103 @@ export class EntityManager {
         }
 
         return normalizedName;
+    }
+
+    IsEntityActive(entityId) {
+        this._RequireEntity(entityId);
+        return !this._inactiveEntities.has(entityId);
+    }
+
+    SetEntityActive(entityId, isActive) {
+        this._RequireEntity(entityId);
+
+        if (typeof isActive !== "boolean") {
+            throw new TypeError("Entity active state must be a boolean.");
+        }
+
+        const isCurrentlyActive = !this._inactiveEntities.has(entityId);
+        if (isCurrentlyActive === isActive) {
+            return false;
+        }
+
+        this._RequireNoActiveQueries();
+        this._beforeStructuralChange({
+            type: "set-entity-active",
+            entityId,
+            isActive,
+        });
+
+        if (isActive) {
+            this._inactiveEntities.delete(entityId);
+        } else {
+            this._inactiveEntities.add(entityId);
+        }
+
+        this._entityStateRevision += 1;
+        return true;
+    }
+
+    IsComponentEnabled(entityId, componentType) {
+        this._RequireEntity(entityId);
+        this._RequireComponentType(componentType);
+
+        if (!this._componentStores.get(componentType)?.Has(entityId)) {
+            throw new Error("Entity does not have the requested component.");
+        }
+
+        return !this._disabledComponents
+            .get(entityId)
+            ?.has(componentType);
+    }
+
+    SetComponentEnabled(entityId, componentType, isEnabled) {
+        this._RequireEntity(entityId);
+        this._RequireComponentType(componentType);
+
+        if (!this._componentStores.get(componentType)?.Has(entityId)) {
+            throw new Error("Entity does not have the requested component.");
+        }
+
+        if (typeof isEnabled !== "boolean") {
+            throw new TypeError("Component enabled state must be a boolean.");
+        }
+
+        if (componentType.CanBeDisabled === false && !isEnabled) {
+            throw new Error("This component cannot be disabled.");
+        }
+
+        const isCurrentlyEnabled = !this._disabledComponents
+            .get(entityId)
+            ?.has(componentType);
+        if (isCurrentlyEnabled === isEnabled) {
+            return false;
+        }
+
+        this._RequireNoActiveQueries();
+        this._beforeStructuralChange({
+            type: "set-component-enabled",
+            entityId,
+            componentType,
+            isEnabled,
+        });
+
+        let disabledComponents = this._disabledComponents.get(entityId);
+        if (!disabledComponents) {
+            disabledComponents = new Set();
+            this._disabledComponents.set(entityId, disabledComponents);
+        }
+
+        if (isEnabled) {
+            disabledComponents.delete(componentType);
+            if (disabledComponents.size === 0) {
+                this._disabledComponents.delete(entityId);
+            }
+        } else {
+            disabledComponents.add(componentType);
+        }
+
+        this._componentEnabledRevision += 1;
+        return true;
     }
 
     GetComponentEntries(entityId) {
@@ -176,6 +287,11 @@ export class EntityManager {
             componentType,
         });
         storage.Remove(entityId);
+        const disabledComponents = this._disabledComponents.get(entityId);
+        disabledComponents?.delete(componentType);
+        if (disabledComponents?.size === 0) {
+            this._disabledComponents.delete(entityId);
+        }
         this._QueueComponentRemoval(entityId, componentType, component);
         this._structuralRevision += 1;
         return true;
@@ -298,8 +414,8 @@ export class EntityManager {
     _RequireNoActiveQueries() {
         if (this._activeQueryCount > 0) {
             throw new Error(
-                "Cannot change component membership during an active query. " +
-                    "Queue the change through the system command buffer.",
+                "Cannot change entity or component state during an active query. " +
+                    "Queue structural changes through the system command buffer.",
             );
         }
     }

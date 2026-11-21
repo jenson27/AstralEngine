@@ -36,7 +36,7 @@ export class RenderSystem {
         );
         const renderItems = [];
 
-        for (const entityId of entityManager.Query(Transform, MeshRenderer)) {
+        for (const entityId of scene.QueryActive(Transform, MeshRenderer)) {
             const transform = entityManager.GetComponent(entityId, Transform);
             const meshRenderer = entityManager.GetComponent(
                 entityId,

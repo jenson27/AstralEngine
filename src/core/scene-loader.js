@@ -165,6 +165,10 @@ export class SceneLoader {
                 entityData.name ?? "Entity",
             );
 
+            if (entityData.active === false) {
+                scene.EntityManager.SetEntityActive(entityId, false);
+            }
+
             for (const componentRecord of entityData.components) {
                 const { typeId } = componentRecord;
 
@@ -180,6 +184,13 @@ export class SceneLoader {
                         componentType,
                         component,
                     );
+                    if (componentRecord.enabled === false) {
+                        scene.EntityManager.SetComponentEnabled(
+                            entityId,
+                            componentType,
+                            false,
+                        );
+                    }
                 } catch (error) {
                     throw new Error(
                         `Failed to load component "${typeId}" for entity ${entityId}.`,
@@ -588,6 +599,13 @@ export class SceneLoader {
             );
         }
 
+        if (
+            entityData.active !== undefined &&
+            typeof entityData.active !== "boolean"
+        ) {
+            throw new TypeError("Entity active state must be a boolean.");
+        }
+
         if (!IsEntityId(entityData.id)) {
             throw new TypeError("Entity IDs must be lowercase UUID strings.");
         }
@@ -641,6 +659,15 @@ export class SceneLoader {
             ) {
                 throw new TypeError(
                     "Component record must define a positive version and data.",
+                );
+            }
+
+            if (
+                componentRecord.enabled !== undefined &&
+                typeof componentRecord.enabled !== "boolean"
+            ) {
+                throw new TypeError(
+                    "Component enabled state must be a boolean.",
                 );
             }
         }

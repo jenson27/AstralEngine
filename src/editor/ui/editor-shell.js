@@ -18,6 +18,13 @@ const DOCK_RESIZE_CONFIG = Object.freeze({
         axis: "x",
         styleProperty: "--editor-left-dock-width",
     }),
+    right: Object.freeze({
+        initial: 320,
+        minimum: 224,
+        maximum: 480,
+        axis: "x",
+        styleProperty: "--editor-right-dock-width",
+    }),
     bottom: Object.freeze({
         initial: 320,
         minimum: 192,
@@ -48,6 +55,9 @@ export class EditorShell {
             ["left", this._RequireDock("left")],
             ["bottom", this._RequireDock("bottom")],
         ]);
+        const rightDock = this._root.querySelector(
+            '[data-editor-dock="right"]',
+        );
         this._dockTabs = new Map([
             ["bottom", this._RequireDockTabs("bottom")],
         ]);
@@ -55,8 +65,25 @@ export class EditorShell {
             ["left", this._RequireSplitter("left")],
             ["bottom", this._RequireSplitter("bottom")],
         ]);
+        const rightSplitter = this._root.querySelector(
+            '[data-editor-splitter="right"]',
+        );
+        if (rightDock || rightSplitter) {
+            if (
+                !(rightDock instanceof HTMLElement) ||
+                !(rightSplitter instanceof HTMLElement)
+            ) {
+                throw new TypeError(
+                    "EditorShell requires both the right dock and its splitter.",
+                );
+            }
+
+            this._docks.set("right", rightDock);
+            this._splitters.set("right", rightSplitter);
+        }
         this._dockSizes = {
             left: DOCK_RESIZE_CONFIG.left.initial,
+            right: DOCK_RESIZE_CONFIG.right.initial,
             bottom: DOCK_RESIZE_CONFIG.bottom.initial,
         };
         this._activePanelIds = new Map();
@@ -292,7 +319,13 @@ export class EditorShell {
             `(max-width: ${STACKED_LAYOUT_WIDTH}px)`,
         ).matches;
 
-        for (const dockName of ["left", "bottom"]) {
+        const dockNames = ["left"];
+        if (this._docks.has("right")) {
+            dockNames.push("right");
+        }
+        dockNames.push("bottom");
+
+        for (const dockName of dockNames) {
             const dockElement =
                 dockName === "bottom"
                     ? this._root.querySelector(".editor-bottom-dock")
@@ -303,7 +336,8 @@ export class EditorShell {
                     ? dockBounds.width
                     : dockBounds.height;
             const size =
-                (dockName === "left" && isStackedLayout) || measuredSize === 0
+                (dockName !== "bottom" && isStackedLayout) ||
+                measuredSize === 0
                     ? DOCK_RESIZE_CONFIG[dockName].initial
                     : measuredSize;
             this._SetDockSize(dockName, size);
@@ -488,7 +522,7 @@ export class EditorShell {
             event,
         );
         const distance = coordinate - activeResize.startCoordinate;
-        const direction = activeResize.dockName === "bottom" ? -1 : 1;
+        const direction = activeResize.dockName === "left" ? 1 : -1;
         this._SetDockSize(
             activeResize.dockName,
             activeResize.startSize + distance * direction,
@@ -511,14 +545,16 @@ export class EditorShell {
 
         const step = event.shiftKey ? 32 : 16;
         let size = this._dockSizes[dockName];
+        const decreaseKey = dockName === "left" ? "ArrowLeft" : "ArrowRight";
+        const increaseKey = dockName === "left" ? "ArrowRight" : "ArrowLeft";
 
         if (event.key === "Home") {
             size = config.minimum;
         } else if (event.key === "End") {
             size = this._GetMaximumDockSize(dockName);
-        } else if (config.axis === "x" && event.key === "ArrowLeft") {
+        } else if (config.axis === "x" && event.key === decreaseKey) {
             size -= step;
-        } else if (config.axis === "x" && event.key === "ArrowRight") {
+        } else if (config.axis === "x" && event.key === increaseKey) {
             size += step;
         } else if (config.axis === "y" && event.key === "ArrowUp") {
             size -= step;
@@ -536,7 +572,11 @@ export class EditorShell {
         if (
             !window.matchMedia(`(max-width: ${STACKED_LAYOUT_WIDTH}px)`).matches
         ) {
-            this._SetDockSize("left", this._dockSizes.left);
+            for (const dockName of ["left", "right"]) {
+                if (this._docks.has(dockName)) {
+                    this._SetDockSize(dockName, this._dockSizes[dockName]);
+                }
+            }
         }
 
         this._SetDockSize("bottom", this._dockSizes.bottom);
@@ -547,10 +587,18 @@ export class EditorShell {
         let availableSize;
 
         if (config.axis === "x") {
+            const horizontalDockNames = ["left", "right"].filter(
+                (name) => this._docks.has(name),
+            );
+            const otherDockSize = horizontalDockNames
+                .filter((name) => name !== dockName)
+                .reduce((total, name) => total + this._dockSizes[name], 0);
+
             availableSize =
                 this._workspace.getBoundingClientRect().width -
                 MIN_VIEWPORT_WIDTH -
-                RESIZE_HANDLE_SIZE;
+                RESIZE_HANDLE_SIZE * horizontalDockNames.length -
+                otherDockSize;
         } else {
             const toolbarHeight = this._root.querySelector(
                 ".editor-toolbar",
@@ -577,7 +625,8 @@ export class EditorShell {
         );
 
         this._dockSizes[dockName] = clampedSize;
-        const styleTarget = dockName === "left" ? this._workspace : this._root;
+        const styleTarget =
+            dockName === "bottom" ? this._root : this._workspace;
         styleTarget.style.setProperty(
             config.styleProperty,
             `${clampedSize}px`,
@@ -586,7 +635,7 @@ export class EditorShell {
     }
 
     _UpdateSplitterValues() {
-        for (const dockName of ["left", "bottom"]) {
+        for (const dockName of this._splitters.keys()) {
             const splitter = this._splitters.get(dockName);
             const config = DOCK_RESIZE_CONFIG[dockName];
             splitter.setAttribute("aria-valuemin", String(config.minimum));

@@ -8,4 +8,14 @@ export class AngularVelocity {
         this.y = y;
         this.z = z;
     }
+
+    SetValues(x, y, z) {
+        if (![x, y, z].every(Number.isFinite)) {
+            throw new TypeError("Angular velocity values must be finite.");
+        }
+
+        this.x = x;
+        this.y = y;
+        this.z = z;
+    }
 }

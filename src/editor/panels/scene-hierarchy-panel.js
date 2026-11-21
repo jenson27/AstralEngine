@@ -2,7 +2,7 @@ import { Parent } from "../../components/parent.js";
 import { CreateElement } from "../ui/dom-utils.js";
 
 export class SceneHierarchyPanel {
-    constructor(sceneManager, rootElement) {
+    constructor(sceneManager, selection, rootElement, authoringController) {
         if (
             !sceneManager ||
             typeof sceneManager.LoadScene !== "function" ||
@@ -19,26 +19,52 @@ export class SceneHierarchyPanel {
             );
         }
 
+        if (
+            !selection ||
+            typeof selection.Select !== "function" ||
+            typeof selection.Clear !== "function" ||
+            typeof selection.Subscribe !== "function"
+        ) {
+            throw new TypeError("SceneHierarchyPanel requires editor selection.");
+        }
+        if (
+            !authoringController ||
+            typeof authoringController.CreateEntity !== "function"
+        ) {
+            throw new TypeError(
+                "SceneHierarchyPanel requires scene authoring.",
+            );
+        }
+
         this._sceneManager = sceneManager;
+        this._selection = selection;
+        this._authoringController = authoringController;
         this._root = rootElement;
         this._root.classList.add("hierarchy-panel");
-        this._selectedEntityId = null;
         this._refreshTimer = null;
         this._lastScene = undefined;
         this._lastStructureRevision = null;
         this._lastEntityNameRevision = null;
+        this._lastEntityStateRevision = null;
         this._lastActiveCameraEntityId = undefined;
         this._lastSceneName = undefined;
         this._lastSelection = undefined;
         this._root.innerHTML = `
-            <div class="hierarchy-scene-label">
-                <span data-role="scene-name"></span>
+            <div class="hierarchy-toolbar">
+                <div class="hierarchy-scene-label">
+                    <span data-role="scene-name"></span>
+                </div>
+                <button type="button" data-action="create-entity">Create Entity</button>
             </div>
+            <span class="hierarchy-authoring-status" data-role="authoring-status" role="status" aria-live="polite"></span>
             <div class="hierarchy-entity-list" data-role="entities" role="list" aria-label="Scene entities"></div>
             <div class="hierarchy-empty" data-role="empty" hidden></div>`;
 
         this._onClick = this._HandleClick.bind(this);
         this._root.addEventListener("click", this._onClick);
+        this._unsubscribeSelection = this._selection.Subscribe(() =>
+            this._Refresh(),
+        );
         this._Refresh();
         this._UpdateRefreshTimer();
     }
@@ -50,6 +76,8 @@ export class SceneHierarchyPanel {
         }
 
         this._root.removeEventListener("click", this._onClick);
+        this._unsubscribeSelection?.();
+        this._unsubscribeSelection = null;
     }
 
     _CanPoll() {
@@ -69,14 +97,46 @@ export class SceneHierarchyPanel {
     }
 
     _HandleClick(event) {
+        const createButton = event.target.closest(
+            '[data-action="create-entity"]',
+        );
+        if (createButton && this._root.contains(createButton)) {
+            this._CreateEntity();
+            return;
+        }
+
         const entityButton = event.target.closest("[data-entity-id]");
 
         if (!entityButton || !this._root.contains(entityButton)) {
             return;
         }
 
-        this._selectedEntityId = entityButton.dataset.entityId;
+        const scene = this._sceneManager.ActiveScene;
+        if (!scene) {
+            return;
+        }
+
+        this._selection.Select(scene, entityButton.dataset.entityId);
         this._Refresh();
+    }
+
+    _CreateEntity() {
+        const status = this._root.querySelector(
+            '[data-role="authoring-status"]',
+        );
+        status.textContent = "";
+        try {
+            this._authoringController.CreateEntity();
+            this._Refresh();
+        } catch (error) {
+            status.textContent =
+                error instanceof Error ? error.message : String(error);
+        }
+    }
+
+    _GetSelectedEntityId(scene = this._sceneManager.ActiveScene) {
+        const selection = this._selection.Current;
+        return selection?.scene === scene ? selection.entityId : null;
     }
 
     _BuildHierarchy(entityManager, entityIds) {
@@ -103,14 +163,22 @@ export class SceneHierarchyPanel {
         return { entityIdSet, childrenByParentId, rootEntityIds };
     }
 
-    _KeepSelectionValid(entityIdSet, activeCameraEntityId) {
+    _KeepSelectionValid(entityIdSet, activeCameraEntityId, scene) {
+        const selection = this._selection.Current;
         if (
-            this._selectedEntityId === null ||
-            !entityIdSet.has(this._selectedEntityId)
+            selection?.scene === scene &&
+            entityIdSet.has(selection.entityId)
         ) {
-            this._selectedEntityId = entityIdSet.has(activeCameraEntityId)
-                ? activeCameraEntityId
-                : null;
+            return;
+        }
+
+        const fallbackEntityId = entityIdSet.has(activeCameraEntityId)
+            ? activeCameraEntityId
+            : null;
+        if (fallbackEntityId) {
+            this._selection.Select(scene, fallbackEntityId);
+        } else {
+            this._selection.Clear();
         }
     }
 
@@ -124,7 +192,10 @@ export class SceneHierarchyPanel {
         button.style.paddingInlineStart = `${0.55 + depth * 1.1}rem`;
         button.setAttribute(
             "aria-pressed",
-            String(entityId === this._selectedEntityId),
+            String(entityId === this._GetSelectedEntityId()),
+        );
+        button.dataset.active = String(
+            entityManager.IsEntityActive?.(entityId) ?? true,
         );
         button.textContent = entityManager.GetEntityName(entityId);
         item.append(button);
@@ -179,10 +250,11 @@ export class SceneHierarchyPanel {
         entityList.replaceChildren();
         empty.textContent = "No scene is loaded.";
         empty.hidden = false;
-        this._selectedEntityId = null;
+        this._selection.Clear();
         this._lastScene = null;
         this._lastStructureRevision = null;
         this._lastEntityNameRevision = null;
+        this._lastEntityStateRevision = null;
         this._lastActiveCameraEntityId = undefined;
         this._lastSceneName = undefined;
         this._lastSelection = null;
@@ -193,9 +265,10 @@ export class SceneHierarchyPanel {
             this._lastScene === scene &&
             this._lastStructureRevision === entityManager.StructuralRevision &&
             this._lastEntityNameRevision === entityManager.EntityNameRevision &&
+            this._lastEntityStateRevision === entityManager.EntityStateRevision &&
             this._lastActiveCameraEntityId === scene.ActiveCameraEntityId &&
             this._lastSceneName === scene.Name &&
-            this._lastSelection === this._selectedEntityId
+            this._lastSelection === this._GetSelectedEntityId(scene)
         );
     }
 
@@ -216,9 +289,10 @@ export class SceneHierarchyPanel {
         this._lastScene = scene;
         this._lastStructureRevision = entityManager.StructuralRevision;
         this._lastEntityNameRevision = entityManager.EntityNameRevision;
+        this._lastEntityStateRevision = entityManager.EntityStateRevision;
         this._lastActiveCameraEntityId = scene.ActiveCameraEntityId;
         this._lastSceneName = scene.Name;
-        this._lastSelection = this._selectedEntityId;
+        this._lastSelection = this._GetSelectedEntityId(scene);
     }
 
     _Refresh() {
@@ -231,6 +305,9 @@ export class SceneHierarchyPanel {
             ? document.activeElement.dataset.entityId
             : null;
         const sceneName = this._root.querySelector('[data-role="scene-name"]');
+        const createButton = this._root.querySelector(
+            '[data-action="create-entity"]',
+        );
         const entityList = this._root.querySelector('[data-role="entities"]');
         const empty = this._root.querySelector('[data-role="empty"]');
 
@@ -240,8 +317,11 @@ export class SceneHierarchyPanel {
             }
 
             this._ClearSceneView(sceneName, entityList, empty);
+            createButton.disabled = true;
             return;
         }
+
+        createButton.disabled = this._authoringController.IsBusy;
 
         const entityManager = scene.EntityManager;
 
@@ -256,6 +336,7 @@ export class SceneHierarchyPanel {
         this._KeepSelectionValid(
             hierarchy.entityIdSet,
             scene.ActiveCameraEntityId,
+            scene,
         );
         entityList.replaceChildren(
             this._RenderEntityTree(

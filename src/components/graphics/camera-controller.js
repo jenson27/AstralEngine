@@ -29,4 +29,19 @@ export class CameraController {
 
         ValidateCameraControllerSettings(this);
     }
+
+    SetSettings(settings) {
+        const nextSettings = {
+            movementSpeed: settings?.movementSpeed,
+            runMultiplier: settings?.runMultiplier,
+            lookSensitivity: settings?.lookSensitivity,
+            maxPitchRadians: settings?.maxPitchRadians,
+        };
+        ValidateCameraControllerSettings(nextSettings);
+
+        this.movementSpeed = nextSettings.movementSpeed;
+        this.runMultiplier = nextSettings.runMultiplier;
+        this.lookSensitivity = nextSettings.lookSensitivity;
+        this.maxPitchRadians = nextSettings.maxPitchRadians;
+    }
 }

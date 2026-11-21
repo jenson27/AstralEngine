@@ -73,6 +73,10 @@ export class CameraControlSystem {
             return;
         }
 
+        if (!entityManager.IsComponentEnabled(cameraEntityId, CameraController)) {
+            return;
+        }
+
         const transform = entityManager.GetComponent(
             cameraEntityId,
             Transform,

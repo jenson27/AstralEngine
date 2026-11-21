@@ -6,6 +6,7 @@ import { ConsolePanel } from "../../src/editor/panels/console-panel.js";
 import { MemoryTrackerPanel } from "../../src/editor/panels/memory-tracker-panel.js";
 import { ProfilerPanel } from "../../src/editor/panels/profiler-panel.js";
 import { SceneHierarchyPanel } from "../../src/editor/panels/scene-hierarchy-panel.js";
+import { EditorSelection } from "../../src/editor/editor-selection.js";
 import { SetOptions } from "../../src/editor/panels/diagnostic-panel-utils.js";
 
 class FakeElement {
@@ -562,9 +563,22 @@ test("hierarchy panel selects entities without a false disclosure control", (con
         ['[data-role="scene-name"]'],
         ['[data-role="entities"]'],
         ['[data-role="empty"]'],
+        ['[data-action="create-entity"]'],
     ]);
-    const panel = new SceneHierarchyPanel(sceneManager, root);
+    const selection = new EditorSelection();
+    const authoringController = {
+        IsBusy: false,
+        CreateEntity() {},
+        DeleteEntity() {},
+    };
+    const panel = new SceneHierarchyPanel(
+        sceneManager,
+        selection,
+        root,
+        authoringController,
+    );
     context.after(() => panel.Dispose());
+    assert.doesNotMatch(root.innerHTML, /delete-entity/);
     const entityList = root.querySelector('[data-role="entities"]');
     const button = entityList.children[0].children[0];
 

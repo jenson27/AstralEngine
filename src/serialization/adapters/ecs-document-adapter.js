@@ -53,18 +53,9 @@ export class EcsDocumentAdapter {
             );
         }
 
-        const entities = entityIds.map((entityId) => ({
-            name: entityManager.GetEntityName(entityId),
-            id: entityId,
-            components: entityManager
-                .GetComponentEntries(entityId)
-                .map(({ component }) =>
-                    this._componentRegistry.SerializeComponent(
-                        component,
-                        context,
-                    ),
-                ),
-        }));
+        const entities = entityIds.map((entityId) =>
+            this._SerializeEntity(entityManager, entityId, context),
+        );
 
         return {
             format: "astral-scene",
@@ -74,6 +65,49 @@ export class EcsDocumentAdapter {
             assets: this._CollectAssetIds(entities),
             entities,
         };
+    }
+
+    _SerializeEntity(entityManager, entityId, context) {
+        const entity = {
+            name: entityManager.GetEntityName(entityId),
+            id: entityId,
+            components: entityManager
+                .GetComponentEntries(entityId)
+                .map(({ componentType, component }) =>
+                    this._SerializeComponent(
+                        entityManager,
+                        entityId,
+                        componentType,
+                        component,
+                        context,
+                    ),
+                ),
+        };
+
+        if (!entityManager.IsEntityActive(entityId)) {
+            entity.active = false;
+        }
+
+        return entity;
+    }
+
+    _SerializeComponent(
+        entityManager,
+        entityId,
+        componentType,
+        component,
+        context,
+    ) {
+        const componentRecord = this._componentRegistry.SerializeComponent(
+            component,
+            context,
+        );
+
+        if (!entityManager.IsComponentEnabled(entityId, componentType)) {
+            componentRecord.enabled = false;
+        }
+
+        return componentRecord;
     }
 
     _CollectAssetIds(entities) {

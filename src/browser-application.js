@@ -226,7 +226,12 @@ export async function StartBrowserApplication({
             status.textContent = "Scene loaded. WebGPU ready.";
         }
 
-        return { SceneManager: sceneManager, Renderer: renderer, Dispose };
+        return {
+            SceneManager: sceneManager,
+            Renderer: renderer,
+            GetAssetCatalog: () => assetRuntime.catalog,
+            Dispose,
+        };
     } catch (error) {
         await Dispose();
         throw error;

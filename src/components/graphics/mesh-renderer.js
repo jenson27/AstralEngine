@@ -78,6 +78,17 @@ export class MeshRenderer {
         this._materialHandlesBySlot = normalizedHandles;
     }
 
+    SetAssets(meshHandle, materialHandlesBySlot) {
+        const nextMeshHandle = ValidateMeshHandle(meshHandle);
+        const nextMaterialHandlesBySlot = NormalizeMaterialHandlesBySlot(
+            nextMeshHandle,
+            materialHandlesBySlot,
+        );
+
+        this._meshHandle = nextMeshHandle;
+        this._materialHandlesBySlot = nextMaterialHandlesBySlot;
+    }
+
     get mesh() {
         return this._meshHandle.Current;
     }

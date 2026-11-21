@@ -270,6 +270,36 @@ export function SetPerspectiveMatrix(
     return matrix;
 }
 
+export function SetOrthographicMatrix(
+    matrix,
+    verticalSize,
+    aspectRatio,
+    nearPlane,
+    farPlane,
+) {
+    if (
+        !Number.isFinite(verticalSize) ||
+        !Number.isFinite(aspectRatio) ||
+        !Number.isFinite(nearPlane) ||
+        !Number.isFinite(farPlane) ||
+        verticalSize <= 0 ||
+        aspectRatio <= 0 ||
+        nearPlane <= 0 ||
+        farPlane <= nearPlane
+    ) {
+        throw new RangeError("Orthographic matrix parameters are invalid.");
+    }
+
+    matrix.fill(0);
+    matrix[0] = 1 / (verticalSize * aspectRatio);
+    matrix[5] = 1 / verticalSize;
+    matrix[10] = 1 / (nearPlane - farPlane);
+    matrix[14] = nearPlane / (nearPlane - farPlane);
+    matrix[15] = 1;
+
+    return matrix;
+}
+
 export function MultiplyMatrix4(out, left, right) {
     if (out === left || out === right) {
         throw new TypeError(

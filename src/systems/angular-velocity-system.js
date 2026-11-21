@@ -5,7 +5,7 @@ export class AngularVelocitySystem {
     FixedUpdate(scene, { deltaTime }) {
         const entityManager = scene.EntityManager;
 
-        for (const entityId of entityManager.Query(Transform, AngularVelocity)) {
+        for (const entityId of scene.QueryActive(Transform, AngularVelocity)) {
             const transform = entityManager.GetComponent(entityId, Transform);
             const angularVelocity = entityManager.GetComponent(
                 entityId,

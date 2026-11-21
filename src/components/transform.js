@@ -7,6 +7,8 @@ import {
 } from "../math/matrix4.js";
 
 export class Transform {
+    static CanBeDisabled = false;
+
     constructor() {
         this.position = [0, 0, 0];
         this.rotation = [0, 0, 0];

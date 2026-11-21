@@ -1,7 +1,7 @@
 import { ComponentRegistry } from "../core/ecs/component-registry.js";
 import { Transform } from "./transform.js";
 import { Parent } from "./parent.js";
-import { Camera } from "./graphics/camera.js";
+import { Camera, ValidateCameraSettings } from "./graphics/camera.js";
 import {
     CameraController,
     ValidateCameraControllerSettings,
@@ -30,20 +30,6 @@ function ValidateAngularVelocity(angularVelocity) {
         ].every(Number.isFinite)
     ) {
         throw new TypeError("Angular velocity values must be finite.");
-    }
-}
-
-function ValidateCameraSettings(camera) {
-    if (
-        !Number.isFinite(camera.fieldOfView) ||
-        camera.fieldOfView <= 0 ||
-        camera.fieldOfView >= Math.PI ||
-        !Number.isFinite(camera.nearPlane) ||
-        camera.nearPlane <= 0 ||
-        !Number.isFinite(camera.farPlane) ||
-        camera.farPlane <= camera.nearPlane
-    ) {
-        throw new RangeError("Camera settings are invalid.");
     }
 }
 
@@ -116,11 +102,14 @@ export function CreateSceneComponentRegistry() {
         Camera,
         (data) => {
             const camera = new Camera();
-            camera.fieldOfView = data.fieldOfView;
-            camera.nearPlane = data.nearPlane;
-            camera.farPlane = data.farPlane;
+            camera.SetSettings({
+                projectionType: data.projectionType ?? "perspective",
+                fieldOfView: data.fieldOfView,
+                orthographicSize: data.orthographicSize ?? 5,
+                nearPlane: data.nearPlane,
+                farPlane: data.farPlane,
+            });
 
-            ValidateCameraSettings(camera);
             return camera;
         },
         {
@@ -128,7 +117,9 @@ export function CreateSceneComponentRegistry() {
             Serialize: (camera) => {
                 ValidateCameraSettings(camera);
                 return {
+                    projectionType: camera.projectionType,
                     fieldOfView: camera.fieldOfView,
+                    orthographicSize: camera.orthographicSize,
                     nearPlane: camera.nearPlane,
                     farPlane: camera.farPlane,
                 };

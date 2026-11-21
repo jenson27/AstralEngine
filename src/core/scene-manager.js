@@ -59,7 +59,40 @@ export class SceneManager {
         return this._activeSceneUrl;
     }
 
-    async LoadScene(url) {
+    async AcquireAssetHandle(assetId) {
+        this._RequireNotDisposed();
+
+        const assetScope = this._activeAssetScope;
+        if (!this._activeScene || !assetScope) {
+            throw new Error("SceneManager has no active asset scope.");
+        }
+
+        await assetScope.Acquire(assetId);
+
+        if (assetScope !== this._activeAssetScope) {
+            throw new Error("Active scene changed while acquiring the asset.");
+        }
+
+        return assetScope.GetHandleRequired(assetId);
+    }
+
+    LoadScene(url) {
+        return this._LoadCandidate(url, (options) =>
+            this._sceneLoader.Load(url, options),
+        );
+    }
+
+    LoadSceneData(data) {
+        if (typeof this._sceneLoader.LoadDataAsync !== "function") {
+            throw new TypeError("Scene loader cannot load scene data.");
+        }
+
+        return this._LoadCandidate(null, (options) =>
+            this._sceneLoader.LoadDataAsync(data, options),
+        );
+    }
+
+    async _LoadCandidate(sourceUrl, loadCandidate) {
         this._RequireNotDisposed();
 
         if (this._isLoading) {
@@ -79,14 +112,11 @@ export class SceneManager {
             pendingAssetScope = this._CreateAssetScope();
 
             const sceneLoadOptions = this._CreateSceneLoadOptions(
-                url,
+                sourceUrl,
                 pendingAssetScope,
             );
 
-            pendingScene = await this._sceneLoader.Load(
-                url,
-                sceneLoadOptions,
-            );
+            pendingScene = await loadCandidate(sceneLoadOptions);
 
             this._RequireNotDisposed();
 
@@ -106,7 +136,7 @@ export class SceneManager {
             const previousAssetScope = this._activeAssetScope;
 
             this._activeScene = pendingScene;
-            this._activeSceneUrl = url;
+            this._activeSceneUrl = sourceUrl;
             this._activeAssetScope = pendingAssetScope;
             pendingScene = null;
             pendingAssetScope = null;

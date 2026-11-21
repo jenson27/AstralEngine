@@ -6,6 +6,18 @@ import { Camera } from "../components/graphics/camera.js";
 import { Parent } from "../components/parent.js";
 import { Transform } from "../components/transform.js";
 
+function ReadVector3(value, name) {
+    if (
+        !Array.isArray(value) ||
+        value.length !== 3 ||
+        !value.every(Number.isFinite)
+    ) {
+        throw new TypeError(name + " must contain three finite numbers.");
+    }
+
+    return [...value];
+}
+
 export class Scene {
     constructor(name) {
         if (typeof name !== "string" || name.trim() === "") {
@@ -61,7 +73,96 @@ export class Scene {
         }
 
         this._RequireCameraEntity(entityId);
+        if (!this.IsEntityActiveInHierarchy(entityId)) {
+            throw new Error("The active camera must be active in the hierarchy.");
+        }
+        if (!this._entityManager.IsComponentEnabled(entityId, Camera)) {
+            throw new Error("The active camera component must be enabled.");
+        }
         this._activeCameraEntityId = entityId;
+    }
+
+    IsEntityActiveInHierarchy(entityId) {
+        this._entityManager.GetEntityName(entityId);
+        const visitedEntityIds = new Set();
+        let currentEntityId = entityId;
+
+        while (currentEntityId !== null) {
+            if (visitedEntityIds.has(currentEntityId)) {
+                throw new Error("Parent hierarchy contains a cycle.");
+            }
+            visitedEntityIds.add(currentEntityId);
+
+            if (!this._entityManager.IsEntityActive(currentEntityId)) {
+                return false;
+            }
+
+            const parent = this._entityManager.GetComponent(
+                currentEntityId,
+                Parent,
+            );
+            currentEntityId = parent?.ParentEntityId ?? null;
+        }
+
+        return true;
+    }
+
+    *QueryActive(...componentTypes) {
+        for (const entityId of this._entityManager.Query(...componentTypes)) {
+            if (!this.IsEntityActiveInHierarchy(entityId)) {
+                continue;
+            }
+
+            if (
+                componentTypes.some(
+                    (componentType) =>
+                        !this._entityManager.IsComponentEnabled(
+                            entityId,
+                            componentType,
+                        ),
+                )
+            ) {
+                continue;
+            }
+
+            yield entityId;
+        }
+    }
+
+    SetEntityActive(entityId, isActive) {
+        this._RequireActive();
+        return this._entityManager.SetEntityActive(entityId, isActive);
+    }
+
+    SetComponentEnabled(entityId, componentType, isEnabled) {
+        this._RequireActive();
+        return this._entityManager.SetComponentEnabled(
+            entityId,
+            componentType,
+            isEnabled,
+        );
+    }
+
+    SetTransform(entityId, { position, rotation, scale } = {}) {
+        this._RequireActive();
+        const transform = this._entityManager.GetComponent(
+            entityId,
+            Transform,
+        );
+
+        if (!transform) {
+            throw new Error("Entity must have a Transform component.");
+        }
+
+        const nextPosition = ReadVector3(position, "Transform position");
+        const nextRotation = ReadVector3(rotation, "Transform rotation");
+        const nextScale = ReadVector3(scale, "Transform scale");
+        this._ValidateActiveCameraTransformScale(entityId, nextScale);
+
+        transform.position.splice(0, transform.position.length, ...nextPosition);
+        transform.rotation.splice(0, transform.rotation.length, ...nextRotation);
+        transform.scale.splice(0, transform.scale.length, ...nextScale);
+        transform.SnapInterpolationToCurrentState();
     }
 
     /**
@@ -99,8 +200,8 @@ export class Scene {
 
         const parentChanges = new Map(this._pendingParentChanges);
         parentChanges.set(childEntityId, parentEntityId);
-        this._ValidateParentChanges(parentChanges);
-        this._ValidateActiveCameraScale(parentChanges);
+        const parentByChildId = this._ValidateParentChanges(parentChanges);
+        this._ValidateActiveCameraHierarchy(parentByChildId);
         this._pendingParentChanges = parentChanges;
         return true;
     }
@@ -298,36 +399,67 @@ export class Scene {
         }
 
         this._ValidateParentHierarchyAcyclic(parentByChildId);
+        return parentByChildId;
     }
 
-    _ValidateActiveCameraScale(parentChanges) {
+    _ValidateActiveCameraHierarchy(parentByChildId) {
         if (this._activeCameraEntityId === null) {
             return;
         }
 
-        const parentByChildId = this._GetParentByChildId(parentChanges);
-        const visitedEntityIds = new Set();
-        let entityId = this._activeCameraEntityId;
-
-        while (entityId !== undefined) {
-            if (visitedEntityIds.has(entityId)) {
-                throw new Error("Parent hierarchy contains a cycle.");
+        let isHierarchyActive = true;
+        let hasUnitScale = true;
+        this._ForEachActiveCameraAncestor((entityId) => {
+            if (!this._entityManager.IsEntityActive(entityId)) {
+                isHierarchyActive = false;
             }
-
-            visitedEntityIds.add(entityId);
 
             const scale = this._entityManager
                 .GetComponent(entityId, Transform)
                 .scale;
-
             if (!this._HasUnitScale(scale)) {
-                throw new RangeError(
-                    "The active camera and its parents must have unit scale.",
-                );
+                hasUnitScale = false;
+            }
+        }, parentByChildId);
+
+        if (!isHierarchyActive) {
+            throw new Error(
+                "The active camera and its parents must be active.",
+            );
+        }
+        if (!hasUnitScale) {
+            throw new RangeError(
+                "The active camera and its parents must have unit scale.",
+            );
+        }
+    }
+
+    _ForEachActiveCameraAncestor(visit, parentByChildId = null) {
+        const visitedEntityIds = new Set();
+        let entityId = this._activeCameraEntityId;
+
+        while (entityId !== null && entityId !== undefined) {
+            if (visitedEntityIds.has(entityId)) {
+                throw new Error("Parent hierarchy contains a cycle.");
+            }
+            visitedEntityIds.add(entityId);
+
+            if (visit(entityId) === false) {
+                return false;
             }
 
-            entityId = parentByChildId.get(entityId);
+            if (parentByChildId) {
+                entityId = parentByChildId.get(entityId);
+            } else {
+                const parent = this._entityManager.GetComponent(
+                    entityId,
+                    Parent,
+                );
+                entityId = parent?.ParentEntityId ?? null;
+            }
         }
+
+        return true;
     }
 
     _HasUnitScale(scale) {
@@ -519,7 +651,13 @@ export class Scene {
         return false;
     }
 
-    _ValidateStructuralChange({ type, entityId, componentType }) {
+    _ValidateStructuralChange({
+        type,
+        entityId,
+        componentType,
+        isActive,
+        isEnabled,
+    }) {
         if (this._state === "disposed") {
             throw new Error("Cannot change a disposed scene.");
         }
@@ -533,6 +671,20 @@ export class Scene {
         }
 
         this._ValidateRuntimeParentMutation(type, componentType);
+
+        if (type === "set-entity-active") {
+            this._ValidateEntityActiveState(entityId, isActive);
+            return;
+        }
+
+        if (type === "set-component-enabled") {
+            this._ValidateComponentEnabledState(
+                entityId,
+                componentType,
+                isEnabled,
+            );
+            return;
+        }
 
         if (type === "create-entity" || type === "add-component") {
             return;
@@ -608,6 +760,59 @@ export class Scene {
                 "Switch to another camera before removing the active camera, its Camera component, or its Transform component.",
             );
         }
+    }
+
+    _ValidateEntityActiveState(entityId, isActive) {
+        if (isActive || !this._IsInActiveCameraHierarchy(entityId)) {
+            return;
+        }
+
+        throw new Error(
+            "Choose another active camera before deactivating its hierarchy.",
+        );
+    }
+
+    _ValidateComponentEnabledState(entityId, componentType, isEnabled) {
+        if (
+            isEnabled ||
+            entityId !== this._activeCameraEntityId ||
+            componentType !== Camera
+        ) {
+            return;
+        }
+
+        throw new Error(
+            "Choose another active camera before disabling its Camera component.",
+        );
+    }
+
+    _IsInActiveCameraHierarchy(entityId) {
+        let isInHierarchy = false;
+        this._ForEachActiveCameraAncestor((currentEntityId) => {
+            if (currentEntityId === entityId) {
+                isInHierarchy = true;
+                return false;
+            }
+        });
+        return isInHierarchy;
+    }
+
+    _ValidateActiveCameraTransformScale(entityId, nextScale) {
+        this._ForEachActiveCameraAncestor((currentEntityId) => {
+            const scale =
+                currentEntityId === entityId
+                    ? nextScale
+                    : this._entityManager.GetComponent(
+                          currentEntityId,
+                          Transform,
+                      )?.scale;
+
+            if (scale && !this._HasUnitScale(scale)) {
+                throw new RangeError(
+                    "The active camera and its parents must have unit scale.",
+                );
+            }
+        });
     }
 
     _ValidateParentTransformRemoval(type, entityId, componentType) {
