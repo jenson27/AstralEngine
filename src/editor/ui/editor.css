@@ -666,6 +666,11 @@ body {
     overflow: hidden;
 }
 
+.editor-dock-right .editor-panel-content.inspector-panel {
+    overflow-x: hidden;
+    overflow-y: auto;
+}
+
 .editor-viewport {
     position: relative;
     min-width: 0;
