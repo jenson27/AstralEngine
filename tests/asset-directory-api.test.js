@@ -101,7 +101,7 @@ test("lists V1 asset metadata and classifies files", async (context) => {
             entry.type,
             entry.sizeBytes,
         ]),
-        [["creature.glb", "model", 4]],
+        [["creature.glb", "glb", 4]],
     );
 });
 

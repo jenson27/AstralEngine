@@ -178,7 +178,7 @@ test("panel status counts filtered files and visible folders", async (context) =
             name: "tree.glb",
             relativePath: "tree.glb",
             kind: "file",
-            type: "model",
+            type: "glb",
             sizeBytes: 20,
         },
     ];
@@ -310,4 +310,55 @@ test("panel shows catalog status, file IDs, and built-in asset IDs", async (cont
         "asset-browser-built-in-id",
     );
     assert.equal(builtInItem.textContent, "builtin:cube");
+});
+
+test("panel filters GLB files and shows their name, type, path, and size", async (context) => {
+    InstallFakeDom(context);
+    const entries = [
+        {
+            name: "character.glb",
+            relativePath: "models/character.glb",
+            kind: "file",
+            type: "glb",
+            sizeBytes: 4096,
+        },
+        {
+            name: "level.gltf",
+            relativePath: "models/level.gltf",
+            kind: "file",
+            type: "model",
+            sizeBytes: 128,
+        },
+    ];
+    const root = new FakeElement();
+    const panel = new AssetBrowserPanel(root, {
+        fetcher: async () => CreateAssetResponse(entries),
+    });
+    context.after(() => panel.Dispose());
+
+    const { details, entryList, typeSelect, searchInput } = GetPanelElements(root);
+    await panel.Refresh();
+    typeSelect.value = "glb";
+    typeSelect.Dispatch("change");
+    assert.equal(entryList.children.length, 1);
+    assert.equal(
+        entryList.children[0].children[0].children[1].textContent,
+        "character.glb",
+    );
+
+    searchInput.value = "character";
+    searchInput.Dispatch("input");
+    entryList.Dispatch("click", {
+        target: entryList.children[0].children[0],
+    });
+
+    const detailHeading = details.children[0];
+    const metadata = FindByClass(details, "asset-browser-detail-list");
+    assert.equal(detailHeading.textContent, "character.glb");
+    assert.deepEqual(
+        metadata.children.filter((child) => child.tagName === "DD").map(
+            (child) => child.textContent,
+        ),
+        ["GLB model", "Unregistered", "—", "models/character.glb", "4.0 KiB (4,096 bytes)"],
+    );
 });

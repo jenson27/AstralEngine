@@ -3,7 +3,9 @@ import test from "node:test";
 import { CreateCubeMesh } from "../../src/graphics/primitives/cube.js";
 import { Camera } from "../../src/components/graphics/camera.js";
 import { MeshRenderer } from "../../src/components/graphics/mesh-renderer.js";
+import { ModelRenderer } from "../../src/components/graphics/model-renderer.js";
 import { Material } from "../../src/graphics/material.js";
+import { ModelAsset } from "../../src/graphics/model-asset.js";
 import { AngularVelocity } from "../../src/components/angular-velocity.js";
 import { Transform } from "../../src/components/transform.js";
 import { AssetHandle } from "../../src/core/assets/asset-handle.js";
@@ -34,6 +36,19 @@ test("serializes and loads ECS data through registered component codecs", async 
             materialHandle,
         ]),
     );
+    const modelHandle = CreateLoadedHandle(
+        "model:die6",
+        new ModelAsset([{
+            mesh,
+            material,
+            transform: new Float32Array([
+                1, 0, 0, 0,
+                0, 1, 0, 0,
+                0, 0, 1, 0,
+                0, 0, 0, 1,
+            ]),
+        }]),
+    );
     const services = {
         ResolveMeshHandle(assetId) {
             assert.equal(assetId, "builtin:cube");
@@ -42,6 +57,10 @@ test("serializes and loads ECS data through registered component codecs", async 
         ResolveMaterialHandle(assetId) {
             assert.equal(assetId, "material:grass");
             return materialHandle;
+        },
+        ResolveModelHandle(assetId) {
+            assert.equal(assetId, "model:die6");
+            return modelHandle;
         },
     };
     const scene = new Scene("serializer-check");
@@ -76,6 +95,20 @@ test("serializes and loads ECS data through registered component codecs", async 
         new MeshRenderer(meshHandle, materialHandlesBySlot),
     );
 
+    const modelEntityId = scene.EntityManager.CreateEntity(
+        "30405060-cccc-4ccc-accc-304050607080",
+    );
+    scene.EntityManager.AddComponent(
+        modelEntityId,
+        Transform,
+        new Transform(),
+    );
+    scene.EntityManager.AddComponent(
+        modelEntityId,
+        ModelRenderer,
+        new ModelRenderer(modelHandle),
+    );
+
     const adapter = new EcsDocumentAdapter(componentRegistry);
     const json = JsonFormat.Stringify(adapter.Serialize(scene, services));
     const document = JsonFormat.Parse(json);
@@ -83,10 +116,14 @@ test("serializes and loads ECS data through registered component codecs", async 
 
     assert.equal(document.format, "astral-scene");
     assert.equal(document.version, 1);
-    assert.deepEqual(document.assets, ["builtin:cube", "material:grass"]);
+    assert.deepEqual(document.assets, [
+        "builtin:cube",
+        "material:grass",
+        "model:die6",
+    ]);
     assert.deepEqual(
         document.entities.map((entity) => entity.id),
-        [cameraEntityId, meshEntityId],
+        [cameraEntityId, meshEntityId, modelEntityId],
     );
 
     const loadedScene = await new SceneLoader(
@@ -113,10 +150,15 @@ test("serializes and loads ECS data through registered component codecs", async 
         meshEntityId,
         MeshRenderer,
     );
+    const loadedModelRenderer = loadedScene.EntityManager.GetComponent(
+        modelEntityId,
+        ModelRenderer,
+    );
 
     assert.deepEqual(loadedTransform.position, [2, 0, 0]);
     assert.equal(loadedAngularVelocity.y, 1);
     assert.strictEqual(loadedMeshRenderer.mesh, mesh);
+    assert.strictEqual(loadedModelRenderer.ModelHandle, modelHandle);
 
     for (const { materialSlot } of mesh.Submeshes) {
         assert.strictEqual(

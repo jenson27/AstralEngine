@@ -7,6 +7,7 @@ import {
     ValidateCameraControllerSettings,
 } from "./graphics/camera-controller.js";
 import { MeshRenderer } from "./graphics/mesh-renderer.js";
+import { ModelRenderer } from "./graphics/model-renderer.js";
 import { AngularVelocity } from "./angular-velocity.js";
 
 function ReadVector3(value, name) {
@@ -226,6 +227,33 @@ export function CreateSceneComponentRegistry() {
                 }
 
                 return { meshAssetId, materialsBySlot };
+            },
+        },
+    );
+
+    registry.Register(
+        "modelRenderer",
+        ModelRenderer,
+        (data, context) => {
+            const resolveModelHandle = context.RequireService(
+                "ResolveModelHandle",
+            );
+            return new ModelRenderer(resolveModelHandle(data.modelAssetId));
+        },
+        {
+            Version: 1,
+            Serialize: (modelRenderer) => {
+                const modelAssetId = modelRenderer.ModelHandle.AssetId;
+                if (
+                    typeof modelAssetId !== "string" ||
+                    modelAssetId.trim() === ""
+                ) {
+                    throw new TypeError(
+                        "Model asset serializer must return a non-empty ID.",
+                    );
+                }
+
+                return { modelAssetId };
             },
         },
     );

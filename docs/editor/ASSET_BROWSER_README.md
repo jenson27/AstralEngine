@@ -27,7 +27,8 @@
 - Clicking a folder opens it; breadcrumbs return to an ancestor folder
 - Search matches file and folder names in the current folder without case sensitivity
 - The type filter applies to files; folders stay visible
-- Supported file types are images, audio, 3D models, scenes, data, shaders, and other files
+- Supported file types include images, audio, general 3D models, GLB models, scenes, data, shaders, and other files
+- `.glb` files use the `glb` type and the `GLB models` filter; other supported model files use the `model` type
 - Scene files ending in `.scene.json` or `.editor-scene.json` use the scene type
 - `Refresh` requests the current folder again without using a cached response
 - When the panel becomes visible, `OnShow()` refreshes the current folder
@@ -38,6 +39,7 @@
 
 - Selecting a file shows its type, relative path, size, catalog status, and matching asset IDs
 - Image files show an image preview; other file types show a type label
+- GLB details show the file name, `GLB model` type, relative path, and file size
 - If an image preview fails, the view shows an unavailable message
 - Built-in assets with IDs that start with `builtin:` appear in the details view
 - A file with no matching catalog IDs is labeled `Unregistered`
@@ -61,6 +63,7 @@
 - The browser is read-only; it does not edit or manage files
 - Only image files receive a visual preview
 - File categories are inferred from extensions; unknown extensions use the `other` type
+- The browser does not render a model preview
 
 ## Source
 

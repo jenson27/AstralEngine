@@ -10,6 +10,7 @@ const BUILT_IN_EDIT_HANDLERS = new Map([
                 entityManager.GetEntityName(entityId),
             apply: ({ entityManager, entityId, value }) =>
                 entityManager.SetEntityName(entityId, value),
+            label: "Rename entity",
         },
     ],
     [
@@ -19,6 +20,7 @@ const BUILT_IN_EDIT_HANDLERS = new Map([
                 entityManager.IsEntityActive(entityId),
             apply: ({ scene, entityId, value }) =>
                 scene.SetEntityActive(entityId, value),
+            label: "Change entity active state",
         },
     ],
 ]);
@@ -143,12 +145,18 @@ export class InspectorEditController {
 
     async _ApplyField(scene, entityId, input, fieldId) {
         const entityManager = scene.EntityManager;
-        if (fieldId === "entity.name") {
-            input.value = entityManager.SetEntityName(entityId, input.value);
-            return;
-        }
-        if (fieldId === "entity.active") {
-            scene.SetEntityActive(entityId, input.checked);
+        const builtInHandler = BUILT_IN_EDIT_HANDLERS.get(fieldId);
+        if (builtInHandler) {
+            const value = input.type === "checkbox" ? input.checked : input.value;
+            const result = builtInHandler.apply({
+                scene,
+                entityManager,
+                entityId,
+                value,
+            });
+            if (typeof result === "string") {
+                input.value = result;
+            }
             return;
         }
 
@@ -270,10 +278,18 @@ export class InspectorEditController {
         this._history.RecordApplied({
             scene,
             label: this._GetEditLabel(input, fieldId, scene, entityId),
-            undo: () =>
-                this._ApplyState(scene, entityId, input, fieldId, previousState),
-            redo: () =>
-                this._ApplyState(scene, entityId, input, fieldId, nextState),
+            undo: this._CreateHistoryAction(
+                scene,
+                entityId,
+                fieldId,
+                previousState,
+            ),
+            redo: this._CreateHistoryAction(
+                scene,
+                entityId,
+                fieldId,
+                nextState,
+            ),
             retainedAssetIds: [
                 ...new Set([
                     ...this._GetStateAssetIds(previousState, scene, entityId),
@@ -281,6 +297,10 @@ export class InspectorEditController {
                 ]),
             ],
         });
+    }
+
+    _CreateHistoryAction(scene, entityId, fieldId, state) {
+        return () => this._ApplyState(scene, entityId, fieldId, state);
     }
 
     _GetStateAssetIds(state, scene, entityId) {
@@ -294,7 +314,7 @@ export class InspectorEditController {
         );
     }
 
-    async _ApplyState(scene, entityId, input, fieldId, state) {
+    async _ApplyState(scene, entityId, fieldId, state) {
         if (this._sceneManager.ActiveScene !== scene) {
             throw new Error("Cannot apply history to an inactive scene.");
         }
@@ -314,7 +334,7 @@ export class InspectorEditController {
         const context = this._CreateFieldContext(
             scene,
             entityId,
-            input,
+            undefined,
             fieldId,
             state.componentType,
         );
@@ -339,11 +359,9 @@ export class InspectorEditController {
     }
 
     _GetEditLabel(input, fieldId, scene, entityId) {
-        if (fieldId === "entity.name") {
-            return "Rename entity";
-        }
-        if (fieldId === "entity.active") {
-            return "Change entity active state";
+        const builtInHandler = BUILT_IN_EDIT_HANDLERS.get(fieldId);
+        if (builtInHandler) {
+            return builtInHandler.label;
         }
 
         const enabledField = this._ResolveEnabledField(fieldId);
@@ -400,7 +418,7 @@ export class InspectorEditController {
             component: resolved?.componentType
                 ? entityManager.GetComponent(entityId, resolved.componentType)
                 : null,
-            input,
+            ...(input === undefined ? {} : { input }),
             fieldId,
             readNumber: (field) => this._ReadNumber(field),
             assetAccess: this._assetAccess,

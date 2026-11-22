@@ -3,6 +3,7 @@
 import { Camera } from "../../components/graphics/camera.js";
 import { Transform } from "../../components/transform.js";
 import { IsEntityId } from "../../core/ecs/entity-id.js";
+import { GetSceneAssetReferences } from "../../core/scene/scene-asset-references.js";
 
 export class EcsDocumentAdapter {
     constructor(componentRegistry) {
@@ -115,16 +116,11 @@ export class EcsDocumentAdapter {
 
         for (const entity of entities) {
             for (const component of entity.components) {
-                if (component.typeId !== "meshRenderer") {
-                    continue;
-                }
-
-                assetIds.add(component.data.meshAssetId);
-
-                for (const materialAssetId of Object.values(
-                    component.data.materialsBySlot,
+                for (const [, assetId] of GetSceneAssetReferences(
+                    component.typeId,
+                    { data: component.data },
                 )) {
-                    assetIds.add(materialAssetId);
+                    assetIds.add(assetId);
                 }
             }
         }

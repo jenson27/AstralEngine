@@ -4,6 +4,7 @@ export async function CreateWebGpuPipeline({
     depthFormat,
     matrixBlockSize,
     shaderCode,
+    mipmapShaderCode,
 }) {
     const shaderModule = device.createShaderModule({
         code: shaderCode,
@@ -38,6 +39,14 @@ export async function CreateWebGpuPipeline({
                 visibility: GPUShaderStage.FRAGMENT,
                 sampler: {
                     type: "filtering",
+                },
+            },
+            {
+                binding: 2,
+                visibility: GPUShaderStage.FRAGMENT,
+                buffer: {
+                    type: "uniform",
+                    minBindingSize: 16,
                 },
             },
         ],
@@ -88,8 +97,28 @@ export async function CreateWebGpuPipeline({
         },
     });
 
+    const mipmapShaderModule = device.createShaderModule({
+        code: mipmapShaderCode,
+    });
+    const mipmapPipeline = await device.createRenderPipelineAsync({
+        layout: "auto",
+        vertex: {
+            module: mipmapShaderModule,
+            entryPoint: "VertexMain",
+        },
+        fragment: {
+            module: mipmapShaderModule,
+            entryPoint: "FragmentMain",
+            targets: [{ format: "rgba8unorm-srgb" }],
+        },
+        primitive: {
+            topology: "triangle-list",
+        },
+    });
+
     return {
         pipeline,
+        mipmapPipeline,
         transformBindGroupLayout,
         materialBindGroupLayout,
     };

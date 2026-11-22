@@ -2,13 +2,13 @@
 // It initializes GPU resources, including a vertex buffer, and draws a mesh to the canvas.
 
 import { AstralLogger } from "../diagnostics/logger.js";
-import { AssetHandle } from "../core/assets/asset-handle.js";
 import { Material } from "./material.js";
 import { GpuTimingTracker } from "./gpu-timing-tracker.js";
 import { WebGpuResourceCache } from "./webgpu-resource-cache.js";
 import { CreateWebGpuPipeline } from "./webgpu-pipeline-builder.js";
 
 const shaderUrl = new URL("./shaders/triangle.wgsl", import.meta.url);
+const mipmapShaderUrl = new URL("./shaders/mipmap.wgsl", import.meta.url);
 
 export class WebGPURenderer {
     constructor(canvas, memoryTracker = null, profiler = null) {
@@ -48,6 +48,7 @@ export class WebGPURenderer {
         this._transformBindGroupLayout = null;
         this._materialBindGroupLayout = null;
         this._textureSampler = null;
+        this._linearTextureSampler = null;
         this._transformBuffer = null;
         this._transformBufferMemoryToken = null;
         this._transformBindGroup = null;
@@ -73,7 +74,10 @@ export class WebGPURenderer {
         await this._InitializeDevice();
         this._ConfigureCanvasContext();
 
-        const shaderCode = await this._LoadShader();
+        const [shaderCode, mipmapShaderCode] = await Promise.all([
+            this._LoadShader(shaderUrl, "triangle"),
+            this._LoadShader(mipmapShaderUrl, "mipmap"),
+        ]);
 
         const pipelineResources = await CreateWebGpuPipeline({
             device: this._device,
@@ -81,6 +85,7 @@ export class WebGPURenderer {
             depthFormat: this._depthFormat,
             matrixBlockSize: this._matrixBlockSize,
             shaderCode,
+            mipmapShaderCode,
         });
         this._pipeline = pipelineResources.pipeline;
         this._transformBindGroupLayout =
@@ -92,11 +97,22 @@ export class WebGPURenderer {
             addressModeV: "repeat",
             magFilter: "linear",
             minFilter: "linear",
+            mipmapFilter: "linear",
+        });
+        this._linearTextureSampler = this._device.createSampler({
+            addressModeU: "repeat",
+            addressModeV: "repeat",
+            magFilter: "linear",
+            minFilter: "linear",
+            mipmapFilter: "nearest",
+            lodMaxClamp: 0,
         });
         this._gpuResourceCache = new WebGpuResourceCache({
             device: this._device,
             materialBindGroupLayout: this._materialBindGroupLayout,
             textureSampler: this._textureSampler,
+            linearTextureSampler: this._linearTextureSampler,
+            mipmapPipeline: pipelineResources.mipmapPipeline,
             trackGpuResource: (label, resourceType, bytes) =>
                 this._TrackGpuResource(label, resourceType, bytes),
             destroyGpuResource: (resource, memoryToken) =>
@@ -166,12 +182,12 @@ export class WebGPURenderer {
         this.EnsureDepthTexture();
     }
 
-    async _LoadShader() {
-        const shaderResponse = await fetch(shaderUrl);
+    async _LoadShader(url, shaderName) {
+        const shaderResponse = await fetch(url);
 
         if (!shaderResponse.ok) {
             throw new Error(
-                `Could not load triangle shader. HTTP ${shaderResponse.status}.`,
+                `Could not load ${shaderName} shader. HTTP ${shaderResponse.status}.`,
             );
         }
 
@@ -218,43 +234,37 @@ export class WebGPURenderer {
 
             this._RequireMatrix(renderItem.modelMatrix, "Model matrix");
 
-            if (!(renderItem.meshHandle instanceof AssetHandle)) {
-                throw new TypeError(
-                    "Render item requires a mesh asset handle.",
-                );
-            }
-
-            const mesh = renderItem.meshHandle.Current;
+            const mesh = renderItem.mesh;
             activeMeshes.add(mesh);
             const meshResource =
                 this._gpuResourceCache.GetMeshResource(mesh);
             const transformOffset = index * this._uniformStride;
 
             for (const submesh of meshResource.submeshes) {
-                const materialHandle =
-                    renderItem.materialHandlesBySlot?.[
-                        submesh.materialSlot
-                    ];
+                const material =
+                    renderItem.materialsBySlot?.[submesh.materialSlot];
 
-                if (!(materialHandle instanceof AssetHandle)) {
+                if (!material) {
                     throw new TypeError(
-                        `Render item has no material handle for slot "${submesh.materialSlot}".`,
+                        `Render item has no material for slot "${submesh.materialSlot}".`,
                     );
                 }
 
-                const material = materialHandle.Current;
-
                 if (!(material instanceof Material)) {
                     throw new TypeError(
-                        `Material handle for slot "${submesh.materialSlot}" must contain a Material.`,
+                        `Material for slot "${submesh.materialSlot}" must be a Material.`,
                     );
                 }
 
                 activeMaterials.add(material);
                 this._drawItems.push({
                     vertexBuffer: meshResource.vertexBuffer,
+                    indexBuffer: meshResource.indexBuffer,
+                    indexFormat: meshResource.indexFormat,
                     firstVertex: submesh.firstVertex,
                     vertexCount: submesh.vertexCount,
+                    firstIndex: submesh.firstIndex,
+                    indexCount: submesh.indexCount,
                     transformOffset,
                     materialBindGroup:
                         this._gpuResourceCache.GetMaterialBindGroup(material),
@@ -425,11 +435,23 @@ export class WebGPURenderer {
             ]);
             renderPass.setBindGroup(1, drawItem.materialBindGroup);
             renderPass.setVertexBuffer(0, drawItem.vertexBuffer);
-            renderPass.draw(
-                drawItem.vertexCount,
-                1,
-                drawItem.firstVertex,
-            );
+            if (drawItem.indexBuffer) {
+                renderPass.setIndexBuffer(
+                    drawItem.indexBuffer,
+                    drawItem.indexFormat,
+                );
+                renderPass.drawIndexed(
+                    drawItem.indexCount,
+                    1,
+                    drawItem.firstIndex,
+                );
+            } else {
+                renderPass.draw(
+                    drawItem.vertexCount,
+                    1,
+                    drawItem.firstVertex,
+                );
+            }
         }
 
         renderPass.end();
@@ -470,6 +492,7 @@ export class WebGPURenderer {
         this._transformBindGroupLayout = null;
         this._materialBindGroupLayout = null;
         this._textureSampler = null;
+        this._linearTextureSampler = null;
         this._transformBuffer = null;
         this._transformBufferMemoryToken = null;
         this._transformBindGroup = null;

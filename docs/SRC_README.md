@@ -24,11 +24,13 @@
 - [Transform](components/TRANSFORM_README.md) - Local transforms, interpolation, and world matrices
 - [Camera](components/graphics/CAMERA_README.md) - Camera matrices and first-person camera controls
 - [Mesh Renderer](components/graphics/MESH_RENDERER_README.md) - Mesh and material asset handles
+- [Model Renderer](components/graphics/MODEL_RENDERER_README.md) - Static GLB model asset handles
 - [Angular Velocity](components/ANGULAR_VELOCITY_README.md) - Angular rate data and its update system
 
 ## Other systems
 
 - [Graphics](graphics/GRAPHICS_README.md) - Mesh data, materials, loaders, and the WebGPU renderer
+- [GLB Assets](graphics/GLB_ASSETS_README.md) - Supported static GLB content and manifest setup
 - [Serialization](serialization/SERIALIZATION_README.md) - Versioned records, JSON rules, and scene documents
 
 ## Editor

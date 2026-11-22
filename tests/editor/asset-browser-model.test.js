@@ -11,7 +11,7 @@ test("filters by case-insensitive name and type while keeping folders visible", 
     const entries = [
         { name: "textures", kind: "directory", type: "folder" },
         { name: "Grass.PNG", kind: "file", type: "image" },
-        { name: "Enemy.glb", kind: "file", type: "model" },
+        { name: "Enemy.glb", kind: "file", type: "glb" },
     ];
 
     assert.deepEqual(
@@ -22,13 +22,14 @@ test("filters by case-insensitive name and type while keeping folders visible", 
         [entries[1]],
     );
     assert.deepEqual(
-        FilterAssetEntries(entries, { typeFilter: "model" }),
+        FilterAssetEntries(entries, { typeFilter: "glb" }),
         [entries[0], entries[2]],
     );
 });
 
 test("formats supported and unknown file types", () => {
     assert.equal(GetAssetFileTypeLabel("model"), "3D model");
+    assert.equal(GetAssetFileTypeLabel("glb"), "GLB model");
     assert.equal(GetAssetFileTypeLabel("unknown"), "Other");
 });
 

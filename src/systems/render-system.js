@@ -3,6 +3,8 @@
 import { Transform } from "../components/transform.js";
 import { Camera } from "../components/graphics/camera.js";
 import { MeshRenderer } from "../components/graphics/mesh-renderer.js";
+import { ModelRenderer } from "../components/graphics/model-renderer.js";
+import { MultiplyMatrix4 } from "../math/matrix4.js";
 
 export class RenderSystem {
     constructor(renderer) {
@@ -15,7 +17,7 @@ export class RenderSystem {
         this._renderer = renderer;
     }
 
-    PrepareRender(scene, { aspectRatio }) {
+    PrepareRender(scene, { aspectRatio, profiler }) {
         const entityManager = scene.EntityManager;
         const cameraEntity = scene.ActiveCameraEntityId;
         const camera = entityManager.GetComponent(cameraEntity, Camera);
@@ -44,11 +46,40 @@ export class RenderSystem {
             );
 
             renderItems.push({
-                meshHandle: meshRenderer.MeshHandle,
-                materialHandlesBySlot:
-                    meshRenderer.MaterialHandlesBySlot,
+                mesh: meshRenderer.mesh,
+                materialsBySlot: meshRenderer.MaterialsBySlot,
                 modelMatrix: transform.WorldMatrix,
             });
+        }
+
+        for (const entityId of scene.QueryActive(Transform, ModelRenderer)) {
+            const transform = entityManager.GetComponent(entityId, Transform);
+            const modelRenderer = entityManager.GetComponent(
+                entityId,
+                ModelRenderer,
+            );
+
+            const profilerScope = profiler?.BeginScope(
+                `ModelRenderer:${modelRenderer.ModelHandle.AssetId}`,
+                "asset",
+            ) ?? null;
+            try {
+                for (const primitive of modelRenderer.Model.Primitives) {
+                    const modelMatrix = new Float32Array(16);
+                    MultiplyMatrix4(
+                        modelMatrix,
+                        transform.WorldMatrix,
+                        primitive.transform,
+                    );
+                    renderItems.push({
+                        mesh: primitive.mesh,
+                        materialsBySlot: { default: primitive.material },
+                        modelMatrix,
+                    });
+                }
+            } finally {
+                profiler?.EndScope(profilerScope);
+            }
         }
 
         this._renderer.SetRenderItems(

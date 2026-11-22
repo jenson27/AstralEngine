@@ -23,6 +23,7 @@ import { AssetScope } from "./core/assets/asset-scope.js";
 import { BuiltinMeshLoader } from "./graphics/assets/builtin-mesh-loader.js";
 import { ImageTextureLoader } from "./graphics/assets/image-texture-loader.js";
 import { MaterialLoader } from "./graphics/assets/material-loader.js";
+import { GlbModelLoader } from "./graphics/assets/glb-model-loader.js";
 
 async function FetchRequiredResponse(url, resourceName) {
     const response = await fetch(url);
@@ -36,7 +37,7 @@ async function FetchRequiredResponse(url, resourceName) {
     return response;
 }
 
-async function CreateAssetRuntime(memoryTracker) {
+async function CreateAssetRuntime(memoryTracker, profiler) {
     const manifestResponse = await FetchRequiredResponse(
         "/assets/asset-manifest.json",
         "asset manifest",
@@ -56,6 +57,10 @@ async function CreateAssetRuntime(memoryTracker) {
     assetLoaderRegistry.Register(
         "basic:material",
         new MaterialLoader(),
+    );
+    assetLoaderRegistry.Register(
+        "gltf:glb",
+        new GlbModelLoader(undefined, undefined, undefined, profiler),
     );
 
     const assetManager = new AssetManager(
@@ -106,6 +111,8 @@ function CreateSceneManager({ renderer, inputManager, assetManager }) {
                     assetScope.GetHandleRequired(meshAssetId),
                 ResolveMaterialHandle: (materialAssetId) =>
                     assetScope.GetHandleRequired(materialAssetId),
+                ResolveModelHandle: (modelAssetId) =>
+                    assetScope.GetHandleRequired(modelAssetId),
             },
         }),
         () => new AssetScope(assetManager),
@@ -177,7 +184,7 @@ export async function StartBrowserApplication({
             await inputMapResponse.json(),
         );
 
-        const assetRuntime = await CreateAssetRuntime(memoryTracker);
+        const assetRuntime = await CreateAssetRuntime(memoryTracker, profiler);
         sceneManager = CreateSceneManager({
             renderer,
             inputManager,

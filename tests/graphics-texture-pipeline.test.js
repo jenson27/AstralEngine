@@ -18,12 +18,12 @@ function CreateLoadedHandle(assetId, asset) {
     return handle;
 }
 
-function WithGpuTextureUsage(callback) {
-    const previous = Object.getOwnPropertyDescriptor(
-        globalThis,
-        "GPUTextureUsage",
-    );
-
+function WithGpuUsage(callback) {
+    const names = ["GPUTextureUsage", "GPUBufferUsage"];
+    const previous = new Map(names.map((name) => [
+        name,
+        Object.getOwnPropertyDescriptor(globalThis, name),
+    ]));
     Object.defineProperty(globalThis, "GPUTextureUsage", {
         configurable: true,
         value: {
@@ -33,18 +33,21 @@ function WithGpuTextureUsage(callback) {
         },
         writable: true,
     });
+    Object.defineProperty(globalThis, "GPUBufferUsage", {
+        configurable: true,
+        value: { UNIFORM: 1, COPY_DST: 2 },
+        writable: true,
+    });
 
     try {
         return callback();
     } finally {
-        if (previous) {
-            Object.defineProperty(
-                globalThis,
-                "GPUTextureUsage",
-                previous,
-            );
-        } else {
-            Reflect.deleteProperty(globalThis, "GPUTextureUsage");
+        for (const [name, descriptor] of previous) {
+            if (descriptor) {
+                Object.defineProperty(globalThis, name, descriptor);
+            } else {
+                Reflect.deleteProperty(globalThis, name);
+            }
         }
     }
 }
@@ -54,7 +57,13 @@ function CreateFakeDevice() {
         textureDescriptors: [],
         textures: [],
         copies: [],
+        textureWrites: [],
+        buffers: [],
+        bufferWrites: [],
         bindGroupDescriptors: [],
+        textureViews: [],
+        renderPasses: [],
+        submissions: [],
     };
 
     const device = {
@@ -67,8 +76,12 @@ function CreateFakeDevice() {
                 },
             };
 
-            texture.view = { texture };
-            texture.createView = () => texture.view;
+            texture.createView = (viewDescriptor = {}) => {
+                const view = { texture, descriptor: viewDescriptor };
+                state.textureViews.push(view);
+                return view;
+            };
+            texture.view = texture.createView();
 
             state.textureDescriptors.push(descriptor);
             state.textures.push(texture);
@@ -81,14 +94,85 @@ function CreateFakeDevice() {
             return bindGroup;
         },
 
+        createBuffer(descriptor) {
+            const buffer = {
+                descriptor,
+                destroyCount: 0,
+                destroy() {
+                    this.destroyCount += 1;
+                },
+            };
+            state.buffers.push(buffer);
+            return buffer;
+        },
+
+        createCommandEncoder() {
+            const command = { renderPasses: [] };
+            return {
+                beginRenderPass(descriptor) {
+                    const renderPass = {
+                        descriptor,
+                        pipeline: null,
+                        bindGroup: null,
+                        drawVertexCount: 0,
+                        ended: false,
+                        setPipeline(pipeline) {
+                            this.pipeline = pipeline;
+                        },
+                        setBindGroup(index, bindGroup) {
+                            this.bindGroup = { index, bindGroup };
+                        },
+                        draw(vertexCount) {
+                            this.drawVertexCount = vertexCount;
+                        },
+                        end() {
+                            this.ended = true;
+                        },
+                    };
+                    command.renderPasses.push(renderPass);
+                    state.renderPasses.push(renderPass);
+                    return renderPass;
+                },
+                finish() {
+                    return command;
+                },
+            };
+        },
+
         queue: {
             copyExternalImageToTexture(source, destination, size) {
                 state.copies.push({ source, destination, size });
+            },
+            writeTexture(destination, data, layout, size) {
+                state.textureWrites.push({
+                    destination,
+                    data: data.slice(),
+                    layout,
+                    size,
+                });
+            },
+            writeBuffer(buffer, offset, data) {
+                state.bufferWrites.push({
+                    buffer,
+                    offset,
+                    data: data.slice(),
+                });
+            },
+            submit(commands) {
+                state.submissions.push(commands);
             },
         },
     };
 
     return { device, state };
+}
+
+function CreateFakeMipmapPipeline() {
+    return {
+        getBindGroupLayout() {
+            return {};
+        },
+    };
 }
 
 test("cube mesh has one UV pair for each vertex", () => {
@@ -109,21 +193,14 @@ test("cube mesh has one UV pair for each vertex", () => {
     );
 });
 
-test("renderer resolves current handles into draw items per material slot", () => {
+test("renderer prepares draw items from normalized material slots", () => {
     const renderer = new WebGPURenderer({});
     const cube = CreateCubeMesh();
-    const meshHandle = CreateLoadedHandle("builtin:cube", cube);
     const materials = {
         side: new Material({ bitmap: {} }),
         top: new Material({ bitmap: {} }),
         bottom: new Material({ bitmap: {} }),
     };
-    const materialHandlesBySlot = Object.fromEntries(
-        Object.entries(materials).map(([materialSlot, material]) => [
-            materialSlot,
-            CreateLoadedHandle(`material:${materialSlot}`, material),
-        ]),
-    );
     let resolvedMesh;
 
     renderer._device = {
@@ -152,8 +229,8 @@ test("renderer resolves current handles into draw items per material slot", () =
     renderer.SetRenderItems(
         [
             {
-                meshHandle,
-                materialHandlesBySlot,
+                mesh: cube,
+                materialsBySlot: materials,
                 modelMatrix: new Float32Array(16),
             },
         ],
@@ -192,14 +269,16 @@ test("renderer resolves current handles into draw items per material slot", () =
 
     const replacementMesh = CreateCubeMesh();
     const replacementTopMaterial = new Material({ bitmap: {} });
-    meshHandle._Replace(replacementMesh);
-    materialHandlesBySlot.top._Replace(replacementTopMaterial);
+    const replacementMaterials = {
+        ...materials,
+        top: replacementTopMaterial,
+    };
 
     renderer.SetRenderItems(
         [
             {
-                meshHandle,
-                materialHandlesBySlot,
+                mesh: replacementMesh,
+                materialsBySlot: replacementMaterials,
                 modelMatrix: new Float32Array(16),
             },
         ],
@@ -212,6 +291,78 @@ test("renderer resolves current handles into draw items per material slot", () =
         renderer._drawItems[1].materialBindGroup.material,
         replacementTopMaterial,
     );
+
+    const directMesh = new Mesh(
+        new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+        new Float32Array(6),
+    );
+    const directMaterial = new Material({ bitmap: {} });
+    renderer.SetRenderItems(
+        [
+            {
+                mesh: directMesh,
+                materialsBySlot: { default: directMaterial },
+                modelMatrix: new Float32Array(16),
+            },
+        ],
+        new Float32Array(16),
+        new Float32Array(16),
+    );
+    assert.equal(renderer._drawItems.length, 1);
+    assert.strictEqual(
+        renderer._drawItems[0].materialBindGroup.material,
+        directMaterial,
+    );
+});
+
+test("renderer submits indexed mesh draws with the mesh index format", () => {
+    const renderer = new WebGPURenderer({ width: 1, height: 1 });
+    const calls = [];
+    const renderPass = {
+        setPipeline() {},
+        setBindGroup() {},
+        setVertexBuffer() {},
+        setIndexBuffer(buffer, format) {
+            calls.push({ type: "index-buffer", buffer, format });
+        },
+        drawIndexed(indexCount, instanceCount, firstIndex) {
+            calls.push({ type: "draw-indexed", indexCount, instanceCount, firstIndex });
+        },
+        end() {},
+    };
+    renderer._deviceLostInfo = null;
+    renderer.EnsureDepthTexture = () => {};
+    renderer._gpuTimingTracker = { BeginFrame: () => null };
+    renderer._device = {
+        createCommandEncoder() {
+            return {
+                beginRenderPass: () => renderPass,
+                finish: () => ({}),
+            };
+        },
+        queue: { submit() {} },
+    };
+    renderer._context = {
+        getCurrentTexture: () => ({ createView: () => ({}) }),
+    };
+    renderer._pipeline = {};
+    renderer._transformBindGroup = {};
+    renderer._drawItems = [{
+        vertexBuffer: {},
+        indexBuffer: {},
+        indexFormat: "uint16",
+        indexCount: 3,
+        firstIndex: 6,
+        transformOffset: 0,
+        materialBindGroup: {},
+    }];
+
+    renderer.Render();
+
+    assert.deepEqual(calls, [
+        { type: "index-buffer", buffer: renderer._drawItems[0].indexBuffer, format: "uint16" },
+        { type: "draw-indexed", indexCount: 3, instanceCount: 1, firstIndex: 6 },
+    ]);
 });
 
 test("mesh rejects UV data with the wrong number of values", () => {
@@ -294,7 +445,7 @@ test("material acquisition loads and releases its image dependency", async () =>
 });
 
 test("GPU texture upload includes required usages and reuses its cache entry", () => {
-    WithGpuTextureUsage(() => {
+    WithGpuUsage(() => {
         const { device, state } = CreateFakeDevice();
         const bitmap = {};
         const imageAsset = {
@@ -302,11 +453,16 @@ test("GPU texture upload includes required usages and reuses its cache entry", (
             width: 16,
             height: 8,
         };
+        const trackedBytes = [];
         const resourceCache = new WebGpuResourceCache({
             device,
             materialBindGroupLayout: {},
             textureSampler: {},
-            trackGpuResource: () => null,
+            mipmapPipeline: CreateFakeMipmapPipeline(),
+            trackGpuResource: (_label, _resourceType, bytes) => {
+                trackedBytes.push(bytes);
+                return null;
+            },
             destroyGpuResource: (resource) => resource?.destroy(),
         });
 
@@ -315,6 +471,7 @@ test("GPU texture upload includes required usages and reuses its cache entry", (
 
         assert.strictEqual(first, second);
         assert.equal(state.textureDescriptors.length, 1);
+        assert.equal(state.textureDescriptors[0].mipLevelCount, 5);
         assert.equal(
             state.textureDescriptors[0].usage,
             globalThis.GPUTextureUsage.TEXTURE_BINDING |
@@ -329,14 +486,67 @@ test("GPU texture upload includes required usages and reuses its cache entry", (
             state.textures[0],
         );
         assert.deepEqual(state.copies[0].size, [16, 8, 1]);
+        assert.equal(state.renderPasses.length, 4);
+        assert.deepEqual(
+            state.renderPasses.map(({ descriptor }) =>
+                descriptor.colorAttachments[0].view.descriptor.baseMipLevel,
+            ),
+            [1, 2, 3, 4],
+        );
+        assert.ok(state.renderPasses.every((pass) =>
+            pass.ended && pass.drawVertexCount === 3,
+        ));
+        assert.equal(state.submissions.length, 1);
+        assert.deepEqual(trackedBytes, [684]);
+    });
+});
+
+test("GPU mesh upload preserves indexed geometry", () => {
+    WithGpuUsage(() => {
+        globalThis.GPUBufferUsage.VERTEX = 4;
+        globalThis.GPUBufferUsage.INDEX = 8;
+        const { device, state } = CreateFakeDevice();
+        const resourceCache = new WebGpuResourceCache({
+            device,
+            materialBindGroupLayout: {},
+            textureSampler: {},
+            mipmapPipeline: CreateFakeMipmapPipeline(),
+            trackGpuResource: () => null,
+            destroyGpuResource: (resource) => resource?.destroy(),
+        });
+        const mesh = new Mesh(
+            new Float32Array([
+                0, 0, 0,
+                1, 0, 0,
+                0, 1, 0,
+            ]),
+            new Float32Array(6),
+            null,
+            new Uint16Array([0, 1, 2]),
+        );
+
+        const meshResource = resourceCache.GetMeshResource(mesh);
+        assert.equal(meshResource.indexFormat, "uint16");
+        assert.equal(meshResource.indexCount, 3);
+        assert.deepEqual(
+            Array.from(state.bufferWrites[1].data),
+            [0, 1, 2],
+        );
+        assert.equal(
+            state.buffers[1].descriptor.usage,
+            globalThis.GPUBufferUsage.INDEX | globalThis.GPUBufferUsage.COPY_DST,
+        );
+        resourceCache.Dispose();
+        assert.ok(state.buffers.every((buffer) => buffer.destroyCount === 1));
     });
 });
 
 test("material bind group is cached and connects texture and sampler", () => {
-    WithGpuTextureUsage(() => {
+    WithGpuUsage(() => {
         const { device, state } = CreateFakeDevice();
         const layout = {};
         const sampler = {};
+        const linearSampler = {};
         const imageAsset = {
             bitmap: {},
             width: 4,
@@ -347,27 +557,76 @@ test("material bind group is cached and connects texture and sampler", () => {
             device,
             materialBindGroupLayout: layout,
             textureSampler: sampler,
+            linearTextureSampler: linearSampler,
+            mipmapPipeline: CreateFakeMipmapPipeline(),
             trackGpuResource: () => null,
             destroyGpuResource: (resource) => resource?.destroy(),
         });
 
         const first = resourceCache.GetMaterialBindGroup(material);
         const second = resourceCache.GetMaterialBindGroup(material);
+        const materialBindGroupDescriptor = state.bindGroupDescriptors.find(
+            ({ layout: bindGroupLayout }) => bindGroupLayout === layout,
+        );
 
         assert.strictEqual(first, second);
-        assert.equal(state.bindGroupDescriptors.length, 1);
+        assert.ok(materialBindGroupDescriptor);
         assert.strictEqual(
-            state.bindGroupDescriptors[0].layout,
+            materialBindGroupDescriptor.layout,
             layout,
         );
         assert.strictEqual(
-            state.bindGroupDescriptors[0].entries[0].resource,
-            state.textures[0].view,
+            materialBindGroupDescriptor.entries[0].resource.texture,
+            state.textures[0],
         );
         assert.strictEqual(
-            state.bindGroupDescriptors[0].entries[1].resource,
+            materialBindGroupDescriptor.entries[1].resource,
             sampler,
         );
+        assert.equal(materialBindGroupDescriptor.entries[2].binding, 2);
+        assert.deepEqual(Array.from(state.bufferWrites[0].data), [1, 1, 1, 1]);
+
+        const linearMaterial = new Material(imageAsset, {
+            baseColorMinFilter: "linear",
+        });
+        resourceCache.GetMaterialBindGroup(linearMaterial);
+        const linearBindGroup = state.bindGroupDescriptors.find(
+            ({ layout: bindGroupLayout, entries }) =>
+                bindGroupLayout === layout && entries[1].resource === linearSampler,
+        );
+        assert.ok(linearBindGroup);
+    });
+});
+
+test("material without a texture uses a cached white texture and base color factor", () => {
+    WithGpuUsage(() => {
+        const { device, state } = CreateFakeDevice();
+        const resourceCache = new WebGpuResourceCache({
+            device,
+            materialBindGroupLayout: {},
+            textureSampler: {},
+            mipmapPipeline: CreateFakeMipmapPipeline(),
+            trackGpuResource: () => null,
+            destroyGpuResource: (resource) => resource?.destroy(),
+        });
+        const material = new Material(null, {
+            baseColorFactor: [0.25, 0.5, 0.75, 1],
+        });
+
+        resourceCache.GetMaterialBindGroup(material);
+        assert.equal(state.textureWrites.length, 1);
+        assert.deepEqual(
+            Array.from(state.textureWrites[0].data),
+            [255, 255, 255, 255],
+        );
+        assert.deepEqual(
+            Array.from(state.bufferWrites[0].data),
+            [0.25, 0.5, 0.75, 1],
+        );
+
+        resourceCache.Dispose();
+        assert.equal(state.textures[0].destroyCount, 1);
+        assert.equal(state.buffers[0].destroyCount, 1);
     });
 });
 
@@ -376,6 +635,7 @@ test("resource cache releases GPU textures unused by active materials", () => {
         device: {},
         materialBindGroupLayout: {},
         textureSampler: {},
+        mipmapPipeline: CreateFakeMipmapPipeline(),
         trackGpuResource: () => null,
         destroyGpuResource: (resource) => resource?.destroy(),
     });

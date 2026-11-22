@@ -18,7 +18,7 @@ const FILE_TYPES_BY_EXTENSION = new Map([
     [".ogg", "audio"],
     [".wav", "audio"],
     [".fbx", "model"],
-    [".glb", "model"],
+    [".glb", "glb"],
     [".gltf", "model"],
     [".obj", "model"],
     [".frag", "shader"],

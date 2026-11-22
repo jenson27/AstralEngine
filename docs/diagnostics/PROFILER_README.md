@@ -22,6 +22,8 @@
 | `Profiler.GetAsyncSpans()` | Return retained and currently running async spans in start-time order |
 | `ProfileScope()` / `ProfileFunction()` | Measure synchronous callbacks and functions |
 | `ProfileAsyncScope()` / `ProfileAsyncFunction()` | Measure asynchronous callbacks and functions |
+| `GlbModelLoader.Load()` | Records an async `GLB.Load:<asset ID>` span for fetch, parsing, and image decoding |
+| `RenderSystem.PrepareRender()` | Records a `ModelRenderer:<asset ID>` CPU scope while preparing that model's render items |
 
 ## Capture lifecycle
 
@@ -44,6 +46,7 @@
 - Null or stale scope tokens are ignored
 - Async scopes are top-level frame slices, may overlap, and set `isAsync` to `true`
 - Async spans are separate records that preserve elapsed time across frames and can include waiting; they are not CPU time
+- GLB load spans include network and image-decoding waits; their duration is elapsed time, not CPU-only time
 - `EndFrame()` marks an open async frame slice incomplete but keeps its async span running
 - `EndAsyncScope()` completes the span and records its ending frame when available
 - The default active and completed async span capacities are 256 each
@@ -58,6 +61,7 @@
 - GPU results arrive asynchronously and are attached to a frame that is still retained
 - `RecordGpuFrameTime()` returns `false` when the frame is no longer in the capture buffer
 - GPU timing can be unavailable when the browser or GPU does not support timestamp queries
+- GPU timing covers the full render pass; `ModelRenderer:<asset ID>` scopes measure CPU preparation, not per-model GPU execution
 
 ## Profiling helpers
 
@@ -80,3 +84,5 @@
 - `src/core/engine.js`
 - `src/core/scene/system-scheduler.js`
 - `src/graphics/webgpu-renderer.js`
+- `src/graphics/assets/glb-model-loader.js`
+- `src/systems/render-system.js`

@@ -1,0 +1,316 @@
+.asset-browser-panel {
+    display: grid;
+    grid-template-rows: auto auto auto minmax(0, 1fr);
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    min-height: 0;
+    color: #e8eaf0;
+    font: 0.76rem/1.35 system-ui, sans-serif;
+}
+
+.asset-browser-toolbar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(5.5rem, 0.8fr);
+    gap: 0.35rem;
+    padding: 0.45rem;
+    border-bottom: 1px solid #303946;
+    background: #151a22;
+}
+
+.asset-browser-toolbar button,
+.asset-browser-toolbar input,
+.asset-browser-toolbar select {
+    min-width: 0;
+    border: 1px solid #414956;
+    border-radius: 0.25rem;
+    padding: 0.3rem 0.4rem;
+    background: #202631;
+    color: #e8eaf0;
+    font: inherit;
+}
+
+.asset-browser-toolbar button {
+    grid-column: 1 / -1;
+    justify-self: start;
+    cursor: pointer;
+}
+
+.asset-browser-toolbar button:disabled {
+    color: #788394;
+    cursor: default;
+}
+
+.asset-browser-toolbar label {
+    display: grid;
+    gap: 0.15rem;
+    min-width: 0;
+    color: #aeb9c8;
+    font-size: 0.68rem;
+}
+
+.asset-browser-toolbar input,
+.asset-browser-toolbar select {
+    width: 100%;
+    background: #10141b;
+}
+
+.asset-browser-toolbar button:focus-visible,
+.asset-browser-toolbar input:focus-visible,
+.asset-browser-toolbar select:focus-visible,
+.asset-browser-breadcrumb:focus-visible,
+.asset-browser-entry:focus-visible {
+    outline: 1px solid #72b7ff;
+    outline-offset: 1px;
+}
+
+.asset-browser-breadcrumbs {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    min-width: 0;
+    overflow-x: auto;
+    padding: 0.35rem 0.45rem;
+    border-bottom: 1px solid #303946;
+    white-space: nowrap;
+}
+
+.asset-browser-breadcrumb {
+    flex: 0 0 auto;
+    border: 0;
+    border-radius: 0.2rem;
+    padding: 0.15rem 0.25rem;
+    background: transparent;
+    color: #9fc9ef;
+    font: inherit;
+    cursor: pointer;
+}
+
+.asset-browser-breadcrumb:hover {
+    background: #202631;
+}
+
+.asset-browser-breadcrumb-separator {
+    color: #788394;
+}
+
+.asset-browser-status {
+    min-height: 1.65rem;
+    overflow: hidden;
+    padding: 0.3rem 0.5rem;
+    color: #9ba7b7;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.asset-browser-status[data-state="error"] {
+    color: #f08a86;
+}
+
+.asset-browser-body {
+    display: grid;
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    min-width: 0;
+    min-height: 0;
+}
+
+.asset-browser-entry-list {
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 0.35rem;
+}
+
+.asset-browser-entry-item {
+    min-width: 0;
+}
+
+.asset-browser-entry {
+    display: grid;
+    grid-template-columns: 2.5rem minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 0.4rem;
+    width: 100%;
+    min-width: 0;
+    border: 1px solid transparent;
+    border-radius: 0.25rem;
+    padding: 0.35rem;
+    background: transparent;
+    color: #d7dde7;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+}
+
+.asset-browser-entry:hover {
+    background: #202631;
+}
+
+.asset-browser-entry[aria-pressed="true"] {
+    border-color: #455266;
+    background: #263243;
+}
+
+.asset-browser-entry-icon {
+    overflow: hidden;
+    color: #8aaac5;
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-align: center;
+    text-overflow: ellipsis;
+}
+
+.asset-browser-entry[data-asset-kind="directory"] .asset-browser-entry-icon {
+    color: #d5b86d;
+}
+
+.asset-browser-entry-name,
+.asset-browser-entry-meta {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.asset-browser-entry-meta {
+    color: #9ba7b7;
+    font-size: 0.68rem;
+}
+
+.asset-browser-entry-meta[data-catalog-status="registered"] {
+    color: #91c79c;
+}
+
+.asset-browser-entry-meta[data-catalog-status="unregistered"] {
+    color: #d5b86d;
+}
+
+.asset-browser-empty {
+    margin: 0;
+    padding: 0.65rem;
+    color: #9ba7b7;
+}
+
+.asset-browser-details {
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    border-top: 1px solid #303946;
+    background: #171c24;
+}
+
+.asset-browser-details-heading {
+    overflow: hidden;
+    margin: 0;
+    padding: 0.4rem 0.55rem;
+    border-bottom: 1px solid #303946;
+    color: #e8eaf0;
+    font-size: 0.76rem;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.asset-browser-details-body {
+    display: grid;
+    grid-template-columns: minmax(4rem, 0.8fr) minmax(0, 1.2fr);
+    align-content: start;
+    gap: 0.45rem;
+    min-width: 0;
+    padding: 0.45rem;
+}
+
+.asset-browser-details-body-empty {
+    display: flex;
+    flex-direction: column;
+}
+
+.asset-browser-preview {
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: 4rem;
+    max-height: 8rem;
+    overflow: hidden;
+    border: 1px solid #303946;
+    border-radius: 0.25rem;
+    background: #10141b;
+}
+
+.asset-browser-preview img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    max-height: 8rem;
+    object-fit: contain;
+}
+
+.asset-browser-preview-icon {
+    color: #8aaac5;
+    font-size: 0.7rem;
+    font-weight: 700;
+}
+
+.asset-browser-detail-list {
+    display: grid;
+    grid-template-columns: 2.8rem minmax(0, 1fr);
+    align-content: start;
+    gap: 0.25rem;
+    min-width: 0;
+    margin: 0;
+}
+
+.asset-browser-detail-label {
+    color: #9ba7b7;
+    font-size: 0.68rem;
+}
+
+.asset-browser-detail-value {
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: #d7dde7;
+    font: 0.68rem/1.35 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.asset-browser-built-in-assets {
+    grid-column: 1 / -1;
+    min-width: 0;
+    padding: 0.45rem;
+    border-top: 1px solid #303946;
+}
+
+.asset-browser-built-in-heading {
+    margin: 0 0 0.35rem;
+    color: #e8eaf0;
+    font-size: 0.72rem;
+}
+
+.asset-browser-built-in-list {
+    display: grid;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.asset-browser-built-in-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.4rem;
+    min-width: 0;
+    color: #d7dde7;
+    font: 0.68rem/1.35 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+
+.asset-browser-built-in-id {
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.asset-browser-built-in-type {
+    flex: 0 0 auto;
+    color: #9ba7b7;
+}

@@ -148,6 +148,17 @@
       },
       "version": 1,
       "dependencies": ["texture:dirt"]
+    },
+    {
+      "id": "model:die6",
+      "typeId": "model",
+      "loaderId": "gltf:glb",
+      "source": {
+        "kind": "glb",
+        "url": "/assets/models/Die6.glb"
+      },
+      "version": 1,
+      "dependencies": []
     }
   ]
 }

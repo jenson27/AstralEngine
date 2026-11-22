@@ -88,6 +88,11 @@ test("renders a parented camera and mesh using interpolated world transforms", (
         const [renderItems, viewMatrix, projectionMatrix] = renderCall;
 
         assert.equal(renderItems.length, 1);
+        assert.strictEqual(renderItems[0].mesh, mesh);
+        assert.strictEqual(
+            renderItems[0].materialsBySlot.default,
+            materialHandle.Current,
+        );
         assert.equal(renderItems[0].modelMatrix[12], 3);
         assert.equal(viewMatrix[12], -2);
         assert.ok(projectionMatrix instanceof Float32Array);

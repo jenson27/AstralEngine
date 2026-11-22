@@ -2,19 +2,26 @@ import { AngularVelocity } from "../components/angular-velocity.js";
 import { CameraController } from "../components/graphics/camera-controller.js";
 import { Camera } from "../components/graphics/camera.js";
 import { MeshRenderer } from "../components/graphics/mesh-renderer.js";
+import { ModelRenderer } from "../components/graphics/model-renderer.js";
 import { Parent } from "../components/parent.js";
 import { Transform } from "../components/transform.js";
+import { GetSceneAssetReferences } from "../core/scene/scene-asset-references.js";
 import { InspectorComponentRegistry } from "./panels/inspector/component-registry.js";
 import { AngularVelocityInspector } from "./panels/inspector/components/angular-velocity-inspector.js";
 import { CameraControllerInspector } from "./panels/inspector/components/camera-controller-inspector.js";
 import { CameraInspector } from "./panels/inspector/components/camera-inspector.js";
 import { MeshRendererInspector } from "./panels/inspector/components/mesh-renderer-inspector.js";
+import { ModelRendererInspector } from "./panels/inspector/components/model-renderer-inspector.js";
 import { ParentInspector } from "./panels/inspector/components/parent-inspector.js";
 import { TransformInspector } from "./panels/inspector/components/transform-inspector.js";
 import {
     CreateMeshRenderer,
     RenderMeshRendererAddFields,
 } from "./component-authoring/mesh-renderer-authoring.js";
+import {
+    CreateModelRenderer,
+    RenderModelRendererAddFields,
+} from "./component-authoring/model-renderer-authoring.js";
 
 function ValidateAssetIds(assetIds) {
     if (
@@ -27,20 +34,6 @@ function ValidateAssetIds(assetIds) {
         throw new TypeError("Component asset references must be asset ID strings.");
     }
     return [...new Set(assetIds)];
-}
-
-function GetMeshRendererAssetIds({ component, state }) {
-    const meshHandle = state?.meshHandle ?? component?.MeshHandle;
-    if (!meshHandle) {
-        return [];
-    }
-
-    const materialHandlesBySlot =
-        state?.materialHandlesBySlot ?? component.MaterialHandlesBySlot;
-    return [
-        meshHandle.AssetId,
-        ...Object.values(materialHandlesBySlot).map((handle) => handle.AssetId),
-    ];
 }
 
 export class EditorComponentAuthoringCatalog {
@@ -138,17 +131,31 @@ export class EditorComponentAuthoringCatalog {
     }
 
     GetAssetIdsForComponent(componentType, component, context = {}) {
-        const provider = this.GetByType(componentType)?.getAssetIds;
-        return provider
-            ? ValidateAssetIds(provider({ ...context, component, state: null }))
-            : [];
+        const definition = this.GetByType(componentType);
+        const source = { ...context, component, state: null };
+        const references = GetSceneAssetReferences(
+            definition?.typeId,
+            source,
+        );
+        const assetIds =
+            references.length > 0
+                ? references.map(([, assetId]) => assetId)
+                : definition?.getAssetIds?.(source) ?? [];
+        return ValidateAssetIds(assetIds);
     }
 
     GetAssetIdsForState(componentType, state, context = {}) {
-        const provider = this.GetByType(componentType)?.getAssetIds;
-        return provider
-            ? ValidateAssetIds(provider({ ...context, component: null, state }))
-            : [];
+        const definition = this.GetByType(componentType);
+        const source = { ...context, component: null, state };
+        const references = GetSceneAssetReferences(
+            definition?.typeId,
+            source,
+        );
+        const assetIds =
+            references.length > 0
+                ? references.map(([, assetId]) => assetId)
+                : definition?.getAssetIds?.(source) ?? [];
+        return ValidateAssetIds(assetIds);
     }
 
     GetAssetIds(scene) {
@@ -256,7 +263,13 @@ export function CreateEditorComponentAuthoringCatalog() {
         renderAddFields: RenderMeshRendererAddFields,
         requiredComponentTypes: [Transform],
         inspector: MeshRendererInspector,
-        getAssetIds: GetMeshRendererAssetIds,
+    });
+    catalog.Register("modelRenderer", ModelRenderer, {
+        title: "Model Renderer",
+        create: CreateModelRenderer,
+        renderAddFields: RenderModelRendererAddFields,
+        requiredComponentTypes: [Transform],
+        inspector: ModelRendererInspector,
     });
     return catalog;
 }

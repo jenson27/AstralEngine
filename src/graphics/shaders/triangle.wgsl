@@ -13,6 +13,13 @@ var baseColorTexture: texture_2d<f32>;
 @group(1) @binding(1)
 var baseColorSampler: sampler;
 
+struct MaterialUniform {
+    baseColorFactor: vec4f,
+};
+
+@group(1) @binding(2)
+var<uniform> material: MaterialUniform;
+
 struct VertexInput {
     @location(0) position: vec3f,
     @location(1) uv: vec2f,
@@ -43,5 +50,5 @@ fn FragmentMain(input: VertexOutput) -> @location(0) vec4f {
         baseColorTexture,
         baseColorSampler,
         input.uv,
-    );
+    ) * material.baseColorFactor;
 }

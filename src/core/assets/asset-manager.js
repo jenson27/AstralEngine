@@ -8,7 +8,7 @@ function GetAssetMemoryDetails(asset) {
         return {
             resourceType: asset.constructor?.name ?? "CPU asset",
             bytes: asset.MemoryUsageBytes,
-            estimated: false,
+            estimated: asset.MemoryUsageEstimated === true,
         };
     }
 
@@ -500,8 +500,11 @@ export class AssetManager {
                     this._entriesById.delete(assetId);
                 }
 
+                const message = error instanceof Error
+                    ? error.message
+                    : String(error);
                 throw new Error(
-                    `Failed to load asset "${assetId}".`,
+                    `Failed to load asset "${assetId}": ${message}`,
                     { cause: error },
                 );
             });
