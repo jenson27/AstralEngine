@@ -34,7 +34,8 @@
 - `activeCameraEntityId` must refer to an entity with `camera` and `transform` components
 - Optional `assets` must contain unique, non-empty asset IDs
 - Parent links must refer to existing transform entities and must not form a cycle
-- Mesh renderer asset references must be declared by the scene's `assets` list
+- `meshRenderer` asset references are checked against the scene's `assets` list during document validation
+- `modelRenderer.data.modelAssetId` must also be in `assets`; the built-in codec resolves it through `ResolveModelHandle` from the scene asset scope during scene building
 
 ## Loading and switching
 
@@ -87,6 +88,7 @@
 - `src/core/scene/scene-hierarchy.js`
 - `src/core/scene/scene-loader.js`
 - `src/core/scene/scene-document-validator.js`
+- `src/core/scene/scene-document-asset-validator.js`
 - `src/core/scene/scene-builder.js`
 - `src/core/scene/scene-manager.js`
 - `src/core/scene/system-scheduler.js`
