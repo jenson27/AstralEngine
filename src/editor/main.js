@@ -230,6 +230,15 @@ exportSceneButton?.addEventListener("click", DownloadEditorScene);
 importSceneButton?.addEventListener("click", OpenEditorScenePicker);
 importSceneFileInput?.addEventListener("change", ImportEditorSceneFile);
 
+editorShell.RegisterPanel("asset-browser", {
+    title: "Asset Browser",
+    dock: "bottom",
+    create: (contentElement, context) =>
+        new AssetBrowserPanel(contentElement, {
+            logger: context.logger,
+            getAssetCatalog: context.getAssetCatalog,
+        }),
+});
 editorShell.RegisterPanel("console", {
     title: "Console",
     dock: "bottom",
@@ -278,16 +287,6 @@ editorShell.RegisterPanel("inspector", {
             context.assetTracker,
         ),
 });
-editorShell.RegisterPanel("asset-browser", {
-    title: "Asset Browser",
-    dock: "right",
-    create: (contentElement, context) =>
-        new AssetBrowserPanel(contentElement, {
-            logger: context.logger,
-            getAssetCatalog: context.getAssetCatalog,
-        }),
-});
-
 window.addEventListener(
     "pagehide",
     () => {

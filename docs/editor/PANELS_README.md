@@ -54,7 +54,7 @@
 - `inspector` uses editor selection, component authoring, and command history to edit the selected entity
 - The inspector is mounted in the right dock
 - `asset-browser` lists files and folders through `/api/assets`, with search, type filters, file details, and image previews
-- The Asset Browser panel is mounted in the right dock and refreshes when it becomes visible
+- The Asset Browser is the first bottom-dock tab, before Console, Profiler, and Memory Tracker; it refreshes when visible
 - `EditorSceneAssetTracker` retains asset IDs from live component definitions and undo or redo entries; it releases other leases from the active scene scope
 - Components that reference assets provide those IDs through `EditorComponentAuthoringCatalog.Register()`
 - Each panel stops its timers and removes its listeners in `Dispose()`

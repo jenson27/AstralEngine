@@ -14,37 +14,61 @@ function CreateButton(className, label) {
     return button;
 }
 
+function GetTreeButtonKey(action, path) {
+    return JSON.stringify([action, path]);
+}
+
 export class AssetBrowserView {
     constructor(
         rootElement,
         {
             onRefresh,
-            onNavigate,
+            onSelectDirectory,
+            onToggleDirectory,
             onSelect,
+            onSelectGridDirectory,
+            onOpenDirectory,
+            onRetryDirectory,
             getCatalogAssetIds,
-            getBuiltInAssets,
         },
     ) {
         this._rootElement = rootElement;
         this._handlers = {
             onRefresh,
-            onNavigate,
+            onSelectDirectory,
+            onToggleDirectory,
             onSelect,
+            onSelectGridDirectory,
+            onOpenDirectory,
+            onRetryDirectory,
         };
         this._getCatalogAssetIds = getCatalogAssetIds;
-        this._getBuiltInAssets = getBuiltInAssets;
+        this._entryButtons = new Map();
+        this._treeButtons = new Map();
         this._entryState = {
+            currentPath: "",
             entries: [],
+            directoryTree: {
+                path: "",
+                name: "Assets",
+                isExpanded: true,
+                canExpand: false,
+                isLoading: false,
+                error: "",
+                children: [],
+            },
             selectedRelativePath: null,
+            selectedGridDirectoryPath: null,
             isLoading: true,
             loadFailed: false,
+            loadError: "",
+            statusMessage: "",
+            statusState: "",
         };
 
         this._CreateView();
         this._BindEvents();
-        this.RenderBreadcrumbs("");
-        this._RenderEntries();
-        this._RenderEmptyDetails();
+        this.Render(this._entryState);
     }
 
     _CreateView() {
@@ -113,12 +137,23 @@ export class AssetBrowserView {
 
     _CreateContent() {
         const body = CreateElement("div", "asset-browser-body");
+        this._folderTreeNavigation = CreateElement(
+            "nav",
+            "asset-browser-folder-tree",
+        );
+        this._folderTreeNavigation.setAttribute(
+            "aria-label",
+            "Asset folders",
+        );
+        this._folderTree = CreateElement("ul", "asset-browser-tree-list");
+        this._folderTree.setAttribute("role", "list");
+        this._folderTreeNavigation.append(this._folderTree);
         this._entryList = CreateElement("div", "asset-browser-entry-list");
         this._entryList.setAttribute("role", "list");
-        this._entryList.setAttribute("aria-label", "Files and folders");
+        this._entryList.setAttribute("aria-label", "Assets in this folder");
         this._details = CreateElement("section", "asset-browser-details");
         this._details.setAttribute("aria-label", "Selected file details");
-        body.append(this._entryList, this._details);
+        body.append(this._folderTreeNavigation, this._entryList, this._details);
         return body;
     }
 
@@ -126,14 +161,24 @@ export class AssetBrowserView {
         this._onRefreshClick = () => this._handlers.onRefresh();
         this._onSearchInput = () => this._RenderEntries();
         this._onTypeChange = () => this._RenderEntries();
+        this._onTreeClick = (event) => this._HandleTreeClick(event);
         this._onEntryClick = (event) => this._HandleEntryClick(event);
+        this._onEntryDoubleClick = (event) =>
+            this._HandleEntryDoubleClick(event);
+        this._onEntryKeyDown = (event) => this._HandleEntryKeyDown(event);
         this._onBreadcrumbClick = (event) =>
             this._HandleBreadcrumbClick(event);
 
         this._refreshButton.addEventListener("click", this._onRefreshClick);
         this._searchInput.addEventListener("input", this._onSearchInput);
         this._typeSelect.addEventListener("change", this._onTypeChange);
+        this._folderTree.addEventListener("click", this._onTreeClick);
         this._entryList.addEventListener("click", this._onEntryClick);
+        this._entryList.addEventListener(
+            "dblclick",
+            this._onEntryDoubleClick,
+        );
+        this._entryList.addEventListener("keydown", this._onEntryKeyDown);
         this._breadcrumb.addEventListener(
             "click",
             this._onBreadcrumbClick,
@@ -147,10 +192,6 @@ export class AssetBrowserView {
 
     SetRefreshDisabled(disabled) {
         this._refreshButton.disabled = disabled;
-    }
-
-    SetEntryState(state) {
-        this._entryState = state;
     }
 
     RenderBreadcrumbs(path) {
@@ -178,37 +219,251 @@ export class AssetBrowserView {
         return button;
     }
 
-    RenderEntries(state) {
-        this.SetEntryState(state);
+    Render(state) {
+        this._entryState = state;
+        this.RenderBreadcrumbs(state.currentPath);
+        this._RenderDirectoryTree();
         this._RenderEntries();
+        this.RenderDetails({
+            entries: state.entries,
+            selectedRelativePath: state.selectedRelativePath,
+        });
+    }
+
+    RenderSelection(state) {
+        this._entryState = state;
+        for (const [path, button] of this._entryButtons) {
+            button.setAttribute(
+                "aria-pressed",
+                String(
+                    path === state.selectedRelativePath ||
+                        path === state.selectedGridDirectoryPath,
+                ),
+            );
+        }
+        this.RenderDetails({
+            entries: state.entries,
+            selectedRelativePath: state.selectedRelativePath,
+        });
+    }
+
+    RenderTree(state) {
+        this._entryState = state;
+        this._RenderDirectoryTree();
+    }
+
+    _RenderDirectoryTree() {
+        const activeElement = globalThis.document?.activeElement;
+        const hasTreeFocus = Boolean(
+            activeElement && this._folderTree.contains(activeElement),
+        );
+        const focusAction = hasTreeFocus
+            ? activeElement.dataset.assetTreeAction
+            : null;
+        const focusPath = hasTreeFocus
+            ? activeElement.dataset.assetPath
+            : null;
+        this._treeButtons.clear();
+        this._folderTree.replaceChildren();
+        this._folderTree.append(
+            this._CreateDirectoryTreeItem(this._entryState.directoryTree),
+        );
+        if (!hasTreeFocus) {
+            return;
+        }
+
+        const focusButton = this._treeButtons.get(
+            GetTreeButtonKey(focusAction, focusPath),
+        ) ?? this._treeButtons.get(
+            GetTreeButtonKey("select", focusPath),
+        ) ?? this._treeButtons.get(
+            GetTreeButtonKey("toggle", focusPath),
+        );
+        focusButton?.focus?.();
+    }
+
+    _CreateDirectoryTreeItem(directory) {
+        const treeItem = CreateElement("li", "asset-browser-tree-item");
+        treeItem.setAttribute("role", "listitem");
+        const row = CreateElement("div", "asset-browser-tree-row");
+
+        if (directory.canExpand) {
+            const toggle = CreateButton(
+                "asset-browser-tree-toggle",
+                directory.isExpanded ? "▾" : "▸",
+            );
+            toggle.dataset.assetTreeAction = "toggle";
+            toggle.dataset.assetPath = directory.path;
+            this._treeButtons.set(
+                GetTreeButtonKey("toggle", directory.path),
+                toggle,
+            );
+            toggle.setAttribute(
+                "aria-label",
+                (directory.isExpanded ? "Collapse " : "Expand ") +
+                    directory.name,
+            );
+            toggle.setAttribute(
+                "aria-expanded",
+                String(directory.isExpanded),
+            );
+            row.append(toggle);
+        } else {
+            row.append(CreateElement("span", "asset-browser-tree-spacer"));
+        }
+
+        const select = CreateButton("asset-browser-tree-select", "");
+        select.dataset.assetTreeAction = "select";
+        select.dataset.assetPath = directory.path;
+        this._treeButtons.set(
+            GetTreeButtonKey("select", directory.path),
+            select,
+        );
+        select.setAttribute(
+            "aria-current",
+            String(directory.path === this._entryState.currentPath),
+        );
+        const icon = CreateElement("span", "asset-browser-folder-icon");
+        icon.setAttribute("aria-hidden", "true");
+        const label = CreateElement("span", "asset-browser-tree-name");
+        label.textContent = directory.name;
+        select.append(icon, label);
+        row.append(select);
+        treeItem.append(row);
+
+        if (!directory.isExpanded) {
+            return treeItem;
+        }
+
+        const childList = CreateElement(
+            "ul",
+            "asset-browser-tree-children",
+        );
+        childList.setAttribute("role", "list");
+
+        if (directory.isLoading) {
+            const loading = CreateElement(
+                "li",
+                "asset-browser-tree-message",
+            );
+            loading.textContent = "Loading folders…";
+            childList.append(loading);
+        } else if (directory.error) {
+            childList.append(
+                this._CreateDirectoryTreeError(
+                    directory.path,
+                    directory.error,
+                ),
+            );
+        } else {
+            for (const child of directory.children) {
+                childList.append(
+                    this._CreateDirectoryTreeItem(child),
+                );
+            }
+        }
+
+        if (childList.children.length > 0) {
+            treeItem.append(childList);
+        }
+        return treeItem;
+    }
+
+    _CreateDirectoryTreeError(path, message) {
+        const item = CreateElement("li", "asset-browser-tree-error");
+        const text = CreateElement("span", "asset-browser-tree-error-text");
+        text.textContent = message;
+        const retry = CreateButton("asset-browser-tree-retry", "Retry");
+        retry.dataset.assetTreeAction = "retry";
+        retry.dataset.assetPath = path;
+        this._treeButtons.set(GetTreeButtonKey("retry", path), retry);
+        item.append(text, retry);
+        return item;
+    }
+
+    _HandleTreeClick(event) {
+        const button = event.target.closest("[data-asset-tree-action]");
+        if (!button || !this._folderTree.contains(button)) {
+            return;
+        }
+
+        const path = button.dataset.assetPath;
+        switch (button.dataset.assetTreeAction) {
+            case "toggle":
+                this._handlers.onToggleDirectory(path);
+                break;
+            case "select":
+                this._handlers.onSelectDirectory(path);
+                break;
+            case "retry":
+                this._handlers.onRetryDirectory(path);
+                break;
+        }
     }
 
     _RenderEntries() {
+        this._entryButtons.clear();
         this._entryList.replaceChildren();
-        const { entries, selectedRelativePath, isLoading, loadFailed } =
-            this._entryState;
+        const {
+            entries,
+            selectedRelativePath,
+            selectedGridDirectoryPath,
+            isLoading,
+            loadFailed,
+            loadError,
+            statusMessage,
+            statusState,
+        } = this._entryState;
         const filteredEntries = FilterAssetEntries(entries, {
             searchText: this._searchInput.value,
             typeFilter: this._typeSelect.value,
         });
-        this._SetFilteredEntryCount(filteredEntries, isLoading, loadFailed);
+        this._SetFilteredEntryCount(
+            filteredEntries,
+            isLoading,
+            loadFailed,
+            statusMessage,
+            statusState,
+        );
 
         if (filteredEntries.length === 0) {
             this._entryList.append(
-                this._CreateEmptyEntryMessage(entries, isLoading, loadFailed),
+                this._CreateEmptyEntryMessage(
+                    entries,
+                    isLoading,
+                    loadFailed,
+                    loadError,
+                ),
             );
             return;
         }
 
         for (const entry of filteredEntries) {
             this._entryList.append(
-                this._CreateEntryItem(entry, selectedRelativePath),
+                this._CreateEntryItem(
+                    entry,
+                    selectedRelativePath,
+                    selectedGridDirectoryPath,
+                ),
             );
         }
     }
 
-    _SetFilteredEntryCount(entries, isLoading, loadFailed) {
+    _SetFilteredEntryCount(
+        entries,
+        isLoading,
+        loadFailed,
+        statusMessage,
+        statusState,
+    ) {
+        if (statusMessage) {
+            this.SetStatus(statusMessage, statusState);
+            return;
+        }
         if (isLoading || loadFailed) {
+            if (loadFailed) {
+                this.SetStatus("This folder could not be listed.", "error");
+            }
             return;
         }
 
@@ -222,19 +477,23 @@ export class AssetBrowserView {
         );
     }
 
-    _CreateEmptyEntryMessage(entries, isLoading, loadFailed) {
+    _CreateEmptyEntryMessage(entries, isLoading, loadFailed, loadError) {
         const empty = CreateElement("p", "asset-browser-empty");
         empty.textContent = isLoading && entries.length === 0
             ? "Loading files…"
             : loadFailed
-              ? "This folder could not be listed."
+              ? "This folder could not be listed: " + loadError
               : entries.length
                 ? "No files match the current search and type filter."
                 : "This folder is empty.";
         return empty;
     }
 
-    _CreateEntryItem(entry, selectedRelativePath) {
+    _CreateEntryItem(
+        entry,
+        selectedRelativePath,
+        selectedGridDirectoryPath,
+    ) {
         const item = CreateElement("div", "asset-browser-entry-item");
         item.setAttribute("role", "listitem");
 
@@ -243,8 +502,12 @@ export class AssetBrowserView {
         button.dataset.assetKind = entry.kind;
         button.setAttribute(
             "aria-pressed",
-            String(entry.relativePath === selectedRelativePath),
+            String(
+                entry.relativePath === selectedRelativePath ||
+                    entry.relativePath === selectedGridDirectoryPath,
+            ),
         );
+        this._entryButtons.set(entry.relativePath, button);
         button.append(
             this._CreateEntryIcon(entry),
             this._CreateEntryName(entry),
@@ -257,9 +520,23 @@ export class AssetBrowserView {
     _CreateEntryIcon(entry) {
         const icon = CreateElement("span", "asset-browser-entry-icon");
         icon.setAttribute("aria-hidden", "true");
-        icon.textContent = entry.kind === "directory"
-            ? "DIR"
-            : GetAssetFileTypeLabel(entry.type).toUpperCase();
+        icon.dataset.assetKind = entry.kind;
+        if (entry.kind === "directory") {
+            icon.append(CreateElement("span", "asset-browser-folder-icon"));
+        } else if (entry.type === "image") {
+            const image = document.createElement("img");
+            image.alt = "";
+            image.loading = "lazy";
+            image.decoding = "async";
+            image.addEventListener("error", () => {
+                image.remove();
+                icon.textContent = GetAssetFileTypeLabel(entry.type).toUpperCase();
+            }, { once: true });
+            image.src = GetAssetFileUrl(entry.relativePath);
+            icon.append(image);
+        } else {
+            icon.textContent = GetAssetFileTypeLabel(entry.type).toUpperCase();
+        }
         return icon;
     }
 
@@ -312,7 +589,6 @@ export class AssetBrowserView {
         const empty = CreateElement("p", "asset-browser-empty");
         empty.textContent = "Select a file to view its details.";
         detailsBody.append(empty);
-        this._AppendBuiltInAssetSection(detailsBody);
         this._details.append(heading, detailsBody);
     }
 
@@ -328,7 +604,6 @@ export class AssetBrowserView {
             this._CreatePreview(entry),
             this._CreateMetadata(entry),
         );
-        this._AppendBuiltInAssetSection(detailsBody);
         this._details.append(heading, detailsBody);
     }
 
@@ -393,51 +668,6 @@ export class AssetBrowserView {
         metadata.append(term, description);
     }
 
-    _AppendBuiltInAssetSection(detailsBody) {
-        const section = this._CreateBuiltInAssetSection();
-        if (section) {
-            detailsBody.append(section);
-        }
-    }
-
-    _CreateBuiltInAssetSection() {
-        const builtInAssets = this._getBuiltInAssets();
-        if (builtInAssets.length === 0) {
-            return null;
-        }
-
-        const section = CreateElement(
-            "section",
-            "asset-browser-built-in-assets",
-        );
-        const heading = CreateElement(
-            "h4",
-            "asset-browser-built-in-heading",
-        );
-        heading.textContent = "Built-in assets";
-        const list = CreateElement("ul", "asset-browser-built-in-list");
-
-        for (const asset of builtInAssets) {
-            list.append(this._CreateBuiltInAssetItem(asset));
-        }
-
-        section.append(heading, list);
-        return section;
-    }
-
-    _CreateBuiltInAssetItem(asset) {
-        const item = CreateElement("li", "asset-browser-built-in-item");
-        const assetId = CreateElement("span", "asset-browser-built-in-id");
-        assetId.textContent = asset.id;
-        const assetType = CreateElement(
-            "span",
-            "asset-browser-built-in-type",
-        );
-        assetType.textContent = asset.typeId;
-        item.append(assetId, assetType);
-        return item;
-    }
-
     _HandleEntryClick(event) {
         const button = event.target.closest("[data-asset-path]");
         if (!button || !this._entryList.contains(button)) {
@@ -445,11 +675,41 @@ export class AssetBrowserView {
         }
 
         if (button.dataset.assetKind === "directory") {
-            this._handlers.onNavigate(button.dataset.assetPath);
+            this._handlers.onSelectGridDirectory(button.dataset.assetPath);
             return;
         }
 
         this._handlers.onSelect(button.dataset.assetPath);
+    }
+
+    _HandleEntryDoubleClick(event) {
+        const button = event.target.closest("[data-asset-path]");
+        if (
+            !button ||
+            !this._entryList.contains(button) ||
+            button.dataset.assetKind !== "directory"
+        ) {
+            return;
+        }
+
+        this._handlers.onOpenDirectory(button.dataset.assetPath);
+    }
+
+    _HandleEntryKeyDown(event) {
+        if (event.key !== "Enter") {
+            return;
+        }
+        const button = event.target.closest("[data-asset-path]");
+        if (
+            !button ||
+            !this._entryList.contains(button) ||
+            button.dataset.assetKind !== "directory"
+        ) {
+            return;
+        }
+
+        event.preventDefault();
+        this._handlers.onOpenDirectory(button.dataset.assetPath);
     }
 
     _HandleBreadcrumbClick(event) {
@@ -458,7 +718,7 @@ export class AssetBrowserView {
             return;
         }
 
-        this._handlers.onNavigate(button.dataset.assetDirectory);
+        this._handlers.onSelectDirectory(button.dataset.assetDirectory);
     }
 
     Dispose() {
@@ -468,7 +728,13 @@ export class AssetBrowserView {
         );
         this._searchInput.removeEventListener("input", this._onSearchInput);
         this._typeSelect.removeEventListener("change", this._onTypeChange);
+        this._folderTree.removeEventListener("click", this._onTreeClick);
         this._entryList.removeEventListener("click", this._onEntryClick);
+        this._entryList.removeEventListener(
+            "dblclick",
+            this._onEntryDoubleClick,
+        );
+        this._entryList.removeEventListener("keydown", this._onEntryKeyDown);
         this._breadcrumb.removeEventListener(
             "click",
             this._onBreadcrumbClick,

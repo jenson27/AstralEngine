@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { Camera } from "../../src/components/graphics/camera.js";
+import { DirectionalLight } from "../../src/components/graphics/directional-light.js";
 import { MeshRenderer } from "../../src/components/graphics/mesh-renderer.js";
 import { Transform } from "../../src/components/transform.js";
 import { Parent } from "../../src/components/parent.js";
@@ -12,7 +13,7 @@ import { Mesh } from "../../src/graphics/mesh.js";
 import { RenderSystem } from "../../src/systems/render-system.js";
 import { TransformHierarchySystem } from "../../src/systems/transform-hierarchy-system.js";
 
-test("renders a parented camera and mesh using interpolated world transforms", () => {
+test("renders interpolated transforms and releases the directional-light query", () => {
     const scene = new Scene("render-interpolation-test");
     const parentEntityId = scene.EntityManager.CreateEntity();
     const parentTransform = new Transform();
@@ -69,6 +70,13 @@ test("renders a parented camera and mesh using interpolated world transforms", (
         new MeshRenderer(meshHandle, { default: materialHandle }),
     );
 
+    const lightEntityId = scene.EntityManager.CreateEntity();
+    scene.EntityManager.AddComponent(
+        lightEntityId,
+        DirectionalLight,
+        new DirectionalLight(),
+    );
+
     let renderCall;
     const renderSystem = new RenderSystem({
         SetRenderItems(...args) {
@@ -96,6 +104,13 @@ test("renders a parented camera and mesh using interpolated world transforms", (
         assert.equal(renderItems[0].modelMatrix[12], 3);
         assert.equal(viewMatrix[12], -2);
         assert.ok(projectionMatrix instanceof Float32Array);
+        assert.doesNotThrow(() =>
+            scene.EntityManager.SetComponentEnabled(
+                lightEntityId,
+                DirectionalLight,
+                false,
+            ),
+        );
     } finally {
         scene.Dispose();
     }

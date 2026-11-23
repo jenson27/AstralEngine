@@ -115,13 +115,13 @@ function InstallFakeDom(context) {
     });
 }
 
-function CreateAssetResponse(entries) {
+function CreateAssetResponse(entries, path = "") {
     return {
         ok: true,
         json: async () => ({
             format: "astral-asset-directory",
             version: 1,
-            path: "",
+            path,
             entries,
         }),
     };
@@ -202,6 +202,43 @@ test("panel status counts filtered files and visible folders", async (context) =
     assert.equal(status.textContent, "0 files · 0 folders");
 });
 
+test(
+    "selecting a grid folder keeps its button attached for double-click navigation",
+    async (context) => {
+        InstallFakeDom(context);
+        const folder = {
+            name: "models",
+            relativePath: "models",
+            kind: "directory",
+            type: "folder",
+            sizeBytes: null,
+        };
+        const requestedPaths = [];
+        const root = new FakeElement();
+        const panel = new AssetBrowserPanel(root, {
+            fetcher: async (url) => {
+                const path = new URL(url, "http://localhost")
+                    .searchParams.get("path") ?? "";
+                requestedPaths.push(path);
+                return CreateAssetResponse(path ? [] : [folder], path);
+            },
+        });
+        try {
+            const { entryList } = GetPanelElements(root);
+            await panel.Refresh();
+            const folderButton = entryList.children[0].children[0];
+
+            entryList.Dispatch("click", { target: folderButton });
+            assert.equal(entryList.children[0].children[0], folderButton);
+
+            entryList.Dispatch("dblclick", { target: folderButton });
+            assert.deepEqual(requestedPaths, ["", "models"]);
+        } finally {
+            panel.Dispose();
+        }
+    },
+);
+
 test("panel shows a fallback when an image preview fails", async (context) => {
     InstallFakeDom(context);
     const entries = [
@@ -238,7 +275,7 @@ test("panel shows a fallback when an image preview fails", async (context) => {
     );
 });
 
-test("panel shows catalog status, file IDs, and built-in asset IDs", async (context) => {
+test("panel shows catalog status and file IDs", async (context) => {
     InstallFakeDom(context);
     const entries = [
         {
@@ -261,9 +298,6 @@ test("panel shows catalog status, file IDs, and built-in asset IDs", async (cont
             return sourcePath === "/assets/grass.png"
                 ? ["texture:grass", "texture:grass-alias"]
                 : [];
-        },
-        GetAll() {
-            return [{ id: "builtin:cube", typeId: "mesh" }];
         },
     };
     const root = new FakeElement();
@@ -301,15 +335,6 @@ test("panel shows catalog status, file IDs, and built-in asset IDs", async (cont
         "texture:grass, texture:grass-alias",
     );
 
-    const builtInSection = FindByClass(
-        details,
-        "asset-browser-built-in-assets",
-    );
-    const builtInItem = FindByClass(
-        builtInSection,
-        "asset-browser-built-in-id",
-    );
-    assert.equal(builtInItem.textContent, "builtin:cube");
 });
 
 test("panel filters GLB files and shows their name, type, path, and size", async (context) => {

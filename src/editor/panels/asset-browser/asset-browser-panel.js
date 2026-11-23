@@ -1,24 +1,7 @@
 import { AstralLogger } from "../../../diagnostics/logger.js";
 import { GetAssetFileUrl } from "./asset-browser-model.js";
+import { AssetBrowserDirectoryState } from "./asset-browser-directory-state.js";
 import { AssetBrowserView } from "./asset-browser-view.js";
-
-const API_FORMAT = "astral-asset-directory";
-const API_VERSION = 1;
-
-function ValidateAssetDirectoryData(data, expectedPath) {
-    if (
-        data?.format !== API_FORMAT ||
-        data.version !== API_VERSION ||
-        data.path !== expectedPath ||
-        !Array.isArray(data.entries)
-    ) {
-        throw new Error(
-            "Asset directory response is not valid version 1 data.",
-        );
-    }
-
-    return data.entries;
-}
 
 export class AssetBrowserPanel {
     constructor(
@@ -32,9 +15,6 @@ export class AssetBrowserPanel {
         if (!(rootElement instanceof HTMLElement)) {
             throw new TypeError("AssetBrowserPanel requires a root element.");
         }
-        if (typeof fetcher !== "function") {
-            throw new TypeError("AssetBrowserPanel requires a fetch function.");
-        }
         if (typeof getAssetCatalog !== "function") {
             throw new TypeError(
                 "AssetBrowserPanel requires an asset catalog getter.",
@@ -42,22 +22,38 @@ export class AssetBrowserPanel {
         }
 
         this._logger = logger;
-        this._fetcher = fetcher;
         this._getAssetCatalog = getAssetCatalog;
-        this._currentPath = "";
-        this._entries = [];
-        this._selectedRelativePath = null;
-        this._requestRevision = 0;
-        this._isLoading = true;
-        this._loadFailed = false;
+        this._refreshRevision = 0;
+        this._statusMessage = "";
+        this._statusState = "";
         this._isDisposed = false;
         this._view = new AssetBrowserView(rootElement, {
             onRefresh: () => void this.Refresh(),
-            onNavigate: (path) => this._NavigateTo(path),
+            onSelectDirectory: (path) => this._SelectDirectory(path),
+            onToggleDirectory: (path) => this._ToggleDirectory(path),
             onSelect: (path) => this._SelectFile(path),
+            onSelectGridDirectory: (path) =>
+                this._SelectGridDirectory(path),
+            onOpenDirectory: (path) => this._SelectDirectory(path),
+            onRetryDirectory: (path) => void this._RetryDirectory(path),
             getCatalogAssetIds: (path) => this._GetCatalogAssetIds(path),
-            getBuiltInAssets: () => this._GetBuiltInAssets(),
         });
+        this._directoryState = new AssetBrowserDirectoryState({
+            fetcher,
+            logger,
+            onChange: (reason) => {
+                if (reason === "selection") {
+                    this._RenderSelection();
+                    return;
+                }
+                if (reason === "tree") {
+                    this._RenderTree();
+                    return;
+                }
+                this._Render();
+            },
+        });
+        this._Render();
     }
 
     OnShow() {
@@ -70,7 +66,8 @@ export class AssetBrowserPanel {
         }
 
         this._isDisposed = true;
-        this._requestRevision += 1;
+        this._refreshRevision += 1;
+        this._directoryState.Dispose();
         this._view.Dispose();
     }
 
@@ -79,114 +76,89 @@ export class AssetBrowserPanel {
             return;
         }
 
-        const requestRevision = ++this._requestRevision;
-        this._isLoading = true;
-        this._loadFailed = false;
+        const refreshRevision = ++this._refreshRevision;
+        this._statusMessage = "Refreshing assets…";
+        this._statusState = "";
         this._view.SetRefreshDisabled(true);
-        this._view.SetStatus("Loading asset files…");
-        this._view.SetEntryState(this._GetEntryViewState());
-        if (this._entries.length === 0) {
-            this._RenderEntries();
-        }
+        this._view.SetStatus(this._statusMessage, this._statusState);
 
         try {
-            const entries = await this._FetchEntries(this._currentPath);
-            if (!this._IsCurrentRequest(requestRevision)) {
+            const result = await this._directoryState.Refresh();
+            if (!this._IsCurrentRefresh(refreshRevision)) {
+                return;
+            }
+            if (!result.ok) {
+                if (result.stale) {
+                    return;
+                }
+                this._statusMessage =
+                    "Could not load Assets: " +
+                    (result.error?.message ?? "The request failed.");
+                this._statusState = "error";
+                this._Render();
                 return;
             }
 
-            this._ApplyEntries(entries);
+            this._statusMessage = "";
+            this._statusState = "";
+            this._Render();
         } catch (error) {
-            if (!this._IsCurrentRequest(requestRevision)) {
+            if (!this._IsCurrentRefresh(refreshRevision)) {
                 return;
             }
 
-            this._HandleRefreshError(error);
+            this._statusMessage = "Could not refresh assets: " + error.message;
+            this._statusState = "error";
+            this._logger?.Warn("Asset browser refresh failed.", error);
+            this._Render();
         } finally {
-            if (this._IsCurrentRequest(requestRevision)) {
+            if (this._IsCurrentRefresh(refreshRevision)) {
                 this._view.SetRefreshDisabled(false);
             }
         }
     }
 
-    async _FetchEntries(path) {
-        const query = new URLSearchParams({ path });
-        const response = await this._fetcher(
-            "/api/assets?" + query.toString(),
-            { cache: "no-store" },
-        );
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(
-                data?.error?.message ??
-                    "Could not read assets. HTTP " + response.status + ".",
-            );
-        }
-        return ValidateAssetDirectoryData(data, path);
-    }
-
-    _IsCurrentRequest(requestRevision) {
+    _IsCurrentRefresh(refreshRevision) {
         return (
             !this._isDisposed &&
-            requestRevision === this._requestRevision
+            refreshRevision === this._refreshRevision
         );
     }
 
-    _ApplyEntries(entries) {
-        this._entries = entries;
-        this._isLoading = false;
-        this._loadFailed = false;
-        if (
-            this._selectedRelativePath &&
-            !this._entries.some(
-                (entry) =>
-                    entry.relativePath === this._selectedRelativePath &&
-                    entry.kind === "file",
-            )
-        ) {
-            this._selectedRelativePath = null;
-        }
-
-        this._RenderEntries();
-        this._RenderDetails();
-    }
-
-    _HandleRefreshError(error) {
-        this._entries = [];
-        this._selectedRelativePath = null;
-        this._isLoading = false;
-        this._loadFailed = true;
-        const message = error instanceof Error ? error.message : String(error);
-        this._view.SetStatus("Could not load assets: " + message, "error");
-        this._RenderEntries();
-        this._RenderDetails();
-        this._logger?.Warn("Asset browser refresh failed.", error);
-    }
-
-    _NavigateTo(path) {
+    _SelectDirectory(path) {
         if (this._isDisposed) {
             return;
         }
-
-        this._currentPath = path;
-        this._entries = [];
-        this._selectedRelativePath = null;
-        this._loadFailed = false;
-        this._view.RenderBreadcrumbs(this._currentPath);
-        this._RenderEntries();
-        this._RenderDetails();
-        void this.Refresh();
+        this._statusMessage = "";
+        this._statusState = "";
+        void this._directoryState.SelectDirectory(path);
     }
 
     _SelectFile(path) {
+        this._directoryState.SelectFile(path);
+    }
+
+    _SelectGridDirectory(path) {
+        this._directoryState.SelectGridDirectory(path);
+    }
+
+    _ToggleDirectory(path) {
         if (this._isDisposed) {
             return;
         }
+        this._statusMessage = "";
+        this._statusState = "";
+        this._view.SetStatus(this._statusMessage, this._statusState);
+        void this._directoryState.ToggleDirectory(path);
+    }
 
-        this._selectedRelativePath = path;
-        this._RenderEntries();
-        this._RenderDetails();
+    async _RetryDirectory(path) {
+        if (this._isDisposed) {
+            return;
+        }
+        this._statusMessage = "";
+        this._statusState = "";
+        await this._directoryState.RetryDirectory(path);
     }
 
     _GetCatalogAssetIds(relativePath) {
@@ -200,34 +172,29 @@ export class AssetBrowserPanel {
         );
     }
 
-    _GetBuiltInAssets() {
-        const assetCatalog = this._getAssetCatalog();
-        if (typeof assetCatalog?.GetAll !== "function") {
-            return [];
-        }
-
-        return assetCatalog
-            .GetAll()
-            .filter((asset) => asset.id.startsWith("builtin:"));
-    }
-
-    _GetEntryViewState() {
+    _GetViewState() {
         return {
-            entries: this._entries,
-            selectedRelativePath: this._selectedRelativePath,
-            isLoading: this._isLoading,
-            loadFailed: this._loadFailed,
+            ...this._directoryState.GetSnapshot(),
+            statusMessage: this._statusMessage,
+            statusState: this._statusState,
         };
     }
 
-    _RenderEntries() {
-        this._view.RenderEntries(this._GetEntryViewState());
+    _Render() {
+        if (this._view) {
+            this._view.Render(this._GetViewState());
+        }
     }
 
-    _RenderDetails() {
-        this._view.RenderDetails({
-            entries: this._entries,
-            selectedRelativePath: this._selectedRelativePath,
-        });
+    _RenderSelection() {
+        if (this._view) {
+            this._view.RenderSelection(this._GetViewState());
+        }
+    }
+
+    _RenderTree() {
+        if (this._view) {
+            this._view.RenderTree(this._GetViewState());
+        }
     }
 }

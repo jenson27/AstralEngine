@@ -89,7 +89,11 @@ export class RenderSystem {
             }
         }
 
-        const directionalLightId = scene.QueryActive(DirectionalLight).next().value;
+        let directionalLightId = null;
+        for (const entityId of scene.QueryActive(DirectionalLight)) {
+            directionalLightId = entityId;
+            break;
+        }
         const directionalLight = directionalLightId
             ? entityManager.GetComponent(directionalLightId, DirectionalLight)
             : DEFAULT_LIGHTING;

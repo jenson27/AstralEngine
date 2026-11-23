@@ -109,12 +109,147 @@
 
 .asset-browser-body {
     display: grid;
-    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns:
+        minmax(0, 18fr)
+        minmax(0, 64fr)
+        minmax(0, 18fr);
     min-width: 0;
     min-height: 0;
 }
 
+.asset-browser-folder-tree {
+    min-width: 0;
+    min-height: 0;
+    overflow: auto;
+    border-right: 1px solid #303946;
+    overscroll-behavior: contain;
+}
+
+.asset-browser-tree-list,
+.asset-browser-tree-children {
+    display: grid;
+    gap: 0.1rem;
+    margin: 0;
+    padding: 0.3rem;
+    list-style: none;
+}
+
+.asset-browser-tree-children {
+    margin-left: 0.45rem;
+    padding: 0 0 0 0.35rem;
+    border-left: 1px solid #303946;
+}
+
+.asset-browser-tree-item {
+    min-width: 0;
+}
+
+.asset-browser-tree-row {
+    display: flex;
+    align-items: center;
+    gap: 0.15rem;
+    min-width: 0;
+}
+
+.asset-browser-tree-toggle,
+.asset-browser-tree-select,
+.asset-browser-tree-retry {
+    border: 0;
+    border-radius: 0.2rem;
+    background: transparent;
+    color: #b9c6d6;
+    font: inherit;
+    cursor: pointer;
+}
+
+.asset-browser-tree-toggle,
+.asset-browser-tree-spacer {
+    flex: 0 0 1.15rem;
+    width: 1.15rem;
+    text-align: center;
+}
+
+.asset-browser-tree-toggle:hover,
+.asset-browser-tree-select:hover,
+.asset-browser-tree-retry:hover {
+    background: #202631;
+}
+
+.asset-browser-tree-select {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0.2rem 0.3rem;
+    text-align: left;
+}
+
+.asset-browser-tree-select[aria-current="true"] {
+    background: #263243;
+    color: #e8eaf0;
+}
+
+.asset-browser-tree-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.asset-browser-folder-icon {
+    position: relative;
+    display: block;
+    flex: 0 0 auto;
+    width: 0.9rem;
+    height: 0.62rem;
+    border-radius: 0.1rem;
+    background: #8aaac5;
+}
+
+.asset-browser-folder-icon::before {
+    position: absolute;
+    top: -0.16rem;
+    left: 0.08rem;
+    width: 0.38rem;
+    height: 0.22rem;
+    border-radius: 0.1rem 0.1rem 0 0;
+    background: inherit;
+    content: "";
+}
+
+.asset-browser-tree-message,
+.asset-browser-tree-error {
+    padding: 0.25rem 0.4rem;
+    color: #9ba7b7;
+    overflow-wrap: anywhere;
+}
+
+.asset-browser-tree-error {
+    display: grid;
+    gap: 0.25rem;
+    color: #f08a86;
+}
+
+.asset-browser-tree-retry {
+    justify-self: start;
+    padding: 0.2rem 0.4rem;
+    color: #9fc9ef;
+}
+
+.asset-browser-tree-toggle:focus-visible,
+.asset-browser-tree-select:focus-visible,
+.asset-browser-tree-retry:focus-visible {
+    outline: 1px solid #72b7ff;
+    outline-offset: 1px;
+}
+
 .asset-browser-entry-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(5rem, 1fr));
+    align-content: start;
+    align-items: start;
+    gap: 0.3rem;
     min-width: 0;
     min-height: 0;
     overflow: auto;
@@ -128,18 +263,19 @@
 
 .asset-browser-entry {
     display: grid;
-    grid-template-columns: 2.5rem minmax(0, 1fr) auto;
-    align-items: center;
-    gap: 0.4rem;
+    grid-template-rows: 3.6rem auto auto;
+    justify-items: center;
+    align-content: start;
+    gap: 0.25rem;
     width: 100%;
     min-width: 0;
     border: 1px solid transparent;
     border-radius: 0.25rem;
-    padding: 0.35rem;
+    padding: 0.3rem 0.2rem;
     background: transparent;
     color: #d7dde7;
     font: inherit;
-    text-align: left;
+    text-align: center;
     cursor: pointer;
 }
 
@@ -153,6 +289,10 @@
 }
 
 .asset-browser-entry-icon {
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: 3.5rem;
     overflow: hidden;
     color: #8aaac5;
     font-size: 0.62rem;
@@ -161,20 +301,45 @@
     text-overflow: ellipsis;
 }
 
-.asset-browser-entry[data-asset-kind="directory"] .asset-browser-entry-icon {
-    color: #d5b86d;
+.asset-browser-entry-icon[data-asset-kind="directory"] {
+    background: transparent;
 }
 
-.asset-browser-entry-name,
-.asset-browser-entry-meta {
+.asset-browser-entry-icon[data-asset-kind="directory"] .asset-browser-folder-icon {
+    width: 2.65rem;
+    height: 1.8rem;
+    border-radius: 0.2rem;
+}
+
+.asset-browser-entry-icon[data-asset-kind="directory"] .asset-browser-folder-icon::before {
+    top: -0.4rem;
+    left: 0.22rem;
+    width: 1.1rem;
+    height: 0.52rem;
+    border-radius: 0.2rem 0.2rem 0 0;
+}
+
+.asset-browser-entry-icon img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+
+.asset-browser-entry-name {
+    width: 100%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
 .asset-browser-entry-meta {
+    width: 100%;
     color: #9ba7b7;
     font-size: 0.68rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .asset-browser-entry-meta[data-catalog-status="registered"] {
@@ -186,6 +351,7 @@
 }
 
 .asset-browser-empty {
+    grid-column: 1 / -1;
     margin: 0;
     padding: 0.65rem;
     color: #9ba7b7;
@@ -197,7 +363,7 @@
     min-width: 0;
     min-height: 0;
     overflow: auto;
-    border-top: 1px solid #303946;
+    border-left: 1px solid #303946;
     background: #171c24;
 }
 
@@ -275,42 +441,31 @@
     font: 0.68rem/1.35 ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
-.asset-browser-built-in-assets {
-    grid-column: 1 / -1;
-    min-width: 0;
-    padding: 0.45rem;
-    border-top: 1px solid #303946;
-}
+@media (max-width: 760px) {
+    .asset-browser-body {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 3fr);
+        grid-template-rows: minmax(8rem, 1fr) minmax(8rem, 1fr);
+        overflow: auto;
+    }
 
-.asset-browser-built-in-heading {
-    margin: 0 0 0.35rem;
-    color: #e8eaf0;
-    font-size: 0.72rem;
-}
+    .asset-browser-folder-tree {
+        grid-column: 1;
+        grid-row: 1;
+    }
 
-.asset-browser-built-in-list {
-    display: grid;
-    gap: 0.25rem;
-    margin: 0;
-    padding: 0;
-    list-style: none;
-}
+    .asset-browser-entry-list {
+        grid-column: 2;
+        grid-row: 1;
+    }
 
-.asset-browser-built-in-item {
-    display: flex;
-    justify-content: space-between;
-    gap: 0.4rem;
-    min-width: 0;
-    color: #d7dde7;
-    font: 0.68rem/1.35 ui-monospace, SFMono-Regular, Consolas, monospace;
-}
+    .asset-browser-details {
+        grid-column: 1 / -1;
+        grid-row: 2;
+        border-top: 1px solid #303946;
+        border-left: 0;
+    }
 
-.asset-browser-built-in-id {
-    min-width: 0;
-    overflow-wrap: anywhere;
-}
-
-.asset-browser-built-in-type {
-    flex: 0 0 auto;
-    color: #9ba7b7;
+    .asset-browser-details-body {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
 }
