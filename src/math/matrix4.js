@@ -322,6 +322,47 @@ export function MultiplyMatrix4(out, left, right) {
     return out;
 }
 
+export function SetNormalMatrix4(normalMatrix, worldMatrix) {
+    if (normalMatrix === worldMatrix) {
+        throw new TypeError("Normal matrix must not alias the world matrix.");
+    }
+
+    const a00 = worldMatrix[0];
+    const a01 = worldMatrix[4];
+    const a02 = worldMatrix[8];
+    const a10 = worldMatrix[1];
+    const a11 = worldMatrix[5];
+    const a12 = worldMatrix[9];
+    const a20 = worldMatrix[2];
+    const a21 = worldMatrix[6];
+    const a22 = worldMatrix[10];
+    const determinant =
+        a00 * (a11 * a22 - a12 * a21) -
+        a01 * (a10 * a22 - a12 * a20) +
+        a02 * (a10 * a21 - a11 * a20);
+
+    normalMatrix.fill(0);
+    normalMatrix[15] = 1;
+    if (!Number.isFinite(determinant) || Math.abs(determinant) < 1e-12) {
+        normalMatrix[0] = 1;
+        normalMatrix[5] = 1;
+        normalMatrix[10] = 1;
+        return normalMatrix;
+    }
+
+    const inverseDeterminant = 1 / determinant;
+    normalMatrix[0] = (a11 * a22 - a12 * a21) * inverseDeterminant;
+    normalMatrix[1] = (a02 * a21 - a01 * a22) * inverseDeterminant;
+    normalMatrix[2] = (a01 * a12 - a02 * a11) * inverseDeterminant;
+    normalMatrix[4] = (a12 * a20 - a10 * a22) * inverseDeterminant;
+    normalMatrix[5] = (a00 * a22 - a02 * a20) * inverseDeterminant;
+    normalMatrix[6] = (a02 * a10 - a00 * a12) * inverseDeterminant;
+    normalMatrix[8] = (a10 * a21 - a11 * a20) * inverseDeterminant;
+    normalMatrix[9] = (a01 * a20 - a00 * a21) * inverseDeterminant;
+    normalMatrix[10] = (a00 * a11 - a01 * a10) * inverseDeterminant;
+    return normalMatrix;
+}
+
 export function SetViewMatrixFromWorldMatrix(viewMatrix, worldMatrix) {
     if (viewMatrix === worldMatrix) {
         throw new TypeError(

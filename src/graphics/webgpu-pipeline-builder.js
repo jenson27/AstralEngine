@@ -14,7 +14,7 @@ export async function CreateWebGpuPipeline({
         entries: [
             {
                 binding: 0,
-                visibility: GPUShaderStage.VERTEX,
+                visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
                 buffer: {
                     type: "uniform",
                     hasDynamicOffset: true,
@@ -46,7 +46,22 @@ export async function CreateWebGpuPipeline({
                 visibility: GPUShaderStage.FRAGMENT,
                 buffer: {
                     type: "uniform",
-                    minBindingSize: 16,
+                    minBindingSize: 48,
+                },
+            },
+            {
+                binding: 3,
+                visibility: GPUShaderStage.FRAGMENT,
+                texture: {
+                    sampleType: "float",
+                    viewDimension: "2d",
+                },
+            },
+            {
+                binding: 4,
+                visibility: GPUShaderStage.FRAGMENT,
+                sampler: {
+                    type: "filtering",
                 },
             },
         ],
@@ -66,7 +81,7 @@ export async function CreateWebGpuPipeline({
             entryPoint: "VertexMain",
             buffers: [
                 {
-                    arrayStride: 20,
+                    arrayStride: 56,
                     attributes: [
                         {
                             format: "float32x3",
@@ -74,9 +89,24 @@ export async function CreateWebGpuPipeline({
                             shaderLocation: 0,
                         },
                         {
-                            format: "float32x2",
+                            format: "float32x3",
                             offset: 12,
                             shaderLocation: 1,
+                        },
+                        {
+                            format: "float32x2",
+                            offset: 24,
+                            shaderLocation: 2,
+                        },
+                        {
+                            format: "float32x2",
+                            offset: 32,
+                            shaderLocation: 3,
+                        },
+                        {
+                            format: "float32x4",
+                            offset: 40,
+                            shaderLocation: 4,
                         },
                     ],
                 },
@@ -115,10 +145,26 @@ export async function CreateWebGpuPipeline({
             topology: "triangle-list",
         },
     });
+    const linearMipmapPipeline = await device.createRenderPipelineAsync({
+        layout: "auto",
+        vertex: {
+            module: mipmapShaderModule,
+            entryPoint: "VertexMain",
+        },
+        fragment: {
+            module: mipmapShaderModule,
+            entryPoint: "FragmentMain",
+            targets: [{ format: "rgba8unorm" }],
+        },
+        primitive: {
+            topology: "triangle-list",
+        },
+    });
 
     return {
         pipeline,
         mipmapPipeline,
+        linearMipmapPipeline,
         transformBindGroupLayout,
         materialBindGroupLayout,
     };

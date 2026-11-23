@@ -1,6 +1,7 @@
 import { AngularVelocity } from "../components/angular-velocity.js";
 import { CameraController } from "../components/graphics/camera-controller.js";
 import { Camera } from "../components/graphics/camera.js";
+import { DirectionalLight } from "../components/graphics/directional-light.js";
 import { MeshRenderer } from "../components/graphics/mesh-renderer.js";
 import { ModelRenderer } from "../components/graphics/model-renderer.js";
 import { Parent } from "../components/parent.js";
@@ -10,6 +11,7 @@ import { InspectorComponentRegistry } from "./panels/inspector/component-registr
 import { AngularVelocityInspector } from "./panels/inspector/components/angular-velocity-inspector.js";
 import { CameraControllerInspector } from "./panels/inspector/components/camera-controller-inspector.js";
 import { CameraInspector } from "./panels/inspector/components/camera-inspector.js";
+import { DirectionalLightInspector } from "./panels/inspector/components/directional-light-inspector.js";
 import { MeshRendererInspector } from "./panels/inspector/components/mesh-renderer-inspector.js";
 import { ModelRendererInspector } from "./panels/inspector/components/model-renderer-inspector.js";
 import { ParentInspector } from "./panels/inspector/components/parent-inspector.js";
@@ -256,6 +258,11 @@ export function CreateEditorComponentAuthoringCatalog() {
             }),
         requiredComponentTypes: [Transform, Camera],
         inspector: CameraControllerInspector,
+    });
+    catalog.Register("directionalLight", DirectionalLight, {
+        title: "Directional Light",
+        create: () => new DirectionalLight(),
+        inspector: DirectionalLightInspector,
     });
     catalog.Register("meshRenderer", MeshRenderer, {
         title: "Mesh Renderer",

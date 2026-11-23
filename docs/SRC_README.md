@@ -23,6 +23,7 @@
 
 - [Transform](components/TRANSFORM_README.md) - Local transforms, interpolation, and world matrices
 - [Camera](components/graphics/CAMERA_README.md) - Camera matrices and first-person camera controls
+- [Directional Light](components/graphics/DIRECTIONAL_LIGHT_README.md) - Scene light data, editor settings, and render behavior
 - [Mesh Renderer](components/graphics/MESH_RENDERER_README.md) - Mesh and material asset handles
 - [Model Renderer](components/graphics/MODEL_RENDERER_README.md) - Static GLB model asset handles
 - [Angular Velocity](components/ANGULAR_VELOCITY_README.md) - Angular rate data and its update system

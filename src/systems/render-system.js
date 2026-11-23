@@ -2,9 +2,16 @@
 
 import { Transform } from "../components/transform.js";
 import { Camera } from "../components/graphics/camera.js";
+import { DirectionalLight } from "../components/graphics/directional-light.js";
 import { MeshRenderer } from "../components/graphics/mesh-renderer.js";
 import { ModelRenderer } from "../components/graphics/model-renderer.js";
 import { MultiplyMatrix4 } from "../math/matrix4.js";
+
+const DEFAULT_LIGHTING = Object.freeze({
+    direction: Object.freeze([0.4, 0.8, 0.45]),
+    color: Object.freeze([1, 1, 1]),
+    intensity: 3,
+});
 
 export class RenderSystem {
     constructor(renderer) {
@@ -82,10 +89,20 @@ export class RenderSystem {
             }
         }
 
+        const directionalLightId = scene.QueryActive(DirectionalLight).next().value;
+        const directionalLight = directionalLightId
+            ? entityManager.GetComponent(directionalLightId, DirectionalLight)
+            : DEFAULT_LIGHTING;
         this._renderer.SetRenderItems(
             renderItems,
             cameraMatrices.viewMatrix,
             cameraMatrices.projectionMatrix,
+            {
+                direction: directionalLight.Direction ?? directionalLight.direction,
+                color: directionalLight.Color ?? directionalLight.color,
+                intensity: directionalLight.Intensity ?? directionalLight.intensity,
+                cameraPosition: cameraTransform.WorldMatrix.slice(12, 15),
+            },
         );
     }
 }

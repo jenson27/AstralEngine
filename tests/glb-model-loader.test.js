@@ -21,6 +21,12 @@ function BuildGlb({
     imageUri = null,
     extensionsRequired = [],
     minFilter = null,
+    sampler = null,
+    mode = null,
+    includeTexCoord1 = false,
+    includeColors = false,
+    materialDefinition = null,
+    animations = null,
     nodes = [{ mesh: 0, translation: [3, 0, 0] }],
     sceneNodes = nodes.map((_node, index) => index),
 } = {}) {
@@ -56,6 +62,13 @@ function BuildGlb({
         new Uint8Array(new Uint16Array([0, 1, 2]).buffer),
     );
     const image = AddBinaryPart(TEST_PNG_BYTES);
+    const colors = includeColors
+        ? AddBinaryPart(Uint8Array.from([
+            255, 0, 0, 255,
+            0, 255, 0, 255,
+            0, 0, 255, 255,
+        ]))
+        : null;
     const declaredBufferLength = binaryLength;
 
     while (binaryLength % 4 !== 0) {
@@ -76,12 +89,18 @@ function BuildGlb({
         nodes,
         meshes: [{
             primitives: [{
-                attributes: { POSITION: 0, TEXCOORD_0: 1 },
+                attributes: {
+                    POSITION: 0,
+                    TEXCOORD_0: 1,
+                    ...(includeTexCoord1 ? { TEXCOORD_1: 1 } : {}),
+                    ...(includeColors ? { COLOR_0: 3 } : {}),
+                },
                 indices: 2,
                 material: 0,
+                ...(mode === null ? {} : { mode }),
             }],
         }],
-        materials: [{
+        materials: [materialDefinition ?? {
             name: "Test material",
             pbrMetallicRoughness: {
                 baseColorFactor: [0.5, 0.75, 1, 1],
@@ -90,9 +109,12 @@ function BuildGlb({
         }],
         textures: [{
             source: 0,
-            ...(minFilter === null ? {} : { sampler: 0 }),
+            ...(minFilter === null && sampler === null ? {} : { sampler: 0 }),
         }],
-        ...(minFilter === null ? {} : { samplers: [{ minFilter }] }),
+        ...(sampler === null && minFilter === null
+            ? {}
+            : { samplers: [sampler ?? { minFilter }] }),
+        ...(animations === null ? {} : { animations }),
         images: imageUri === null
             ? [{ bufferView: 3, mimeType: "image/png" }]
             : [{ uri: imageUri }],
@@ -105,11 +127,15 @@ function BuildGlb({
             { buffer: 0, ...uvs, target: 34962 },
             { buffer: 0, ...indices, target: 34963 },
             { buffer: 0, ...image },
+            ...(colors === null ? [] : [{ buffer: 0, ...colors, target: 34962 }]),
         ],
         accessors: [
             { bufferView: 0, componentType: 5126, count: 3, type: "VEC3" },
             { bufferView: 1, componentType: 5126, count: 3, type: "VEC2" },
             { bufferView: 2, componentType: 5123, count: 3, type: "SCALAR" },
+            ...(includeColors
+                ? [{ bufferView: 4, componentType: 5121, count: 3, type: "VEC4", normalized: true }]
+                : []),
         ],
     };
 
@@ -134,7 +160,7 @@ function BuildGlb({
     return glb;
 }
 
-function CreateManager(loader, memoryTracker = null) {
+function CreateManager(loader, memoryTracker = null, importScale = undefined) {
     const catalog = new AssetCatalog();
     catalog.RegisterManifest({
         format: "astral-assets",
@@ -143,7 +169,11 @@ function CreateManager(loader, memoryTracker = null) {
             id: "model:test",
             typeId: "model",
             loaderId: "gltf:glb",
-            source: { kind: "glb", url: "/assets/models/test.glb" },
+            source: {
+                kind: "glb",
+                url: "/assets/models/test.glb",
+                ...(importScale === undefined ? {} : { importScale }),
+            },
             version: 1,
             dependencies: [],
         }],
@@ -230,6 +260,79 @@ test("loads a static GLB through the asset manager with texture and material dat
     assert.equal(memoryTracker.GetLiveResources().length, 0);
 });
 
+test("loads common static PBR attributes, sampler settings, mask alpha, and import scale", async () => {
+    const glb = BuildGlb({
+        mode: 5,
+        includeTexCoord1: true,
+        includeColors: true,
+        sampler: {
+            wrapS: 33071,
+            wrapT: 33648,
+            magFilter: 9728,
+            minFilter: 9986,
+        },
+        materialDefinition: {
+            name: "PBR mask",
+            alphaMode: "MASK",
+            alphaCutoff: 0.35,
+            extensions: { KHR_materials_unlit: {} },
+            pbrMetallicRoughness: {
+                baseColorFactor: [0.7, 0.6, 0.5, 1],
+                baseColorTexture: { index: 0, texCoord: 1 },
+                metallicFactor: 0.4,
+                roughnessFactor: 0.6,
+                metallicRoughnessTexture: { index: 0 },
+            },
+        },
+    });
+    const manager = CreateManager(
+        new GlbModelLoader(
+            async () => ({ ok: true, arrayBuffer: async () => glb }),
+            async () => ({ width: 1, height: 1, close() {} }),
+        ),
+        null,
+        0.01,
+    );
+
+    const lease = await manager.Acquire("model:test");
+    const { mesh, material, transform } = lease.Asset.Primitives[0];
+    assert.ok(Math.abs(transform[12] - 0.03) < 1e-6);
+    assert.deepEqual(Array.from(mesh.GetIndices()), [0, 1, 2]);
+    assert.deepEqual(Array.from(mesh.GetNormals()), [0, 0, 1, 0, 0, 1, 0, 0, 1]);
+    assert.deepEqual(Array.from(mesh.GetTexCoord1()), [0, 0, 1, 0, 0, 1]);
+    assert.deepEqual(Array.from(mesh.GetColors()), [
+        1, 0, 0, 1,
+        0, 1, 0, 1,
+        0, 0, 1, 1,
+    ]);
+    assert.equal(material.MetallicFactor, 0.4);
+    assert.equal(material.RoughnessFactor, 0.6);
+    assert.equal(material.BaseColorTexCoord, 1);
+    assert.equal(material.AlphaMode, "MASK");
+    assert.equal(material.AlphaCutoff, 0.35);
+    assert.equal(material.IsUnlit, true);
+    assert.equal(material.BaseColorSampler.addressModeU, "clamp-to-edge");
+    assert.equal(material.BaseColorSampler.addressModeV, "mirror-repeat");
+    assert.equal(material.BaseColorSampler.magFilter, "nearest");
+    assert.equal(material.BaseColorSampler.minFilter, "nearest");
+    assert.equal(material.BaseColorSampler.mipmapFilter, "linear");
+    assert.equal(material.BaseColorSampler.mipmaps, true);
+    assert.strictEqual(material.BaseColorTexture, material.MetallicRoughnessTexture);
+    await lease.Release();
+});
+
+test("converts triangle fans to indexed triangle lists", async () => {
+    const manager = CreateManager(
+        new GlbModelLoader(
+            async () => ({ ok: true, arrayBuffer: async () => BuildGlb({ mode: 6 }) }),
+            async () => ({ width: 1, height: 1, close() {} }),
+        ),
+    );
+    const lease = await manager.Acquire("model:test");
+    assert.deepEqual(Array.from(lease.Asset.Primitives[0].mesh.GetIndices()), [0, 1, 2]);
+    await lease.Release();
+});
+
 test("maps GLB linear minification to the non-mipmapped material mode", async () => {
     const glb = BuildGlb({ minFilter: 9729 });
     const manager = CreateManager(
@@ -305,13 +408,14 @@ test("decodes percent-encoded image data URI bytes without UTF-8 conversion", as
     await lease.Release();
 });
 
-test("rejects required punctual lighting that the static renderer skips", async () => {
+test("rejects required punctual light extension when static loader skips lights", async () => {
     const glb = BuildGlb({
         extensionsRequired: ["KHR_lights_punctual"],
     });
     const manager = CreateManager(
         new GlbModelLoader(
             async () => ({ ok: true, arrayBuffer: async () => glb }),
+            async () => ({ width: 1, height: 1, close() {} }),
         ),
     );
 
@@ -387,49 +491,17 @@ test("reports a missing GLB file with its HTTP status", async () => {
     );
 });
 
-test("rejects unsupported GLB animation content with a clear error", async () => {
-    const glb = BuildGlb();
-    const bytes = new Uint8Array(glb);
-    const jsonChunkLength = new DataView(glb).getUint32(12, true);
-    const jsonStart = 20;
-    const document = JSON.parse(
-        new TextDecoder().decode(bytes.subarray(jsonStart, jsonStart + jsonChunkLength)).trimEnd(),
-    );
-    document.animations = [{ samplers: [], channels: [] }];
-
-    const jsonBytes = new TextEncoder().encode(JSON.stringify(document));
-    const paddedJsonLength = Math.ceil(jsonBytes.byteLength / 4) * 4;
-    const paddedJson = new Uint8Array(paddedJsonLength).fill(0x20);
-    paddedJson.set(jsonBytes);
-    const oldBinHeaderOffset = 20 + jsonChunkLength;
-    const binaryLength = new DataView(glb).getUint32(oldBinHeaderOffset, true);
-    const binaryStart = oldBinHeaderOffset + 8;
-    const binary = bytes.slice(binaryStart, binaryStart + binaryLength);
-    const totalLength = 12 + 8 + paddedJsonLength + 8 + binary.byteLength;
-    const updatedGlb = new ArrayBuffer(totalLength);
-    const view = new DataView(updatedGlb);
-    view.setUint32(0, 0x46546c67, true);
-    view.setUint32(4, 2, true);
-    view.setUint32(8, totalLength, true);
-    view.setUint32(12, paddedJsonLength, true);
-    view.setUint32(16, 0x4e4f534a, true);
-    new Uint8Array(updatedGlb, 20, paddedJsonLength).set(paddedJson);
-    const binHeaderOffset = 20 + paddedJsonLength;
-    view.setUint32(binHeaderOffset, binary.byteLength, true);
-    view.setUint32(binHeaderOffset + 4, 0x004e4942, true);
-    new Uint8Array(updatedGlb, binHeaderOffset + 8).set(binary);
-
+test("skips unsupported animation data while loading static content", async () => {
+    const updatedGlb = BuildGlb({ animations: [{ samplers: [], channels: [] }] });
     const manager = CreateManager(
         new GlbModelLoader(
             async () => ({ ok: true, arrayBuffer: async () => updatedGlb }),
             async () => ({ width: 1, height: 1, close() {} }),
         ),
     );
-    await assert.rejects(manager.Acquire("model:test"), (error) =>
-        error.message.includes(
-            "GLB animations are not supported by the static model loader",
-        ),
-    );
+    const lease = await manager.Acquire("model:test");
+    assert.equal(lease.Asset.Primitives.length, 1);
+    await lease.Release();
 });
 
 test("test GLB fixture uses binary chunks rather than a text file", () => {

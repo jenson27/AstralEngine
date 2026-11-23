@@ -8,6 +8,7 @@ import {
 } from "./graphics/camera-controller.js";
 import { MeshRenderer } from "./graphics/mesh-renderer.js";
 import { ModelRenderer } from "./graphics/model-renderer.js";
+import { DirectionalLight } from "./graphics/directional-light.js";
 import { AngularVelocity } from "./angular-velocity.js";
 
 function ReadVector3(value, name) {
@@ -143,6 +144,20 @@ export function CreateSceneComponentRegistry() {
                     maxPitchRadians: cameraController.maxPitchRadians,
                 };
             },
+        },
+    );
+
+    registry.Register(
+        "directionalLight",
+        DirectionalLight,
+        (data) => new DirectionalLight(data),
+        {
+            Version: 1,
+            Serialize: (light) => ({
+                direction: ReadVector3(light.Direction, "Directional light direction"),
+                color: ReadVector3(light.Color, "Directional light color"),
+                intensity: light.Intensity,
+            }),
         },
     );
 

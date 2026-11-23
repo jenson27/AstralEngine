@@ -6,6 +6,7 @@ import { Material } from "./material.js";
 import { GpuTimingTracker } from "./gpu-timing-tracker.js";
 import { WebGpuResourceCache } from "./webgpu-resource-cache.js";
 import { CreateWebGpuPipeline } from "./webgpu-pipeline-builder.js";
+import { SetNormalMatrix4 } from "../math/matrix4.js";
 
 const shaderUrl = new URL("./shaders/triangle.wgsl", import.meta.url);
 const mipmapShaderUrl = new URL("./shaders/mipmap.wgsl", import.meta.url);
@@ -52,7 +53,7 @@ export class WebGPURenderer {
         this._transformBuffer = null;
         this._transformBufferMemoryToken = null;
         this._transformBindGroup = null;
-        this._matrixBlockSize = 16 * 3 * Float32Array.BYTES_PER_ELEMENT;
+        this._matrixBlockSize = 76 * Float32Array.BYTES_PER_ELEMENT;
         this._uniformStride = 0;
         this._drawCapacity = 0;
         this._matrixData = new Float32Array(0);
@@ -113,6 +114,7 @@ export class WebGPURenderer {
             textureSampler: this._textureSampler,
             linearTextureSampler: this._linearTextureSampler,
             mipmapPipeline: pipelineResources.mipmapPipeline,
+            linearMipmapPipeline: pipelineResources.linearMipmapPipeline,
             trackGpuResource: (label, resourceType, bytes) =>
                 this._TrackGpuResource(label, resourceType, bytes),
             destroyGpuResource: (resource, memoryToken) =>
@@ -202,7 +204,12 @@ export class WebGPURenderer {
         this._EnsureTransformCapacity(1);
     }
 
-    SetRenderItems(renderItems, viewMatrix, projectionMatrix) {
+    SetRenderItems(
+        renderItems,
+        viewMatrix,
+        projectionMatrix,
+        lighting = {},
+    ) {
         if (!Array.isArray(renderItems)) {
             throw new TypeError("Render items must be an array.");
         }
@@ -217,6 +224,22 @@ export class WebGPURenderer {
 
         this._RequireMatrix(viewMatrix, "View matrix");
         this._RequireMatrix(projectionMatrix, "Projection matrix");
+        const lightDirection = this._ReadVector3(
+            lighting.direction ?? [0.4, 0.8, 0.45],
+            "Light direction",
+        );
+        const lightColor = this._ReadVector3(
+            lighting.color ?? [1, 1, 1],
+            "Light color",
+        );
+        const cameraPosition = this._ReadVector3(
+            lighting.cameraPosition ?? [0, 0, 0],
+            "Camera position",
+        );
+        const lightIntensity = lighting.intensity ?? 3;
+        if (!Number.isFinite(lightIntensity) || lightIntensity < 0) {
+            throw new RangeError("Light intensity must be non-negative.");
+        }
         this._EnsureTransformCapacity(renderItems.length);
         this._drawItems.length = 0;
         const activeMeshes = new Set();
@@ -275,6 +298,22 @@ export class WebGPURenderer {
             this._matrixData.set(renderItem.modelMatrix, matrixOffset);
             this._matrixData.set(viewMatrix, matrixOffset + 16);
             this._matrixData.set(projectionMatrix, matrixOffset + 32);
+            this._matrixData.set(
+                SetNormalMatrix4(new Float32Array(16), renderItem.modelMatrix),
+                matrixOffset + 48,
+            );
+            this._matrixData.set(
+                [...lightDirection, 0],
+                matrixOffset + 64,
+            );
+            this._matrixData.set(
+                [...lightColor, lightIntensity],
+                matrixOffset + 68,
+            );
+            this._matrixData.set(
+                [...cameraPosition, 1],
+                matrixOffset + 72,
+            );
         }
 
         if (renderItems.length > 0) {
@@ -293,6 +332,16 @@ export class WebGPURenderer {
         if (!(matrix instanceof Float32Array) || matrix.length !== 16) {
             throw new TypeError(`${name} must contain 16 values.`);
         }
+    }
+
+    _ReadVector3(value, name) {
+        if (
+            !Array.isArray(value) && !(value instanceof Float32Array) ||
+            value.length !== 3 || !value.every(Number.isFinite)
+        ) {
+            throw new TypeError(`${name} must contain three finite values.`);
+        }
+        return value;
     }
 
     _TrackGpuResource(label, resourceType, bytes) {

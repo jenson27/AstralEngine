@@ -1,4 +1,58 @@
-function ValidateVertexData(positions, uvs, indices) {
+function CreateDefaultNormals(positions, indices) {
+    const normals = new Float32Array(positions.length);
+    const vertexCount = positions.length / 3;
+    const elementCount = indices?.length ?? vertexCount;
+    const readIndex = (index) => indices?.[index] ?? index;
+
+    for (let index = 0; index < elementCount; index += 3) {
+        const first = readIndex(index) * 3;
+        const second = readIndex(index + 1) * 3;
+        const third = readIndex(index + 2) * 3;
+        const edgeA = [
+            positions[second] - positions[first],
+            positions[second + 1] - positions[first + 1],
+            positions[second + 2] - positions[first + 2],
+        ];
+        const edgeB = [
+            positions[third] - positions[first],
+            positions[third + 1] - positions[first + 1],
+            positions[third + 2] - positions[first + 2],
+        ];
+        const normal = [
+            edgeA[1] * edgeB[2] - edgeA[2] * edgeB[1],
+            edgeA[2] * edgeB[0] - edgeA[0] * edgeB[2],
+            edgeA[0] * edgeB[1] - edgeA[1] * edgeB[0],
+        ];
+        for (const vertex of [first, second, third]) {
+            normals[vertex] += normal[0];
+            normals[vertex + 1] += normal[1];
+            normals[vertex + 2] += normal[2];
+        }
+    }
+
+    for (let index = 0; index < normals.length; index += 3) {
+        const length = Math.hypot(normals[index], normals[index + 1], normals[index + 2]);
+        if (length > 0) {
+            normals[index] /= length;
+            normals[index + 1] /= length;
+            normals[index + 2] /= length;
+        } else {
+            normals[index + 1] = 1;
+        }
+    }
+    return normals;
+}
+
+function ValidateVertexAttribute(values, expectedLength, name) {
+    if (!(values instanceof Float32Array) || values.length !== expectedLength) {
+        throw new TypeError(`Mesh ${name} must contain ${expectedLength} float values.`);
+    }
+    if (!values.every(Number.isFinite)) {
+        throw new RangeError(`Mesh ${name} must contain finite values.`);
+    }
+}
+
+function ValidateVertexData(positions, uvs, indices, attributes) {
     if (!(positions instanceof Float32Array)) {
         throw new TypeError("Mesh positions must be a Float32Array.");
     }
@@ -45,15 +99,26 @@ function ValidateVertexData(positions, uvs, indices) {
         throw new RangeError("Mesh index references a missing vertex.");
     }
 
-    return { vertexCount, elementCount };
+    const normals = attributes.normals ?? CreateDefaultNormals(positions, indices);
+    const texCoord1 = attributes.texCoord1 ?? new Float32Array(vertexCount * 2);
+    const colors = attributes.colors ?? new Float32Array(vertexCount * 4).fill(1);
+    ValidateVertexAttribute(normals, vertexCount * 3, "normals");
+    ValidateVertexAttribute(texCoord1, vertexCount * 2, "TEXCOORD_1");
+    ValidateVertexAttribute(colors, vertexCount * 4, "colors");
+
+    return { vertexCount, elementCount, normals, texCoord1, colors };
 }
 
 export class Mesh {
-    constructor(positions, uvs, submeshes = null, indices = null) {
-        const { vertexCount, elementCount } = ValidateVertexData(
+    constructor(positions, uvs, submeshes = null, indices = null, attributes = {}) {
+        if (!attributes || typeof attributes !== "object" || Array.isArray(attributes)) {
+            throw new TypeError("Mesh vertex attributes must be an object.");
+        }
+        const { vertexCount, elementCount, normals, texCoord1, colors } = ValidateVertexData(
             positions,
             uvs,
             indices,
+            attributes,
         );
         const indexed = indices !== null;
 
@@ -75,6 +140,9 @@ export class Mesh {
 
         this._positions = positions.slice();
         this._uvs = uvs.slice();
+        this._normals = normals.slice();
+        this._texCoord1 = texCoord1.slice();
+        this._colors = colors.slice();
         this._indices = indices?.slice() ?? null;
         this._submeshes = Object.freeze(normalizedSubmeshes);
     }
@@ -162,6 +230,8 @@ export class Mesh {
 
     get MemoryUsageBytes() {
         return this._positions.byteLength + this._uvs.byteLength +
+            this._normals.byteLength + this._texCoord1.byteLength +
+            this._colors.byteLength +
             (this._indices?.byteLength ?? 0);
     }
 
@@ -179,6 +249,18 @@ export class Mesh {
 
     GetUVs() {
         return this._uvs.slice();
+    }
+
+    GetNormals() {
+        return this._normals.slice();
+    }
+
+    GetTexCoord1() {
+        return this._texCoord1.slice();
+    }
+
+    GetColors() {
+        return this._colors.slice();
     }
 
     GetIndices() {

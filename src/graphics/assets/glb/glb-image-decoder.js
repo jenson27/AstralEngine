@@ -63,6 +63,10 @@ export class GlbImageDecoder {
         try {
             bitmap = await this._bitmapDecoder(
                 this._blobFactory([bytes], { type: mimeType }),
+                {
+                    colorSpaceConversion: "none",
+                    premultiplyAlpha: "none",
+                },
             );
             if (
                 !bitmap ||

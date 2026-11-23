@@ -36,7 +36,7 @@ const DOCK_RESIZE_CONFIG = Object.freeze({
 const RESIZE_HANDLE_SIZE = 6;
 const MIN_VIEWPORT_WIDTH = 320;
 const MIN_VIEWPORT_HEIGHT = 220;
-const STACKED_LAYOUT_WIDTH = 1100;
+const STACKED_LAYOUT_WIDTH = 760;
 
 export class EditorShell {
     constructor(rootElement) {
@@ -599,18 +599,25 @@ export class EditorShell {
         let availableSize;
 
         if (config.axis === "x") {
-            const horizontalDockNames = ["left", "right"].filter(
-                (name) => this._docks.has(name),
+            const horizontalSplitterCount = ["left", "right"].filter(
+                (name) => this._splitters.has(name),
             );
-            const otherDockSize = horizontalDockNames
-                .filter((name) => name !== dockName)
-                .reduce((total, name) => total + this._dockSizes[name], 0);
+            const availableWidth =
+                dockName === "right"
+                    ? this._root.getBoundingClientRect().width
+                    : this._workspace.getBoundingClientRect().width;
+            const leftDockSize =
+                dockName === "right" && this._docks.has("left")
+                    ? this._dockSizes.left
+                    : 0;
+            const splitterCount =
+                dockName === "right" ? horizontalSplitterCount.length : 1;
 
             availableSize =
-                this._workspace.getBoundingClientRect().width -
+                availableWidth -
                 MIN_VIEWPORT_WIDTH -
-                RESIZE_HANDLE_SIZE * horizontalDockNames.length -
-                otherDockSize;
+                leftDockSize -
+                RESIZE_HANDLE_SIZE * splitterCount;
         } else {
             const toolbarHeight = this._root.querySelector(
                 ".editor-toolbar",
@@ -638,7 +645,7 @@ export class EditorShell {
 
         this._dockSizes[dockName] = clampedSize;
         const styleTarget =
-            dockName === "bottom" ? this._root : this._workspace;
+            dockName === "left" ? this._workspace : this._root;
         styleTarget.style.setProperty(
             config.styleProperty,
             `${clampedSize}px`,

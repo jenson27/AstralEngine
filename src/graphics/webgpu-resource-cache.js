@@ -24,6 +24,7 @@ export class WebGpuResourceCache {
         textureSampler,
         linearTextureSampler = textureSampler,
         mipmapPipeline,
+        linearMipmapPipeline = mipmapPipeline,
         trackGpuResource,
         destroyGpuResource,
     }) {
@@ -51,11 +52,13 @@ export class WebGpuResourceCache {
         this._textureSampler = textureSampler;
         this._linearTextureSampler = linearTextureSampler;
         this._mipmapPipeline = mipmapPipeline;
+        this._linearMipmapPipeline = linearMipmapPipeline;
         this._trackGpuResource = trackGpuResource;
         this._destroyGpuResource = destroyGpuResource;
         this._meshResources = new Map();
         this._textureResources = new Map();
         this._materialBindGroups = new Map();
+        this._samplers = new Map();
         this._defaultTextureResource = null;
     }
 
@@ -77,18 +80,24 @@ export class WebGpuResourceCache {
     _CreateMeshResource(mesh) {
         const positions = mesh.GetPositions();
         const uvs = mesh.GetUVs();
+        const normals = mesh.GetNormals();
+        const texCoord1 = mesh.GetTexCoord1();
+        const colors = mesh.GetColors();
         const indices = mesh.GetIndices();
-        const vertexData = new Float32Array(mesh.VertexCount * 5);
+        const vertexData = new Float32Array(mesh.VertexCount * 14);
 
         for (let index = 0; index < mesh.VertexCount; index += 1) {
             vertexData.set(
                 positions.subarray(index * 3, index * 3 + 3),
-                index * 5,
+                index * 14,
             );
+            vertexData.set(normals.subarray(index * 3, index * 3 + 3), index * 14 + 3);
             vertexData.set(
                 uvs.subarray(index * 2, index * 2 + 2),
-                index * 5 + 3,
+                index * 14 + 6,
             );
+            vertexData.set(texCoord1.subarray(index * 2, index * 2 + 2), index * 14 + 8);
+            vertexData.set(colors.subarray(index * 4, index * 4 + 4), index * 14 + 10);
         }
 
         let vertexBuffer = null;
@@ -137,12 +146,16 @@ export class WebGpuResourceCache {
         };
     }
 
-    GetTextureResource(imageAsset) {
+    GetTextureResource(imageAsset, colorSpace = "srgb") {
         if (imageAsset === null) {
             return this._GetDefaultTextureResource();
         }
 
-        let textureResource = this._textureResources.get(imageAsset);
+        if (!["srgb", "linear"].includes(colorSpace)) {
+            throw new TypeError("Texture color space must be srgb or linear.");
+        }
+        const resourcesByColorSpace = this._textureResources.get(imageAsset);
+        let textureResource = resourcesByColorSpace?.get(colorSpace);
 
         if (textureResource) {
             return textureResource;
@@ -162,7 +175,7 @@ export class WebGpuResourceCache {
         const texture = this._device.createTexture({
             size: [imageAsset.width, imageAsset.height, 1],
             mipLevelCount,
-            format: "rgba8unorm-srgb",
+            format: colorSpace === "srgb" ? "rgba8unorm-srgb" : "rgba8unorm",
             usage:
                 GPUTextureUsage.TEXTURE_BINDING |
                 GPUTextureUsage.COPY_DST |
@@ -175,7 +188,13 @@ export class WebGpuResourceCache {
                 { texture, mipLevel: 0 },
                 [imageAsset.width, imageAsset.height, 1],
             );
-            this._GenerateMipmaps(texture, mipLevelCount);
+            this._GenerateMipmaps(
+                texture,
+                mipLevelCount,
+                colorSpace === "srgb"
+                    ? this._mipmapPipeline
+                    : this._linearMipmapPipeline,
+            );
         } catch (error) {
             texture.destroy();
             throw error;
@@ -185,17 +204,19 @@ export class WebGpuResourceCache {
             texture,
             view: texture.createView(),
             memoryToken: this._trackGpuResource(
-                "Material base-color texture",
+                `Material ${colorSpace} texture`,
                 "GPUTexture",
                 GetMipChainByteLength(imageAsset.width, imageAsset.height),
             ),
         };
-        this._textureResources.set(imageAsset, textureResource);
+        const nextResourcesByColorSpace = resourcesByColorSpace ?? new Map();
+        nextResourcesByColorSpace.set(colorSpace, textureResource);
+        this._textureResources.set(imageAsset, nextResourcesByColorSpace);
 
         return textureResource;
     }
 
-    _GenerateMipmaps(texture, mipLevelCount) {
+    _GenerateMipmaps(texture, mipLevelCount, mipmapPipeline) {
         if (mipLevelCount <= 1) {
             return;
         }
@@ -211,7 +232,7 @@ export class WebGpuResourceCache {
                 mipLevelCount: 1,
             });
             const bindGroup = this._device.createBindGroup({
-                layout: this._mipmapPipeline.getBindGroupLayout(0),
+                layout: mipmapPipeline.getBindGroupLayout(0),
                 entries: [
                     { binding: 0, resource: sourceView },
                     { binding: 1, resource: this._textureSampler },
@@ -225,7 +246,7 @@ export class WebGpuResourceCache {
                     storeOp: "store",
                 }],
             });
-            renderPass.setPipeline(this._mipmapPipeline);
+            renderPass.setPipeline(mipmapPipeline);
             renderPass.setBindGroup(0, bindGroup);
             renderPass.draw(3);
             renderPass.end();
@@ -280,11 +301,16 @@ export class WebGpuResourceCache {
             return materialResource.bindGroup;
         }
 
-        const textureResource = this.GetTextureResource(
+        const baseColorTextureResource = this.GetTextureResource(
             material.BaseColorTexture,
+            "srgb",
+        );
+        const metallicRoughnessTextureResource = this.GetTextureResource(
+            material.MetallicRoughnessTexture,
+            "linear",
         );
         const factorBuffer = this._device.createBuffer({
-            size: 16,
+            size: 48,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
         });
         let factorMemoryToken = null;
@@ -293,29 +319,45 @@ export class WebGpuResourceCache {
             this._device.queue.writeBuffer(
                 factorBuffer,
                 0,
-                new Float32Array(material.BaseColorFactor),
+                new Float32Array([
+                    ...material.BaseColorFactor,
+                    material.MetallicFactor,
+                    material.RoughnessFactor,
+                    material.AlphaCutoff,
+                    material.AlphaMode === "MASK" ? 1 : 0,
+                    material.BaseColorTexCoord,
+                    material.MetallicRoughnessTexCoord,
+                    material.IsUnlit ? 1 : 0,
+                    0,
+                ]),
             );
             factorMemoryToken = this._trackGpuResource(
-                "Material base-color factor",
+                "Material PBR factors",
                 "GPUBuffer",
-                16,
+                48,
             );
             const bindGroup = this._device.createBindGroup({
                 layout: this._materialBindGroupLayout,
                 entries: [
                     {
                         binding: 0,
-                        resource: textureResource.view,
+                        resource: baseColorTextureResource.view,
                     },
                     {
                         binding: 1,
-                        resource: material.BaseColorMinFilter === "linear"
-                            ? this._linearTextureSampler
-                            : this._textureSampler,
+                        resource: this._GetSampler(material.BaseColorSampler),
                     },
                     {
                         binding: 2,
                         resource: { buffer: factorBuffer },
+                    },
+                    {
+                        binding: 3,
+                        resource: metallicRoughnessTextureResource.view,
+                    },
+                    {
+                        binding: 4,
+                        resource: this._GetSampler(material.MetallicRoughnessSampler),
                     },
                 ],
             });
@@ -330,6 +372,23 @@ export class WebGpuResourceCache {
             this._destroyGpuResource(factorBuffer, factorMemoryToken);
             throw error;
         }
+    }
+
+    _GetSampler(settings) {
+        const key = JSON.stringify(settings);
+        let sampler = this._samplers.get(key);
+        if (!sampler) {
+            sampler = this._device.createSampler({
+                addressModeU: settings.addressModeU,
+                addressModeV: settings.addressModeV,
+                magFilter: settings.magFilter,
+                minFilter: settings.minFilter,
+                mipmapFilter: settings.mipmapFilter,
+                lodMaxClamp: settings.mipmaps ? 32 : 0,
+            });
+            this._samplers.set(key, sampler);
+        }
+        return sampler;
     }
 
     Prune(activeMeshes, activeMaterials) {
@@ -347,12 +406,22 @@ export class WebGpuResourceCache {
             }
         }
 
-        const activeTextures = new Set();
+        const activeTextureFormats = new Map();
+        const AddActiveTexture = (imageAsset, colorSpace) => {
+            if (imageAsset === null) {
+                return;
+            }
+            let colorSpaces = activeTextureFormats.get(imageAsset);
+            if (!colorSpaces) {
+                colorSpaces = new Set();
+                activeTextureFormats.set(imageAsset, colorSpaces);
+            }
+            colorSpaces.add(colorSpace);
+        };
 
         for (const material of activeMaterials) {
-            if (material.BaseColorTexture !== null) {
-                activeTextures.add(material.BaseColorTexture);
-            }
+            AddActiveTexture(material.BaseColorTexture, "srgb");
+            AddActiveTexture(material.MetallicRoughnessTexture, "linear");
         }
 
         for (const [material, materialResource] of this._materialBindGroups) {
@@ -365,12 +434,18 @@ export class WebGpuResourceCache {
             }
         }
 
-        for (const [imageAsset, textureResource] of this._textureResources) {
-            if (!activeTextures.has(imageAsset)) {
-                this._destroyGpuResource(
-                    textureResource.texture,
-                    textureResource.memoryToken,
-                );
+        for (const [imageAsset, resourcesByColorSpace] of this._textureResources) {
+            const activeColorSpaces = activeTextureFormats.get(imageAsset) ?? new Set();
+            for (const [colorSpace, textureResource] of resourcesByColorSpace) {
+                if (!activeColorSpaces.has(colorSpace)) {
+                    this._destroyGpuResource(
+                        textureResource.texture,
+                        textureResource.memoryToken,
+                    );
+                    resourcesByColorSpace.delete(colorSpace);
+                }
+            }
+            if (resourcesByColorSpace.size === 0) {
                 this._textureResources.delete(imageAsset);
             }
         }
@@ -388,11 +463,13 @@ export class WebGpuResourceCache {
             );
         }
 
-        for (const textureResource of this._textureResources.values()) {
-            this._destroyGpuResource(
-                textureResource.texture,
-                textureResource.memoryToken,
-            );
+        for (const resourcesByColorSpace of this._textureResources.values()) {
+            for (const textureResource of resourcesByColorSpace.values()) {
+                this._destroyGpuResource(
+                    textureResource.texture,
+                    textureResource.memoryToken,
+                );
+            }
         }
 
         for (const materialResource of this._materialBindGroups.values()) {
@@ -409,6 +486,7 @@ export class WebGpuResourceCache {
         this._meshResources.clear();
         this._textureResources.clear();
         this._materialBindGroups.clear();
+        this._samplers.clear();
         this._defaultTextureResource = null;
     }
 }

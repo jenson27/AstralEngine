@@ -35,7 +35,7 @@ function WithGpuUsage(callback) {
     });
     Object.defineProperty(globalThis, "GPUBufferUsage", {
         configurable: true,
-        value: { UNIFORM: 1, COPY_DST: 2 },
+        value: { VERTEX: 4, INDEX: 8, UNIFORM: 1, COPY_DST: 2 },
         writable: true,
     });
 
@@ -58,6 +58,7 @@ function CreateFakeDevice() {
         textures: [],
         copies: [],
         textureWrites: [],
+        samplers: [],
         buffers: [],
         bufferWrites: [],
         bindGroupDescriptors: [],
@@ -67,6 +68,12 @@ function CreateFakeDevice() {
     };
 
     const device = {
+        createSampler(descriptor) {
+            const sampler = { descriptor };
+            state.samplers.push(sampler);
+            return sampler;
+        },
+
         createTexture(descriptor) {
             const texture = {
                 descriptor,
@@ -209,9 +216,9 @@ test("renderer prepares draw items from normalized material slots", () => {
         },
     };
     renderer._transformBuffer = {};
-    renderer._uniformStride = 256;
+    renderer._uniformStride = 512;
     renderer._drawCapacity = 1;
-    renderer._matrixData = new Float32Array(64);
+    renderer._matrixData = new Float32Array(128);
     renderer._gpuResourceCache = {
         GetMeshResource(mesh) {
             resolvedMesh = mesh;
@@ -546,7 +553,6 @@ test("material bind group is cached and connects texture and sampler", () => {
         const { device, state } = CreateFakeDevice();
         const layout = {};
         const sampler = {};
-        const linearSampler = {};
         const imageAsset = {
             bitmap: {},
             width: 4,
@@ -557,7 +563,6 @@ test("material bind group is cached and connects texture and sampler", () => {
             device,
             materialBindGroupLayout: layout,
             textureSampler: sampler,
-            linearTextureSampler: linearSampler,
             mipmapPipeline: CreateFakeMipmapPipeline(),
             trackGpuResource: () => null,
             destroyGpuResource: (resource) => resource?.destroy(),
@@ -581,10 +586,14 @@ test("material bind group is cached and connects texture and sampler", () => {
         );
         assert.strictEqual(
             materialBindGroupDescriptor.entries[1].resource,
-            sampler,
+            state.samplers[0],
         );
         assert.equal(materialBindGroupDescriptor.entries[2].binding, 2);
-        assert.deepEqual(Array.from(state.bufferWrites[0].data), [1, 1, 1, 1]);
+        assert.deepEqual(Array.from(state.bufferWrites[0].data), [
+            1, 1, 1, 1,
+            1, 1, 0.5, 0,
+            0, 0, 0, 0,
+        ]);
 
         const linearMaterial = new Material(imageAsset, {
             baseColorMinFilter: "linear",
@@ -592,7 +601,8 @@ test("material bind group is cached and connects texture and sampler", () => {
         resourceCache.GetMaterialBindGroup(linearMaterial);
         const linearBindGroup = state.bindGroupDescriptors.find(
             ({ layout: bindGroupLayout, entries }) =>
-                bindGroupLayout === layout && entries[1].resource === linearSampler,
+                bindGroupLayout === layout &&
+                entries[1].resource.descriptor.lodMaxClamp === 0,
         );
         assert.ok(linearBindGroup);
     });
@@ -621,7 +631,11 @@ test("material without a texture uses a cached white texture and base color fact
         );
         assert.deepEqual(
             Array.from(state.bufferWrites[0].data),
-            [0.25, 0.5, 0.75, 1],
+            [
+                0.25, 0.5, 0.75, 1,
+                1, 1, 0.5, 0,
+                0, 0, 0, 0,
+            ],
         );
 
         resourceCache.Dispose();
@@ -656,12 +670,12 @@ test("resource cache releases GPU textures unused by active materials", () => {
         },
     };
 
-    resourceCache._textureResources.set(activeImage, {
-        texture: activeTexture,
-    });
-    resourceCache._textureResources.set(inactiveImage, {
-        texture: inactiveTexture,
-    });
+    resourceCache._textureResources.set(activeImage, new Map([
+        ["srgb", { texture: activeTexture }],
+    ]));
+    resourceCache._textureResources.set(inactiveImage, new Map([
+        ["srgb", { texture: inactiveTexture }],
+    ]));
     resourceCache._materialBindGroups.set(activeMaterial, {});
     resourceCache._materialBindGroups.set(inactiveMaterial, {});
 

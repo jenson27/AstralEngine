@@ -55,6 +55,10 @@ export class GlbModelLoader {
                     "GLB model descriptor must define a non-empty source URL.",
                 );
             }
+            const importScale = descriptor.source.importScale ?? 1;
+            if (!Number.isFinite(importScale) || importScale <= 0) {
+                throw new RangeError("GLB source importScale must be a positive finite number.");
+            }
 
             stage = "fetch GLB";
             const response = await this._fetcher(descriptor.source.url);
@@ -70,13 +74,16 @@ export class GlbModelLoader {
             );
 
             stage = "validate GLB content";
-            ValidateGlbDocument(document);
+            ValidateGlbDocument(document, (message, details) =>
+                AstralLogger.Warn(message, details),
+            );
             const buffers = ReadBuffers(document, binaryChunk);
             const primitives = await BuildGlbScene({
                 document,
                 buffers,
                 loadImage: (imageIndex) =>
                     this._LoadImage(document, buffers, imageIndex, images),
+                importScale,
                 onWarning: (message, details) =>
                     AstralLogger.Warn(message, details),
             });
