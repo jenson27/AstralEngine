@@ -121,12 +121,18 @@ export function AppendScopeTimelineGrid(svg, layout) {
 
     for (const ratio of [0, 0.5, 1]) {
         const x = plotLeft + ratio * plotWidth;
+        let textAnchor = "middle";
+        if (ratio === 0) {
+            textAnchor = "start";
+        } else if (ratio === 1) {
+            textAnchor = "end";
+        }
+
         const timeLabel = CreateSvgElement("text", {
             x,
             y: 18,
             class: "profiler-chart-label",
-            "text-anchor":
-                ratio === 0 ? "start" : ratio === 1 ? "end" : "middle",
+            "text-anchor": textAnchor,
         });
         timeLabel.textContent = FormatMilliseconds(frameDuration * ratio);
         svg.append(

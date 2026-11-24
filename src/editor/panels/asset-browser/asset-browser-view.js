@@ -672,8 +672,8 @@ export class AssetBrowserView {
     }
 
     _HandleEntryClick(event) {
-        const button = event.target.closest("[data-asset-path]");
-        if (!button || !this._entryList.contains(button)) {
+        const button = this._GetEntryButton(event);
+        if (!button) {
             return;
         }
 
