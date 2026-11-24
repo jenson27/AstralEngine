@@ -201,3 +201,40 @@ test("releases a pending scope if the manager is disposed during loading", async
     assert.deepEqual(lateScene.Calls, [["Dispose", "late"]]);
     assert.deepEqual(releaseCalls, ["pending"]);
 });
+
+test("manager disposal waits for a session release already in progress", async () => {
+    let completeRelease;
+    let releaseStarted = false;
+    const scope = {
+        ...CreateAssetScope("session", []),
+        ReleaseAll() {
+            releaseStarted = true;
+            return new Promise((resolve) => {
+                completeRelease = resolve;
+            });
+        },
+    };
+    const manager = new SceneManager(
+        { async Load() { return CreateScene("scene"); } },
+        () => ({}),
+        () => scope,
+    );
+    await manager.LoadScene("/scenes/scene.json");
+
+    const sessionDisposal = manager.DisposeSceneSession(
+        manager.ActiveSceneSession,
+    );
+    assert.equal(releaseStarted, true);
+
+    let managerDisposalCompleted = false;
+    const managerDisposal = manager.Dispose().then(() => {
+        managerDisposalCompleted = true;
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+    assert.equal(managerDisposalCompleted, false);
+
+    completeRelease();
+    assert.equal(await sessionDisposal, true);
+    await managerDisposal;
+    assert.equal(managerDisposalCompleted, true);
+});

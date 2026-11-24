@@ -17,6 +17,8 @@
 | `AssetBrowserDirectoryState.Dispose()` | Invalidates pending results when the panel closes |
 | `AssetBrowserPanel._GetCatalogAssetIds()` | Finds catalog IDs that refer to a project file |
 | `AssetBrowserView.Render()` / `RenderBreadcrumbs()` / `RenderDetails()` | Renders browser state, selection, paths, and file details |
+| `AssetBrowserView` scene-entry handlers | Opens scene files through the editor callback |
+| `EditorSceneWorkspace` / `SceneDocumentTabs` | Opens scene documents and renders their editor tabs |
 | `AssetBrowserView.SetStatus()` / `SetRefreshDisabled()` / `Dispose()` | Updates status and controls and removes view event listeners |
 | `ASSET_FILE_TYPE_OPTIONS` / `FilterAssetEntries()` | Defines type filters and filters entries in the selected folder |
 | `GetAssetFileTypeLabel()` / `FormatAssetFileSize()` / `GetAssetFileUrl()` | Formats file types and sizes and builds asset URLs |
@@ -29,6 +31,7 @@
 - `AssetBrowserDirectoryState` owns directory-entry and request maps, expanded paths, errors, current path, and selection for its lifetime
 - `AssetBrowserView` receives copied entries and a nested folder-tree snapshot; it does not read the directory state's maps or sets
 - The panel borrows `AssetCatalog` through its getter; it does not dispose the catalog
+- `AssetBrowserPanel` borrows `onOpenScene`; `EditorSceneWorkspace` owns opened scene sessions and document records
 - `AssetBrowserView` creates its DOM under the shell-provided root and removes its DOM and event listeners during `Dispose()`
 - `AssetBrowserDirectoryState.Dispose()` invalidates pending request results; it does not abort the network requests
 
@@ -66,6 +69,8 @@
 - Selecting a tree folder displays its contents in the grid
 - A single click in the grid selects a file or folder
 - A double-click or Enter on a grid folder opens that folder
+- A double-click or Enter on a scene file opens it in an editor scene tab
+- Opening a scene file that already has a tab activates that tab instead of loading a duplicate document
 - The tree disclosure button expands or collapses a folder
 - Name search matches file and folder names in the selected folder without case sensitivity
 - The type filter applies to files; folders remain visible
@@ -83,6 +88,7 @@
 - Retrying a folder reloads expanded descendants and the selected folder under it
 - The Refresh button reloads the root, expanded folders, and selected folder
 - A failed root request displays an error in the browser
+- A scene load failure appears in the editor document status and is logged
 
 ## File details and previews
 
@@ -120,6 +126,8 @@
 - `src/editor/panels/asset-browser/asset-browser-directory-state.js`
 - `src/editor/panels/asset-browser/asset-browser-view.js`
 - `src/editor/panels/asset-browser/asset-browser-model.js`
+- `src/editor/editor-scene-workspace.js`
+- `src/editor/ui/scene-document-tabs.js`
 - `src/core/assets/asset-catalog.js`
 - `src/editor/main.js`
 - `server/asset-directory-api.cjs`

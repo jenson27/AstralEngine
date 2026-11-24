@@ -213,11 +213,15 @@ export async function StartBrowserApplication({
             (interpolationAlpha, diagnostics) => {
                 hotReloadClient.CommitAtFrameBoundary();
 
-                sceneManager.PrepareRender(
-                    interpolationAlpha,
-                    platform.Canvas.width / platform.Canvas.height,
-                    diagnostics,
-                );
+                if (sceneManager.ActiveScene) {
+                    sceneManager.PrepareRender(
+                        interpolationAlpha,
+                        platform.Canvas.width / platform.Canvas.height,
+                        diagnostics,
+                    );
+                } else {
+                    renderer.ClearRenderItems();
+                }
             },
             { profiler, memoryTracker },
         );

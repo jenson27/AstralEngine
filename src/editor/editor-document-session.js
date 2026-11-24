@@ -18,13 +18,6 @@ export class EditorDocumentSession {
                     return;
                 }
 
-                if (change.type === "scene") {
-                    this._scene = change.scene;
-                    this._isDirty = false;
-                    this._Notify();
-                    return;
-                }
-
                 if (
                     ["edit", "undo", "redo"].includes(change.type) &&
                     change.scene === this._scene

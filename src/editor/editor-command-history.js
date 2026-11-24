@@ -5,6 +5,7 @@ export class EditorCommandHistory {
         }
 
         this._maxEntries = maxEntries;
+        this._sceneStates = new WeakMap();
         this._scene = null;
         this._undoStack = [];
         this._redoStack = [];
@@ -43,14 +44,37 @@ export class EditorCommandHistory {
     }
 
     SetScene(scene) {
+        if (scene !== null && typeof scene !== "object") {
+            throw new TypeError("Editor history scene must be an object or null.");
+        }
         if (scene === this._scene) {
             return false;
         }
 
         this._scene = scene;
-        this._undoStack.length = 0;
-        this._redoStack.length = 0;
+        const state = scene ? this._GetOrCreateSceneState(scene) : null;
+        this._undoStack = state?.undoStack ?? [];
+        this._redoStack = state?.redoStack ?? [];
         this._Notify({ type: "scene", scene });
+        return true;
+    }
+
+    ForgetScene(scene) {
+        if (!scene || typeof scene !== "object") {
+            return false;
+        }
+
+        const didForget = this._sceneStates.delete(scene);
+        if (!didForget) {
+            return false;
+        }
+
+        if (scene === this._scene) {
+            this._scene = null;
+            this._undoStack = [];
+            this._redoStack = [];
+            this._Notify({ type: "scene", scene: null });
+        }
         return true;
     }
 
@@ -103,6 +127,15 @@ export class EditorCommandHistory {
 
         this._listeners.add(listener);
         return () => this._listeners.delete(listener);
+    }
+
+    _GetOrCreateSceneState(scene) {
+        let state = this._sceneStates.get(scene);
+        if (!state) {
+            state = { undoStack: [], redoStack: [] };
+            this._sceneStates.set(scene, state);
+        }
+        return state;
     }
 
     async _Move(source, destination, action) {

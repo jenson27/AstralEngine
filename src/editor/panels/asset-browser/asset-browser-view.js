@@ -28,6 +28,7 @@ export class AssetBrowserView {
             onSelect,
             onSelectGridDirectory,
             onOpenDirectory,
+            onOpenScene,
             onRetryDirectory,
             getCatalogAssetIds,
         },
@@ -40,6 +41,7 @@ export class AssetBrowserView {
             onSelect,
             onSelectGridDirectory,
             onOpenDirectory,
+            onOpenScene,
             onRetryDirectory,
         };
         this._getCatalogAssetIds = getCatalogAssetIds;
@@ -500,6 +502,7 @@ export class AssetBrowserView {
         const button = CreateButton("asset-browser-entry", "");
         button.dataset.assetPath = entry.relativePath;
         button.dataset.assetKind = entry.kind;
+        button.dataset.assetType = entry.type;
         button.setAttribute(
             "aria-pressed",
             String(
@@ -683,33 +686,45 @@ export class AssetBrowserView {
     }
 
     _HandleEntryDoubleClick(event) {
-        const button = event.target.closest("[data-asset-path]");
-        if (
-            !button ||
-            !this._entryList.contains(button) ||
-            button.dataset.assetKind !== "directory"
-        ) {
-            return;
+        const button = this._GetEntryButton(event);
+        if (button) {
+            this._OpenEntry(button);
         }
-
-        this._handlers.onOpenDirectory(button.dataset.assetPath);
     }
 
     _HandleEntryKeyDown(event) {
         if (event.key !== "Enter") {
             return;
         }
-        const button = event.target.closest("[data-asset-path]");
-        if (
-            !button ||
-            !this._entryList.contains(button) ||
-            button.dataset.assetKind !== "directory"
-        ) {
+        const button = this._GetEntryButton(event);
+        if (!button || !this._OpenEntry(button)) {
             return;
         }
 
         event.preventDefault();
-        this._handlers.onOpenDirectory(button.dataset.assetPath);
+    }
+
+    _GetEntryButton(event) {
+        const button = event.target.closest("[data-asset-path]");
+        return button && this._entryList.contains(button) ? button : null;
+    }
+
+    _OpenEntry(button) {
+        if (button.dataset.assetKind === "directory") {
+            this._handlers.onOpenDirectory(button.dataset.assetPath);
+            return true;
+        }
+
+        if (button.dataset.assetType !== "scene") {
+            return false;
+        }
+
+        const relativePath = button.dataset.assetPath;
+        this._handlers.onOpenScene(
+            GetAssetFileUrl(relativePath),
+            relativePath,
+        );
+        return true;
     }
 
     _HandleBreadcrumbClick(event) {

@@ -10,6 +10,7 @@ export class AssetBrowserPanel {
             logger = AstralLogger,
             fetcher = globalThis.fetch?.bind(globalThis),
             getAssetCatalog = () => null,
+            onOpenScene = () => {},
         } = {},
     ) {
         if (!(rootElement instanceof HTMLElement)) {
@@ -18,6 +19,11 @@ export class AssetBrowserPanel {
         if (typeof getAssetCatalog !== "function") {
             throw new TypeError(
                 "AssetBrowserPanel requires an asset catalog getter.",
+            );
+        }
+        if (typeof onOpenScene !== "function") {
+            throw new TypeError(
+                "AssetBrowserPanel scene opener must be a function.",
             );
         }
 
@@ -35,6 +41,7 @@ export class AssetBrowserPanel {
             onSelectGridDirectory: (path) =>
                 this._SelectGridDirectory(path),
             onOpenDirectory: (path) => this._SelectDirectory(path),
+            onOpenScene,
             onRetryDirectory: (path) => void this._RetryDirectory(path),
             getCatalogAssetIds: (path) => this._GetCatalogAssetIds(path),
         });

@@ -10,6 +10,7 @@ import { SetNormalMatrix4 } from "../math/matrix4.js";
 
 const shaderUrl = new URL("./shaders/triangle.wgsl", import.meta.url);
 const mipmapShaderUrl = new URL("./shaders/mipmap.wgsl", import.meta.url);
+const EMPTY_RESOURCE_SET = new Set();
 
 export class WebGPURenderer {
     constructor(canvas, memoryTracker = null, profiler = null) {
@@ -326,6 +327,18 @@ export class WebGPURenderer {
         }
 
         this._gpuResourceCache.Prune(activeMeshes, activeMaterials);
+    }
+
+    ClearRenderItems() {
+        if (this._drawItems.length === 0) {
+            return;
+        }
+
+        this._drawItems.length = 0;
+        this._gpuResourceCache?.Prune(
+            EMPTY_RESOURCE_SET,
+            EMPTY_RESOURCE_SET,
+        );
     }
 
     _RequireMatrix(matrix, name) {

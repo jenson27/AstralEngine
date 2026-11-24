@@ -42,9 +42,10 @@ export class SceneManager {
         this._sceneLoader = sceneLoader;
         this._createLoadOptions = createLoadOptions;
         this._createAssetScope = createAssetScope;
-        this._activeScene = null;
-        this._activeSceneUrl = null;
-        this._activeAssetScope = null;
+        this._sceneSessions = new Map();
+        this._pendingSessionDisposals = new Set();
+        this._activeSceneSession = null;
+        this._listeners = new Set();
         this._isLoading = false;
         this._loadCompletion = null;
         this._isDisposed = false;
@@ -52,24 +53,31 @@ export class SceneManager {
     }
 
     get ActiveScene() {
-        return this._activeScene;
+        return this._activeSceneSession?.Scene ?? null;
     }
 
     get ActiveSceneUrl() {
-        return this._activeSceneUrl;
+        return this._activeSceneSession?.Url ?? null;
+    }
+
+    get ActiveSceneSession() {
+        return this._activeSceneSession;
     }
 
     async AcquireAssetHandle(assetId) {
         this._RequireNotDisposed();
 
-        const assetScope = this._activeAssetScope;
-        if (!this._activeScene || !assetScope) {
+        const activeSession = this._activeSceneSession;
+        const assetScope = activeSession
+            ? this._sceneSessions.get(activeSession)
+            : null;
+        if (!activeSession || !assetScope) {
             throw new Error("SceneManager has no active asset scope.");
         }
 
         await assetScope.Acquire(assetId);
 
-        if (assetScope !== this._activeAssetScope) {
+        if (activeSession !== this._activeSceneSession) {
             throw new Error("Active scene changed while acquiring the asset.");
         }
 
@@ -77,20 +85,47 @@ export class SceneManager {
     }
 
     RetainActiveAssetHandles(scene, assetIds) {
-        if (scene !== this._activeScene || !this._activeAssetScope) {
+        const activeSession = this._activeSceneSession;
+        const assetScope = activeSession
+            ? this._sceneSessions.get(activeSession)
+            : null;
+        if (scene !== activeSession?.Scene || !assetScope) {
             return Promise.resolve(false);
         }
 
-        return this._activeAssetScope.RetainOnly(assetIds).then(() => true);
+        return assetScope.RetainOnly(assetIds).then(() => true);
     }
 
-    LoadScene(url) {
+    async LoadScene(url) {
+        return this._LoadAndActivate(this.LoadSceneSession(url));
+    }
+
+    LoadSceneSession(url) {
         return this._LoadCandidate(url, (options) =>
             this._sceneLoader.Load(url, options),
         );
     }
 
-    LoadSceneData(data) {
+    async LoadSceneData(data) {
+        return this._LoadAndActivate(this.LoadSceneDataSession(data));
+    }
+
+    async _LoadAndActivate(sessionPromise) {
+        const session = await sessionPromise;
+        try {
+            const previousSession = this.ActivateSceneSession(session);
+            if (previousSession) {
+                await this.DisposeSceneSession(previousSession);
+            }
+            this._RequireNotDisposed();
+            return session.Scene;
+        } catch (error) {
+            await this.DisposeSceneSession(session);
+            throw error;
+        }
+    }
+
+    LoadSceneDataSession(data) {
         if (typeof this._sceneLoader.LoadDataAsync !== "function") {
             throw new TypeError("Scene loader cannot load scene data.");
         }
@@ -98,6 +133,151 @@ export class SceneManager {
         return this._LoadCandidate(null, (options) =>
             this._sceneLoader.LoadDataAsync(data, options),
         );
+    }
+
+    ActivateSceneSession(session) {
+        this._RequireNotDisposed();
+        if (session !== null && !this._sceneSessions.has(session)) {
+            throw new TypeError("Scene session is not owned by this manager.");
+        }
+        if (session === this._activeSceneSession) {
+            return null;
+        }
+
+        const previousSession = this._activeSceneSession;
+        this._activeSceneSession = session;
+        this._Notify({
+            type: "active-session",
+            previousSession,
+            session,
+        });
+        return previousSession;
+    }
+
+    DisposeSceneSession(session) {
+        if (!this._sceneSessions.has(session)) {
+            return Promise.resolve(false);
+        }
+
+        if (session === this._activeSceneSession) {
+            this.ActivateSceneSession(null);
+        }
+
+        const assetScope = this._sceneSessions.get(session);
+        this._sceneSessions.delete(session);
+
+        const disposalPromise = this._DisposeSceneSession(
+            session,
+            assetScope,
+        );
+        this._pendingSessionDisposals.add(disposalPromise);
+        return disposalPromise.finally(() =>
+            this._pendingSessionDisposals.delete(disposalPromise),
+        );
+    }
+
+    async _DisposeSceneSession(session, assetScope) {
+        try {
+            session.Scene.Dispose();
+        } catch (error) {
+            AstralLogger.Error(
+                "Scene session failed to dispose.",
+                error,
+            );
+        }
+
+        await this._ReleaseAssetScope(
+            assetScope,
+            "Scene session assets failed to release.",
+        );
+        return true;
+    }
+
+    Subscribe(listener) {
+        if (typeof listener !== "function") {
+            throw new TypeError("Scene manager listener must be a function.");
+        }
+
+        this._listeners.add(listener);
+        return () => this._listeners.delete(listener);
+    }
+
+    FixedUpdate(deltaTime, elapsedTime, diagnostics = null) {
+        this._RequireNotDisposed();
+        this._activeSceneSession?.Scene.FixedUpdate(
+            deltaTime,
+            elapsedTime,
+            diagnostics,
+        );
+    }
+
+    PrepareRender(interpolationAlpha, aspectRatio, diagnostics = null) {
+        this._RequireNotDisposed();
+        this._activeSceneSession?.Scene.PrepareRender(
+            interpolationAlpha,
+            aspectRatio,
+            diagnostics,
+        );
+    }
+
+    Dispose() {
+        if (this._disposePromise) {
+            return this._disposePromise;
+        }
+
+        if (this._isDisposed) {
+            return Promise.resolve();
+        }
+
+        this._isDisposed = true;
+        const sessions = [...this._sceneSessions.entries()];
+        const pendingSessionDisposals = [
+            ...this._pendingSessionDisposals,
+        ];
+        const pendingLoadCompletion = this._loadCompletion;
+        this._sceneSessions.clear();
+        this._activeSceneSession = null;
+        this._listeners.clear();
+
+        let resolveDispose;
+        let rejectDispose;
+        this._disposePromise = new Promise((resolve, reject) => {
+            resolveDispose = resolve;
+            rejectDispose = reject;
+        });
+
+        const errors = [];
+        const releaseOperations = [];
+        for (const [session, assetScope] of sessions) {
+            try {
+                session.Scene.Dispose();
+            } catch (error) {
+                errors.push(error);
+            }
+            if (assetScope) {
+                releaseOperations.push(
+                    this._ReleaseAssetScope(
+                        assetScope,
+                        "Scene manager assets failed to release.",
+                        true,
+                    ).catch((error) => errors.push(error)),
+                );
+            }
+        }
+
+        Promise.all([...releaseOperations, ...pendingSessionDisposals])
+            .then(() => pendingLoadCompletion)
+            .then(() => {
+                if (errors.length > 0) {
+                    throw new AggregateError(
+                        errors,
+                        "Scene manager disposal failed.",
+                    );
+                }
+            })
+            .then(resolveDispose, rejectDispose);
+
+        return this._disposePromise;
     }
 
     async _LoadCandidate(sourceUrl, loadCandidate) {
@@ -128,35 +308,28 @@ export class SceneManager {
 
             this._RequireNotDisposed();
 
-            const previousScene = this._activeScene;
-
             if (!IsSceneCandidate(pendingScene)) {
                 throw new TypeError(
                     "Scene loader returned an invalid scene.",
                 );
             }
 
-            if (pendingScene === previousScene) {
+            const existingSession = [...this._sceneSessions.keys()].find(
+                (session) => session.Scene === pendingScene,
+            );
+            if (existingSession) {
                 pendingScene = null;
-                return previousScene;
+                return existingSession;
             }
 
-            const previousAssetScope = this._activeAssetScope;
-
-            this._activeScene = pendingScene;
-            this._activeSceneUrl = sourceUrl;
-            this._activeAssetScope = pendingAssetScope;
+            const session = Object.freeze({
+                Scene: pendingScene,
+                Url: sourceUrl,
+            });
+            this._sceneSessions.set(session, pendingAssetScope);
             pendingScene = null;
             pendingAssetScope = null;
-
-            this._DisposePreviousScene(previousScene);
-            await this._ReleaseAssetScope(
-                previousAssetScope,
-                "Previous scene assets failed to release.",
-            );
-
-            this._RequireNotDisposed();
-            return this._activeScene;
+            return session;
         } finally {
             try {
                 this._DisposeUnactivatedScene(pendingScene);
@@ -171,79 +344,6 @@ export class SceneManager {
                 this._loadCompletion = null;
             }
         }
-    }
-
-    FixedUpdate(deltaTime, elapsedTime, diagnostics = null) {
-        this._RequireActiveScene().FixedUpdate(
-            deltaTime,
-            elapsedTime,
-            diagnostics,
-        );
-    }
-
-    PrepareRender(interpolationAlpha, aspectRatio, diagnostics = null) {
-        this._RequireActiveScene().PrepareRender(
-            interpolationAlpha,
-            aspectRatio,
-            diagnostics,
-        );
-    }
-
-    Dispose() {
-        if (this._disposePromise) {
-            return this._disposePromise;
-        }
-
-        if (this._isDisposed) {
-            return Promise.resolve();
-        }
-
-        this._isDisposed = true;
-
-        const activeScene = this._activeScene;
-        const activeAssetScope = this._activeAssetScope;
-        const pendingLoadCompletion = this._loadCompletion;
-
-        this._activeScene = null;
-        this._activeSceneUrl = null;
-        this._activeAssetScope = null;
-
-        let resolveDispose;
-        let rejectDispose;
-
-        this._disposePromise = new Promise((resolve, reject) => {
-            resolveDispose = resolve;
-            rejectDispose = reject;
-        });
-
-        const errors = [];
-
-        try {
-            activeScene?.Dispose();
-        } catch (error) {
-            errors.push(error);
-        }
-
-        Promise.resolve()
-            .then(async () => {
-                try {
-                    await activeAssetScope?.ReleaseAll();
-                } catch (error) {
-                    errors.push(error);
-                }
-
-                await pendingLoadCompletion;
-
-                if (errors.length > 0) {
-                    throw new AggregateError(
-                        errors,
-                        "Scene manager disposal failed.",
-                    );
-                }
-            })
-            .then(resolveDispose, rejectDispose);
-
-        return this._disposePromise;
     }
 
     _CreateSceneLoadOptions(url, assetScope) {
@@ -284,17 +384,6 @@ export class SceneManager {
         return assetScope;
     }
 
-    _DisposePreviousScene(scene) {
-        try {
-            scene?.Dispose();
-        } catch (error) {
-            AstralLogger.Error(
-                "Previous scene failed to dispose after scene replacement.",
-                error,
-            );
-        }
-    }
-
     _DisposeUnactivatedScene(scene) {
         if (!scene) {
             return;
@@ -312,7 +401,7 @@ export class SceneManager {
         }
     }
 
-    async _ReleaseAssetScope(assetScope, message) {
+    async _ReleaseAssetScope(assetScope, message, throwOnError = false) {
         if (!assetScope) {
             return;
         }
@@ -321,17 +410,23 @@ export class SceneManager {
             await assetScope.ReleaseAll();
         } catch (error) {
             AstralLogger.Error(message, error);
+            if (throwOnError) {
+                throw error;
+            }
         }
     }
 
-    _RequireActiveScene() {
-        this._RequireNotDisposed();
-
-        if (!this._activeScene) {
-            throw new Error("SceneManager has no active scene.");
+    _Notify(change) {
+        for (const listener of [...this._listeners]) {
+            try {
+                listener(this, change);
+            } catch (error) {
+                AstralLogger.Error(
+                    "Scene manager listener failed.",
+                    error,
+                );
+            }
         }
-
-        return this._activeScene;
     }
 
     _RequireNotDisposed() {

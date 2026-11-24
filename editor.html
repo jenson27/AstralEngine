@@ -48,8 +48,21 @@
           aria-label="Resize hierarchy panel"
           tabindex="0"
         ></div>
-        <section class="editor-viewport" aria-label="Game viewport">
+        <section
+          id="editor-scene-viewport"
+          class="editor-viewport"
+          aria-label="Scene viewport"
+        >
+          <nav
+            id="editor-scene-tabs"
+            class="editor-scene-tabs"
+            role="tablist"
+            aria-label="Open scenes"
+          ></nav>
           <canvas id="game-canvas" aria-label="Game view" tabindex="0"></canvas>
+          <div class="editor-empty-scene" data-role="empty-scene" hidden>
+            No scene is open. Double-click a scene in Asset Browser or import a scene.
+          </div>
           <output id="engine-status" aria-live="polite">Starting...</output>
         </section>
       </div>
@@ -94,6 +107,20 @@
         ></div>
       </section>
     </main>
+    <dialog
+      id="editor-unsaved-close-dialog"
+      class="editor-unsaved-close-dialog"
+      aria-labelledby="editor-unsaved-close-title"
+      aria-describedby="editor-unsaved-close-message"
+    >
+      <h2 id="editor-unsaved-close-title">Unsaved scene changes</h2>
+      <p id="editor-unsaved-close-message"></p>
+      <div class="editor-unsaved-close-actions">
+        <button type="button" data-unsaved-action="export">Export Copy</button>
+        <button type="button" data-unsaved-action="discard">Discard</button>
+        <button type="button" data-unsaved-action="cancel">Cancel</button>
+      </div>
+    </dialog>
     <script type="module" src="/src/editor/main.js"></script>
   </body>
 </html>

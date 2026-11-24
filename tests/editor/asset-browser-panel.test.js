@@ -239,6 +239,49 @@ test(
     },
 );
 
+test("scene entries open from double-click and Enter", async (context) => {
+    InstallFakeDom(context);
+    const sceneEntry = {
+        name: "level one.scene.json",
+        relativePath: "scenes/level one.scene.json",
+        kind: "file",
+        type: "scene",
+        sizeBytes: 128,
+    };
+    const openedScenes = [];
+    const root = new FakeElement();
+    const panel = new AssetBrowserPanel(root, {
+        fetcher: async () => CreateAssetResponse([sceneEntry]),
+        onOpenScene: (url, relativePath) =>
+            openedScenes.push({ url, relativePath }),
+    });
+    try {
+        const { entryList, typeSelect } = GetPanelElements(root);
+        typeSelect.value = "all";
+        await panel.Refresh();
+        const sceneButton = entryList.children[0].children[0];
+
+        entryList.Dispatch("dblclick", { target: sceneButton });
+        let defaultPrevented = false;
+        entryList.Dispatch("keydown", {
+            target: sceneButton,
+            key: "Enter",
+            preventDefault() {
+                defaultPrevented = true;
+            },
+        });
+
+        const expectedOpen = {
+            url: "/assets/scenes/level%20one.scene.json",
+            relativePath: sceneEntry.relativePath,
+        };
+        assert.deepEqual(openedScenes, [expectedOpen, expectedOpen]);
+        assert.equal(defaultPrevented, true);
+    } finally {
+        panel.Dispose();
+    }
+});
+
 test("panel shows a fallback when an image preview fails", async (context) => {
     InstallFakeDom(context);
     const entries = [
