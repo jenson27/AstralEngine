@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "explainer",
+  "quality": "showcase",
+  "specification": {
+    "path": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\candidate.archify.md",
+    "sha256": "c342b362a7a87ecdd202ff261a36a4b6484b7baca8e4f940536cc4592032c973",
+    "bytes": 15130
+  },
+  "artifact": {
+    "path": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\astralengine.html",
+    "sha256": "431a72694a1b8dbe0aa0aa759490796e783628c5b060c3f9b28f5e788cca4382",
+    "bytes": 2274155
+  },
+  "gates": {
+    "validate": "pass",
+    "deliver": "pass",
+    "check": "pass",
+    "browser-check": "not-run"
+  },
+  "diagnostics": [],
+  "diagnosticSummary": {
+    "total": 0,
+    "shown": 0,
+    "truncated": false
+  },
+  "evidence": {
+    "receipt": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\astralengine.finalize.json",
+    "summaryReceipt": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\astralengine.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "durationMs": 2439,
+  "browserCheck": {
+    "requested": false,
+    "ran": false
+  }
+}

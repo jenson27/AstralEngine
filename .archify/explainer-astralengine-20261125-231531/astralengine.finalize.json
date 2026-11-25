@@ -1,0 +1,1213 @@
+{
+  "schemaVersion": 1,
+  "ok": true,
+  "command": "finalize",
+  "status": "pass",
+  "type": "explainer",
+  "quality": "showcase",
+  "startedAt": "2026-11-25T15:36:21.930Z",
+  "specification": {
+    "path": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\candidate.archify.md",
+    "sha256": "c342b362a7a87ecdd202ff261a36a4b6484b7baca8e4f940536cc4592032c973",
+    "bytes": 15130
+  },
+  "artifact": {
+    "path": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\astralengine.html",
+    "sha256": "431a72694a1b8dbe0aa0aa759490796e783628c5b060c3f9b28f5e788cca4382",
+    "bytes": 2274155
+  },
+  "stages": {
+    "browser-check": {
+      "status": "not-run",
+      "execution": "not-requested"
+    },
+    "validate": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": null,
+      "execution": "embedded-in-deliver",
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "deliver",
+        "explainer",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\candidate.archify.md",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\astralengine.html",
+        "--quality",
+        "showcase",
+        "--repo-root",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": true,
+        "command": "validate",
+        "specification": {
+          "sha256": "c342b362a7a87ecdd202ff261a36a4b6484b7baca8e4f940536cc4592032c973",
+          "bytes": 15130
+        },
+        "validation": {
+          "checksPassed": 4,
+          "checkCount": 4,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        }
+      }
+    },
+    "deliver": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 1175,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "deliver",
+        "explainer",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\candidate.archify.md",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\astralengine.html",
+        "--quality",
+        "showcase",
+        "--repo-root",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "receiptId": "f0342593-54be-4eb2-b5d1-dab73011e1fa",
+        "ok": true,
+        "command": "deliver",
+        "type": "explainer",
+        "input": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\candidate.archify.md",
+        "output": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\astralengine.html",
+        "explainer": {
+          "preparedSha256": "19a854ab63f6d27d5cd50612c8be9b7ab3622516c5fab0367ad6f39864204fad",
+          "dependencies": [
+            {
+              "kind": "repository",
+              "id": "ref-project",
+              "path": "README.md",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "2bc0bb228e1e749ace6bba76734550f0b9e4dfd2612a0b54c0dd947cb5aad86c",
+              "bytes": 1090
+            },
+            {
+              "kind": "repository",
+              "id": "ref-editor-page",
+              "path": "editor.html",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "2f1782fbf20dfd583366efa89cadb52b9d8aaacb1f8deb1ddbf6ec84cacd4d7f",
+              "bytes": 4440
+            },
+            {
+              "kind": "repository",
+              "id": "ref-game-entry",
+              "path": "src/main.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "367eeac84c2d9011991a99cc61e2ac66ccd6ae831eb0fc5db0bc84873d18a317",
+              "bytes": 812
+            },
+            {
+              "kind": "repository",
+              "id": "ref-editor-entry",
+              "path": "src/editor/main.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "38e3b0df7e74d9b081a9553e74db51cc649d45a5abaa8702ed79c643eb4d43da",
+              "bytes": 5071
+            },
+            {
+              "kind": "repository",
+              "id": "ref-app-setup",
+              "path": "src/browser-application.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "a77d116e28888eef8d773ed364755c1e4bb982057234cf4dec2d9fb9e3433a1f",
+              "bytes": 8132
+            },
+            {
+              "kind": "repository",
+              "id": "ref-app-start",
+              "path": "src/browser-application.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "a77d116e28888eef8d773ed364755c1e4bb982057234cf4dec2d9fb9e3433a1f",
+              "bytes": 8132
+            },
+            {
+              "kind": "repository",
+              "id": "ref-platform",
+              "path": "src/platform/browser-platform.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "ad08e82a8e68c7466cd53d023a7909de426a02747e9ae3bde978ec6b697d5fbf",
+              "bytes": 2651
+            },
+            {
+              "kind": "repository",
+              "id": "ref-input",
+              "path": "src/core/input/input-manager.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "7fb7ad0576cdc118fb1bcb45f12fa669814ca1afdc568bfd3150444730dc1341",
+              "bytes": 4997
+            },
+            {
+              "kind": "repository",
+              "id": "ref-server",
+              "path": "server.cjs",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "6d2f66a417b31a039625630973b320b2066d7be6b8ebfd991f7a70d744e09f01",
+              "bytes": 11802
+            },
+            {
+              "kind": "repository",
+              "id": "ref-server-api",
+              "path": "server/asset-directory-api.cjs",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "86710f7517af1875d1c1dcfa2add02dab1d25f93aa3bdb10955399f657288932",
+              "bytes": 6181
+            },
+            {
+              "kind": "repository",
+              "id": "ref-scene-loader",
+              "path": "src/core/scene/scene-loader.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "b3fffd8d3faa057812d8b4c92f5e235dc71f3cbc8be6a057f2f64687c4426142",
+              "bytes": 3903
+            },
+            {
+              "kind": "repository",
+              "id": "ref-scene-builder",
+              "path": "src/core/scene/scene-builder.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "560163e997dbf9c4a993eae49c36c8bbb0940a3fa616f376caec14e69e205d03",
+              "bytes": 3498
+            },
+            {
+              "kind": "repository",
+              "id": "ref-scene-manager",
+              "path": "src/core/scene/scene-manager.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "caf3f9131dad5bc3a7067a4803607c1a63e6523b3da8f2d29deb5ec7ce021e3c",
+              "bytes": 12522
+            },
+            {
+              "kind": "repository",
+              "id": "ref-scene-phases",
+              "path": "src/core/scene/scene.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "f1b12bfd992dd267ca854af069db5ee72e396aeb697229bb563b1f306e8a02f2",
+              "bytes": 17329
+            },
+            {
+              "kind": "repository",
+              "id": "ref-system-scheduler",
+              "path": "src/core/scene/system-scheduler.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "0b5f826897eb47e32b78ed9322877ef1b84b3cf91d0ca73c7975c44d95abe4f2",
+              "bytes": 2798
+            },
+            {
+              "kind": "repository",
+              "id": "ref-engine-config",
+              "path": "src/core/engine.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "fc1ed9fd72276423185ae450f433983c1a7f21df79dd577446cde01d56fc39b1",
+              "bytes": 10890
+            },
+            {
+              "kind": "repository",
+              "id": "ref-engine-loop",
+              "path": "src/core/engine.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "fc1ed9fd72276423185ae450f433983c1a7f21df79dd577446cde01d56fc39b1",
+              "bytes": 10890
+            },
+            {
+              "kind": "repository",
+              "id": "ref-engine-render",
+              "path": "src/core/engine.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "fc1ed9fd72276423185ae450f433983c1a7f21df79dd577446cde01d56fc39b1",
+              "bytes": 10890
+            },
+            {
+              "kind": "repository",
+              "id": "ref-ecs-create",
+              "path": "src/core/ecs/entity-manager.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "6881fc60bc198d5697a15cf3e437f7055ae079fe90fa1a92d920a9db846a727f",
+              "bytes": 13294
+            },
+            {
+              "kind": "repository",
+              "id": "ref-ecs-component",
+              "path": "src/core/ecs/entity-manager.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "6881fc60bc198d5697a15cf3e437f7055ae079fe90fa1a92d920a9db846a727f",
+              "bytes": 13294
+            },
+            {
+              "kind": "repository",
+              "id": "ref-ecs-query",
+              "path": "src/core/ecs/entity-manager.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "6881fc60bc198d5697a15cf3e437f7055ae079fe90fa1a92d920a9db846a727f",
+              "bytes": 13294
+            },
+            {
+              "kind": "repository",
+              "id": "ref-render-system",
+              "path": "src/systems/render-system.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "d8476702c24acbb3bacdf25c8aee2f63abdf93a4aba84c9f6af0693699273477",
+              "bytes": 4161
+            },
+            {
+              "kind": "repository",
+              "id": "ref-renderer-init",
+              "path": "src/graphics/webgpu-renderer.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "db7bfa18d1013574df30a9d3deb7cb316ca1c7ea7af735472547052d4d8188ec",
+              "bytes": 19236
+            },
+            {
+              "kind": "repository",
+              "id": "ref-renderer-prepare",
+              "path": "src/graphics/webgpu-renderer.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "db7bfa18d1013574df30a9d3deb7cb316ca1c7ea7af735472547052d4d8188ec",
+              "bytes": 19236
+            },
+            {
+              "kind": "repository",
+              "id": "ref-renderer-submit",
+              "path": "src/graphics/webgpu-renderer.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "db7bfa18d1013574df30a9d3deb7cb316ca1c7ea7af735472547052d4d8188ec",
+              "bytes": 19236
+            },
+            {
+              "kind": "repository",
+              "id": "ref-asset-catalog",
+              "path": "src/core/assets/asset-catalog.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "25c7af7224f0a0d7b91485acafa7858ddaa16e0fa84d7340091e9a05f39d1ddb",
+              "bytes": 6396
+            },
+            {
+              "kind": "repository",
+              "id": "ref-asset-scope",
+              "path": "src/core/assets/asset-scope.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "523659e1773dad64bc1aee4224a4571f4e5c0ce2573ba2af30a94437b50d4fc2",
+              "bytes": 6829
+            },
+            {
+              "kind": "repository",
+              "id": "ref-asset-manager",
+              "path": "src/core/assets/asset-manager.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "cec650237230f57899d992f9d516722240c3ecd4037547d555dcb485621f0844",
+              "bytes": 20491
+            },
+            {
+              "kind": "repository",
+              "id": "ref-hot-reload-server",
+              "path": "server.cjs",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "6d2f66a417b31a039625630973b320b2066d7be6b8ebfd991f7a70d744e09f01",
+              "bytes": 11802
+            },
+            {
+              "kind": "repository",
+              "id": "ref-hot-reload-client",
+              "path": "src/core/hot-reload-client.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "827a1226e6175df0c92c549332e5205342fa16366bc165c5853bc6ceced67b3f",
+              "bytes": 14118
+            },
+            {
+              "kind": "repository",
+              "id": "ref-hot-reload-stage",
+              "path": "src/core/hot-reload-client.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "827a1226e6175df0c92c549332e5205342fa16366bc165c5853bc6ceced67b3f",
+              "bytes": 14118
+            },
+            {
+              "kind": "repository",
+              "id": "ref-hot-reload-commit",
+              "path": "src/core/hot-reload-client.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "827a1226e6175df0c92c549332e5205342fa16366bc165c5853bc6ceced67b3f",
+              "bytes": 14118
+            },
+            {
+              "kind": "repository",
+              "id": "ref-asset-commit",
+              "path": "src/core/assets/asset-manager.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "cec650237230f57899d992f9d516722240c3ecd4037547d555dcb485621f0844",
+              "bytes": 20491
+            },
+            {
+              "kind": "repository",
+              "id": "ref-scene-v1",
+              "path": "assets/scenes/main.scene.json",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "13e164453e4785edd5880e6ae2f2839c9bd302c0323674f9d990205bc9a1a6fe",
+              "bytes": 10894
+            },
+            {
+              "kind": "repository",
+              "id": "ref-assets-v1",
+              "path": "assets/asset-manifest.json",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "82aeedc5489d7f6652f14ece86341b984c751aae95ff8b5f16e63836a894c5bc",
+              "bytes": 4889
+            },
+            {
+              "kind": "repository",
+              "id": "ref-input-v1",
+              "path": "assets/input/default.input-map.json",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "b7f56cccc4eb569cf27946f95e9c698ab10dfc1ce58f41cffb5f87bfb4e7d0ff",
+              "bytes": 1020
+            },
+            {
+              "kind": "repository",
+              "id": "ref-codecs-v1",
+              "path": "src/components/register-scene-components.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "e9a58ae8c7b002eb921717c8652b017a506558ec9953aeae91490663e3d87ffa",
+              "bytes": 8838
+            },
+            {
+              "kind": "repository",
+              "id": "ref-type-registry",
+              "path": "src/serialization/type-serializer-registry.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "3ede0affd80a524140da86e9417051313b1e59f397b98a386cfe6e3b16535b9a",
+              "bytes": 5045
+            },
+            {
+              "kind": "repository",
+              "id": "ref-json",
+              "path": "src/serialization/json-format.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "98d15c6980e70ef1ea995453b4686f3a702fdbbb019ae1c521af2367a1736552",
+              "bytes": 4654
+            },
+            {
+              "kind": "repository",
+              "id": "ref-scene-adapter",
+              "path": "src/serialization/adapters/ecs-document-adapter.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "cb5d0065061f498d02d3ce4f3f36603f1e34480598b1fb3d692ebb8cf27c54da",
+              "bytes": 4003
+            },
+            {
+              "kind": "repository",
+              "id": "ref-editor-panels",
+              "path": "src/editor/register-editor-panels.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "d181ff02f3e3e68c02c4f4fd28387deb881f81bd1d967a57845462337b74f549",
+              "bytes": 2663
+            },
+            {
+              "kind": "repository",
+              "id": "ref-editor-authoring",
+              "path": "src/editor/scene-authoring-controller.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "31a9b9266435b0387552f5b4a3ca4461d1e1817d6be567686ce632606e6fd5b6",
+              "bytes": 15710
+            },
+            {
+              "kind": "repository",
+              "id": "ref-editor-export",
+              "path": "src/editor/editor-scene-document-controller.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "e844f13b9581b0a054f8f5117c89cc04004f88589f09ff4081783e57bda0b000",
+              "bytes": 12935
+            },
+            {
+              "kind": "repository",
+              "id": "ref-logger",
+              "path": "src/diagnostics/logger.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "fe49cd1126d4d435e50727b2bb39fbfe7c397d1e629fd82e2ed74a1b02b68aaf",
+              "bytes": 4951
+            },
+            {
+              "kind": "repository",
+              "id": "ref-profiler",
+              "path": "src/diagnostics/profiling/profiler.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "a15fb6620c123fb242a1a7111b8b061c2c43ea46cedd6829a7fbaceb15b7c6d6",
+              "bytes": 14495
+            },
+            {
+              "kind": "repository",
+              "id": "ref-memory",
+              "path": "src/diagnostics/profiling/memory-tracker.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "79d29924de198605b67b18c1cde098171282ccd97f685c6eeaeba1a2bad2adf0",
+              "bytes": 17148
+            },
+            {
+              "kind": "repository",
+              "id": "ref-doc-index",
+              "path": "docs/SRC_README.md",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "3702acf69dafe02c230095c6be18d8a083d6625b4c6dda7868955efec573e173",
+              "bytes": 2540
+            },
+            {
+              "kind": "repository",
+              "id": "ref-package",
+              "path": "package.json",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "79a4a2ffae7ca8387e85872a449f6e2288e47de91910ec7c7acfa872215ea8f9",
+              "bytes": 515
+            },
+            {
+              "kind": "repository",
+              "id": "ref-test",
+              "path": "tests/engine.test.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "b090630187a7e66903dc419157b9d14bf3e923eb0bcc3c4a77fa4e2410997496",
+              "bytes": 3512
+            },
+            {
+              "kind": "repository",
+              "id": "ref-glb",
+              "path": "src/graphics/assets/glb-model-loader.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "4400d1dfdbdfa3da76485b878035581172b0ec223e3bf24aec60ad480790f70c",
+              "bytes": 5248
+            },
+            {
+              "kind": "repository",
+              "id": "ref-math",
+              "path": "src/math/matrix4.js",
+              "revision": "2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd",
+              "sha256": "6d02d59a1f678f11a4e75326ae5a751d6a81f3e15aa797ed6dde4dda073dc132",
+              "bytes": 12704
+            },
+            {
+              "kind": "diagram-spec",
+              "id": "architecture-map",
+              "inline": true,
+              "sha256": "1b1a614b6f0972c3165039a1fdf6c1955370e58a9a065521f27e8e8d63f4125b",
+              "bytes": 2970
+            },
+            {
+              "kind": "diagram-spec",
+              "id": "runtime-sequence",
+              "inline": true,
+              "sha256": "f04b62435ca74e6c549c9853e8ed79d55d14ceeab706bc67940229c352ae7c81",
+              "bytes": 3046
+            },
+            {
+              "kind": "diagram-spec",
+              "id": "project-tree",
+              "inline": true,
+              "sha256": "bd1af31822dcea6e220810d6918f30cdab5589edf261911d8501740b8fa8bc55",
+              "bytes": 1910
+            }
+          ]
+        },
+        "specification": {
+          "sha256": "c342b362a7a87ecdd202ff261a36a4b6484b7baca8e4f940536cc4592032c973",
+          "bytes": 15130
+        },
+        "artifact": {
+          "sha256": "431a72694a1b8dbe0aa0aa759490796e783628c5b060c3f9b28f5e788cca4382",
+          "bytes": 2274155
+        },
+        "validation": {
+          "checksPassed": 4,
+          "checkCount": 4,
+          "compositionProfile": "showcase",
+          "compositionStatus": "pass",
+          "errors": 0,
+          "warnings": 0
+        },
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      }
+    },
+    "check": {
+      "status": "pass",
+      "exitCode": 0,
+      "durationMs": 558,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "check",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\astralengine.html",
+        "--require-provenance"
+      ],
+      "receipt": {
+        "ok": true,
+        "file": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\astralengine.html",
+        "family": "explainer",
+        "artifact": {
+          "sha256": "431a72694a1b8dbe0aa0aa759490796e783628c5b060c3f9b28f5e788cca4382",
+          "bytes": 2274155
+        },
+        "checks": [
+          {
+            "name": "explainer_structure",
+            "ok": true,
+            "details": [
+              "155 unique DOM IDs"
+            ]
+          },
+          {
+            "name": "explainer_payload_identity",
+            "ok": true,
+            "details": []
+          },
+          {
+            "name": "explainer_dependencies",
+            "ok": true,
+            "details": [
+              "54 frozen dependencies"
+            ]
+          },
+          {
+            "name": "explainer_native_diagrams",
+            "ok": true,
+            "details": [
+              "architecture-map: pass",
+              "runtime-sequence: pass",
+              "project-tree: pass"
+            ]
+          }
+        ],
+        "composition": {
+          "schemaVersion": 1,
+          "profile": "showcase",
+          "status": "pass",
+          "summary": {
+            "errors": 0,
+            "warnings": 0
+          },
+          "issues": [],
+          "nativeDiagrams": [
+            {
+              "id": "architecture-map",
+              "receipt": {
+                "ok": true,
+                "file": "C:\\Users\\Astral\\AppData\\Local\\Temp\\archify-explainer-check-GNgwU8\\child.html",
+                "artifact": {
+                  "sha256": "6b871d6fe0e0a2aff2ba1a532bf97974534a1a4de166c02fb029384f6f5086f4",
+                  "bytes": 937805
+                },
+                "checks": [
+                  {
+                    "name": "single_svg",
+                    "ok": true,
+                    "details": [
+                      "found 1 <svg> block(s)"
+                    ]
+                  },
+                  {
+                    "name": "finite_svg",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "orthogonal_arrows",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "label_route_clearance",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "relationship_crossings",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "relationship_corridors",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "container_border_runs",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "route_rhythm",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "legend_clearance",
+                    "ok": true,
+                    "details": []
+                  }
+                ],
+                "composition": {
+                  "schemaVersion": 1,
+                  "profile": "showcase",
+                  "status": "pass",
+                  "summary": {
+                    "errors": 0,
+                    "warnings": 0
+                  },
+                  "metrics": {
+                    "properCrossings": 0,
+                    "resolvedCrossovers": 5,
+                    "ambiguousCorridors": 0,
+                    "arrowheadCollisions": 0,
+                    "containerBorderRuns": 0,
+                    "labelRouteClearanceIssues": 0,
+                    "labelCanvasOverflowIssues": 0,
+                    "minLabelRouteClearance": null,
+                    "desktopReadabilityIssues": 0,
+                    "viewportHeightIssues": 0,
+                    "minProjectedNodeTextPx": 6.681407942238267,
+                    "maxBends": 4,
+                    "routesOverSuggestedBends": 3,
+                    "maxStretch": 1.189,
+                    "routesOverSuggestedStretch": 0,
+                    "minSegmentPx": 19,
+                    "minInteriorSegmentPx": 19,
+                    "shortSegmentCount": 0,
+                    "shortEndpointSegmentCount": 0,
+                    "shortInteriorSegmentCount": 0,
+                    "microSegmentCount": 0
+                  },
+                  "suggestedLimits": {
+                    "bendsPerRelationship": 2,
+                    "stretch": 1.35,
+                    "segmentPx": 16,
+                    "microSegmentPx": 8
+                  },
+                  "routeReview": {
+                    "crossings": [
+                      {
+                        "left": {
+                          "id": "arch-app-to-arch-platform-1",
+                          "from": "arch-app",
+                          "to": "arch-platform",
+                          "label": "",
+                          "collectionIndex": 2,
+                          "artifactIndex": 3
+                        },
+                        "right": {
+                          "id": "arch-app-to-arch-scenes-1",
+                          "from": "arch-app",
+                          "to": "arch-scenes",
+                          "label": "",
+                          "collectionIndex": 4,
+                          "artifactIndex": 5
+                        },
+                        "point": [
+                          584,
+                          164
+                        ],
+                        "sharedNode": "arch-app"
+                      },
+                      {
+                        "left": {
+                          "id": "arch-app-to-arch-platform-1",
+                          "from": "arch-app",
+                          "to": "arch-platform",
+                          "label": "",
+                          "collectionIndex": 2,
+                          "artifactIndex": 3
+                        },
+                        "right": {
+                          "id": "arch-app-to-arch-engine-1",
+                          "from": "arch-app",
+                          "to": "arch-engine",
+                          "label": "",
+                          "collectionIndex": 5,
+                          "artifactIndex": 6
+                        },
+                        "point": [
+                          500,
+                          164
+                        ],
+                        "sharedNode": "arch-app"
+                      },
+                      {
+                        "left": {
+                          "id": "arch-app-to-arch-platform-1",
+                          "from": "arch-app",
+                          "to": "arch-platform",
+                          "label": "",
+                          "collectionIndex": 2,
+                          "artifactIndex": 3
+                        },
+                        "right": {
+                          "id": "arch-app-to-arch-webgpu-1",
+                          "from": "arch-app",
+                          "to": "arch-webgpu",
+                          "label": "",
+                          "collectionIndex": 6,
+                          "artifactIndex": 7
+                        },
+                        "point": [
+                          568,
+                          164
+                        ],
+                        "sharedNode": "arch-app"
+                      },
+                      {
+                        "left": {
+                          "id": "arch-app-to-arch-scenes-1",
+                          "from": "arch-app",
+                          "to": "arch-scenes",
+                          "label": "",
+                          "collectionIndex": 4,
+                          "artifactIndex": 5
+                        },
+                        "right": {
+                          "id": "arch-app-to-arch-webgpu-1",
+                          "from": "arch-app",
+                          "to": "arch-webgpu",
+                          "label": "",
+                          "collectionIndex": 6,
+                          "artifactIndex": 7
+                        },
+                        "point": [
+                          871.3137084989847,
+                          247
+                        ],
+                        "sharedNode": "arch-app"
+                      },
+                      {
+                        "left": {
+                          "id": "arch-app-to-arch-webgpu-1",
+                          "from": "arch-app",
+                          "to": "arch-webgpu",
+                          "label": "",
+                          "collectionIndex": 6,
+                          "artifactIndex": 7
+                        },
+                        "right": {
+                          "id": "arch-scenes-to-arch-assets-1",
+                          "from": "arch-scenes",
+                          "to": "arch-assets",
+                          "label": "",
+                          "collectionIndex": 7,
+                          "artifactIndex": 8
+                        },
+                        "point": [
+                          964,
+                          247
+                        ]
+                      }
+                    ],
+                    "crowdedSides": [
+                      {
+                        "node": "arch-app",
+                        "label": "Shared browser application",
+                        "side": "right",
+                        "relationships": 5,
+                        "sidePx": 60,
+                        "neededPx": 88
+                      }
+                    ],
+                    "detours": [
+                      {
+                        "relationship": {
+                          "id": "arch-app-to-arch-assets-1",
+                          "from": "arch-app",
+                          "to": "arch-assets",
+                          "label": "",
+                          "collectionIndex": 3,
+                          "artifactIndex": 4
+                        },
+                        "bends": 4,
+                        "stretch": 1.056,
+                        "directCorridorBlockers": [
+                          {
+                            "id": "arch-platform",
+                            "label": "Platform",
+                            "box": [
+                              616,
+                              80,
+                              120,
+                              60
+                            ]
+                          }
+                        ]
+                      },
+                      {
+                        "relationship": {
+                          "id": "arch-app-to-arch-scenes-1",
+                          "from": "arch-app",
+                          "to": "arch-scenes",
+                          "label": "",
+                          "collectionIndex": 4,
+                          "artifactIndex": 5
+                        },
+                        "bends": 4,
+                        "stretch": 1
+                      },
+                      {
+                        "relationship": {
+                          "id": "arch-app-to-arch-webgpu-1",
+                          "from": "arch-app",
+                          "to": "arch-webgpu",
+                          "label": "",
+                          "collectionIndex": 6,
+                          "artifactIndex": 7
+                        },
+                        "bends": 4,
+                        "stretch": 1
+                      }
+                    ]
+                  },
+                  "leadingSpace": {
+                    "measured": true,
+                    "emptyTopPx": 77,
+                    "emptyTopRatio": 0.133,
+                    "occupiedTop": 77,
+                    "viewBoxTop": 0,
+                    "canvasHeight": 580,
+                    "typicalNodeHeight": 60,
+                    "reviewSuggested": false
+                  },
+                  "desktopReadability": {
+                    "budgetBasis": "recognized-declared-wide",
+                    "readerContract": "declared-wide-v1",
+                    "availableDiagramWidth": 1346,
+                    "actualBudgetPx": 1346,
+                    "actualReaderWidth": 1376,
+                    "desiredReaderWidth": 1540.9090909090908,
+                    "viewportCap": 1376,
+                    "limit": "viewport-cap",
+                    "requestedTargetPx": 7.5,
+                    "requestedTargetMet": false,
+                    "hardFloorPx": 6,
+                    "hardFloorMet": true,
+                    "minimumOwner": {
+                      "kind": "node",
+                      "id": "arch-editor"
+                    },
+                    "minimumSourceTextPx": 11,
+                    "minimumProjectedTextPx": 6.681407942238267,
+                    "semanticTextCount": 13
+                  },
+                  "issues": []
+                }
+              }
+            },
+            {
+              "id": "runtime-sequence",
+              "receipt": {
+                "ok": true,
+                "file": "C:\\Users\\Astral\\AppData\\Local\\Temp\\archify-explainer-check-JmG8DP\\child.html",
+                "artifact": {
+                  "sha256": "f1aef39c8f43419cffb773f82eb450badbb437794d1707d45da66fa468225771",
+                  "bytes": 937131
+                },
+                "checks": [
+                  {
+                    "name": "single_svg",
+                    "ok": true,
+                    "details": [
+                      "found 1 <svg> block(s)"
+                    ]
+                  },
+                  {
+                    "name": "finite_svg",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "orthogonal_arrows",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "label_route_clearance",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "relationship_crossings",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "relationship_corridors",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "container_border_runs",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "route_rhythm",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "legend_clearance",
+                    "ok": true,
+                    "details": []
+                  }
+                ],
+                "composition": {
+                  "schemaVersion": 1,
+                  "profile": "showcase",
+                  "status": "pass",
+                  "summary": {
+                    "errors": 0,
+                    "warnings": 0
+                  },
+                  "metrics": {
+                    "properCrossings": 0,
+                    "resolvedCrossovers": 0,
+                    "ambiguousCorridors": 0,
+                    "arrowheadCollisions": 0,
+                    "containerBorderRuns": 0,
+                    "labelRouteClearanceIssues": 0,
+                    "labelCanvasOverflowIssues": 0,
+                    "minLabelRouteClearance": 28,
+                    "desktopReadabilityIssues": 0,
+                    "viewportHeightIssues": 0,
+                    "minProjectedNodeTextPx": 10,
+                    "maxBends": 0,
+                    "routesOverSuggestedBends": 0,
+                    "maxStretch": 1,
+                    "routesOverSuggestedStretch": 0,
+                    "minSegmentPx": 90.6,
+                    "minInteriorSegmentPx": null,
+                    "shortSegmentCount": 0,
+                    "shortEndpointSegmentCount": 0,
+                    "shortInteriorSegmentCount": 0,
+                    "microSegmentCount": 0
+                  },
+                  "suggestedLimits": {
+                    "bendsPerRelationship": 2,
+                    "stretch": 1.35,
+                    "segmentPx": 16,
+                    "microSegmentPx": 8
+                  },
+                  "routeReview": {
+                    "crossings": [],
+                    "detours": []
+                  },
+                  "leadingSpace": {
+                    "measured": false,
+                    "reviewSuggested": false
+                  },
+                  "sequenceColumnSpace": {
+                    "measured": true,
+                    "columnFit": "spread",
+                    "participantCount": 8,
+                    "occupiedRight": 880,
+                    "viewBoxLeft": 0,
+                    "canvasWidth": 920,
+                    "emptyRightPx": 40,
+                    "emptyRightRatio": 0.043,
+                    "typicalParticipantWidth": 86,
+                    "reviewSuggested": false
+                  },
+                  "desktopReadability": {
+                    "budgetBasis": "legacy-930",
+                    "readerContract": "declared-wide-v1",
+                    "availableDiagramWidth": 930,
+                    "actualBudgetPx": 930,
+                    "limit": "legacy",
+                    "requestedTargetPx": null,
+                    "requestedTargetMet": null,
+                    "hardFloorPx": 6,
+                    "hardFloorMet": true,
+                    "minimumOwner": {
+                      "kind": "node",
+                      "id": "flow-render-system"
+                    },
+                    "minimumSourceTextPx": 10,
+                    "minimumProjectedTextPx": 10,
+                    "semanticTextCount": 26
+                  },
+                  "issues": []
+                }
+              }
+            },
+            {
+              "id": "project-tree",
+              "receipt": {
+                "ok": true,
+                "file": "C:\\Users\\Astral\\AppData\\Local\\Temp\\archify-explainer-check-n9fLMH\\child.html",
+                "artifact": {
+                  "sha256": "d3866d5f82bf7267cbe775c6113f7fc34449a0cf4f97013f74a933ac12dd39de",
+                  "bytes": 956474
+                },
+                "checks": [
+                  {
+                    "name": "single_svg",
+                    "ok": true,
+                    "details": [
+                      "found 1 <svg> block(s)"
+                    ]
+                  },
+                  {
+                    "name": "finite_svg",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "orthogonal_arrows",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "label_route_clearance",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "relationship_crossings",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "relationship_corridors",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "container_border_runs",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "route_rhythm",
+                    "ok": true,
+                    "details": []
+                  },
+                  {
+                    "name": "legend_clearance",
+                    "ok": true,
+                    "details": [
+                      "no legend marker found"
+                    ]
+                  }
+                ],
+                "composition": {
+                  "schemaVersion": 1,
+                  "profile": "showcase",
+                  "status": "pass",
+                  "summary": {
+                    "errors": 0,
+                    "warnings": 0
+                  },
+                  "metrics": {
+                    "properCrossings": 0,
+                    "resolvedCrossovers": 0,
+                    "ambiguousCorridors": 0,
+                    "arrowheadCollisions": 0,
+                    "containerBorderRuns": 0,
+                    "labelRouteClearanceIssues": 0,
+                    "labelCanvasOverflowIssues": 0,
+                    "minLabelRouteClearance": null,
+                    "desktopReadabilityIssues": 0,
+                    "viewportHeightIssues": 0,
+                    "minProjectedNodeTextPx": 6.965764331210192,
+                    "maxBends": 0,
+                    "routesOverSuggestedBends": 0,
+                    "maxStretch": null,
+                    "routesOverSuggestedStretch": 0,
+                    "minSegmentPx": null,
+                    "minInteriorSegmentPx": null,
+                    "shortSegmentCount": 0,
+                    "shortEndpointSegmentCount": 0,
+                    "shortInteriorSegmentCount": 0,
+                    "microSegmentCount": 0
+                  },
+                  "suggestedLimits": {
+                    "bendsPerRelationship": 2,
+                    "stretch": 1.35,
+                    "segmentPx": 16,
+                    "microSegmentPx": 8
+                  },
+                  "routeReview": {
+                    "crossings": [],
+                    "detours": []
+                  },
+                  "leadingSpace": {
+                    "measured": false,
+                    "reviewSuggested": false
+                  },
+                  "desktopReadability": {
+                    "budgetBasis": "recognized-declared-wide",
+                    "readerContract": "declared-wide-v1",
+                    "availableDiagramWidth": 1346,
+                    "actualBudgetPx": 1346,
+                    "actualReaderWidth": 1376,
+                    "desiredReaderWidth": 1962.3076923076924,
+                    "viewportCap": 1376,
+                    "limit": "viewport-cap",
+                    "requestedTargetPx": 10,
+                    "requestedTargetMet": false,
+                    "hardFloorPx": 6,
+                    "hardFloorMet": true,
+                    "minimumOwner": {
+                      "kind": "node",
+                      "id": "tree-shell"
+                    },
+                    "minimumSourceTextPx": 13,
+                    "minimumProjectedTextPx": 6.965764331210192,
+                    "semanticTextCount": 26
+                  },
+                  "issues": []
+                }
+              }
+            }
+          ]
+        },
+        "diagnostics": [],
+        "provenance": "current",
+        "deliveryReceiptId": "f0342593-54be-4eb2-b5d1-dab73011e1fa"
+      }
+    }
+  },
+  "browserCheck": {
+    "requested": false,
+    "ran": false
+  },
+  "diagnostics": [],
+  "evidence": {
+    "receipt": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\astralengine.finalize.json",
+    "summaryReceipt": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\astralengine.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "finishedAt": "2026-11-25T15:36:24.369Z",
+  "durationMs": 2439,
+  "update": {
+    "status": "unavailable",
+    "installedVersion": null,
+    "availableVersion": null,
+    "releaseNotes": null,
+    "checkedAt": null,
+    "source": null,
+    "noticeRequired": false,
+    "noticeText": null,
+    "reason": "check-failed"
+  }
+}

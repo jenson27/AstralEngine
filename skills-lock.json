@@ -1,6 +1,13 @@
 {
   "version": 2,
   "skills": {
+    "archify": {
+      "source": "archify.si",
+      "sourceUrl": "https://archify.si",
+      "sourceType": "well-known",
+      "computedHash": "82eb6a26d4f2482d7eb3017336c17b1cc574e92da54ea6982d13bae7b694867e",
+      "wellKnownDigest": "sha256:3084813ffd0e7e99d4268dde67bbdfe23789538b82c355a369519adbab002571"
+    },
     "code-simplification": {
       "source": "addyosmani/agent-skills",
       "commit": "8c99fa36d90068c82d547f7c12a9d67a3e95f4ee",
