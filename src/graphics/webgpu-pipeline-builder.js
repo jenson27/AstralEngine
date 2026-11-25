@@ -2,7 +2,8 @@ export async function CreateWebGpuPipeline({
     device,
     format,
     depthFormat,
-    matrixBlockSize,
+    frameUniformSize,
+    transformUniformSize,
     shaderCode,
     mipmapShaderCode,
 }) {
@@ -10,15 +11,28 @@ export async function CreateWebGpuPipeline({
         code: shaderCode,
     });
 
-    const transformBindGroupLayout = device.createBindGroupLayout({
+    const frameBindGroupLayout = device.createBindGroupLayout({
         entries: [
             {
                 binding: 0,
                 visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
                 buffer: {
                     type: "uniform",
+                    minBindingSize: frameUniformSize,
+                },
+            },
+        ],
+    });
+
+    const transformBindGroupLayout = device.createBindGroupLayout({
+        entries: [
+            {
+                binding: 0,
+                visibility: GPUShaderStage.VERTEX,
+                buffer: {
+                    type: "uniform",
                     hasDynamicOffset: true,
-                    minBindingSize: matrixBlockSize,
+                    minBindingSize: transformUniformSize,
                 },
             },
         ],
@@ -69,6 +83,7 @@ export async function CreateWebGpuPipeline({
 
     const pipelineLayout = device.createPipelineLayout({
         bindGroupLayouts: [
+            frameBindGroupLayout,
             transformBindGroupLayout,
             materialBindGroupLayout,
         ],
@@ -165,6 +180,7 @@ export async function CreateWebGpuPipeline({
         pipeline,
         mipmapPipeline,
         linearMipmapPipeline,
+        frameBindGroupLayout,
         transformBindGroupLayout,
         materialBindGroupLayout,
     };

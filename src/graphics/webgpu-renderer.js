@@ -47,14 +47,20 @@ export class WebGPURenderer {
         this._pipeline = null;
         this._gpuResourceCache = null;
         this._drawItems = [];
+        this._frameBindGroupLayout = null;
         this._transformBindGroupLayout = null;
         this._materialBindGroupLayout = null;
         this._textureSampler = null;
         this._linearTextureSampler = null;
+        this._frameBuffer = null;
+        this._frameBufferMemoryToken = null;
+        this._frameBindGroup = null;
+        this._frameData = new Float32Array(44);
+        this._frameUniformBlockSize = 44 * Float32Array.BYTES_PER_ELEMENT;
         this._transformBuffer = null;
         this._transformBufferMemoryToken = null;
         this._transformBindGroup = null;
-        this._matrixBlockSize = 76 * Float32Array.BYTES_PER_ELEMENT;
+        this._matrixBlockSize = 32 * Float32Array.BYTES_PER_ELEMENT;
         this._uniformStride = 0;
         this._drawCapacity = 0;
         this._matrixData = new Float32Array(0);
@@ -85,11 +91,14 @@ export class WebGPURenderer {
             device: this._device,
             format: this._format,
             depthFormat: this._depthFormat,
-            matrixBlockSize: this._matrixBlockSize,
+            frameUniformSize: this._frameUniformBlockSize,
+            transformUniformSize: this._matrixBlockSize,
             shaderCode,
             mipmapShaderCode,
         });
         this._pipeline = pipelineResources.pipeline;
+        this._frameBindGroupLayout =
+            pipelineResources.frameBindGroupLayout;
         this._transformBindGroupLayout =
             pipelineResources.transformBindGroupLayout;
         this._materialBindGroupLayout =
@@ -121,6 +130,7 @@ export class WebGPURenderer {
             destroyGpuResource: (resource, memoryToken) =>
                 this._DestroyTrackedResource(resource, memoryToken),
         });
+        this._InitializeFrameResources();
         this._InitializeTransformResources();
     }
 
@@ -205,6 +215,31 @@ export class WebGPURenderer {
         this._EnsureTransformCapacity(1);
     }
 
+    _InitializeFrameResources() {
+        this._frameBuffer = this._device.createBuffer({
+            size: this._frameUniformBlockSize,
+            usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+        this._frameBufferMemoryToken = this._TrackGpuResource(
+            "Frame uniform buffer",
+            "GPUBuffer",
+            this._frameUniformBlockSize,
+        );
+        this._frameBindGroup = this._device.createBindGroup({
+            layout: this._frameBindGroupLayout,
+            entries: [
+                {
+                    binding: 0,
+                    resource: {
+                        buffer: this._frameBuffer,
+                        offset: 0,
+                        size: this._frameUniformBlockSize,
+                    },
+                },
+            ],
+        });
+    }
+
     SetRenderItems(
         renderItems,
         viewMatrix,
@@ -229,6 +264,9 @@ export class WebGPURenderer {
             lighting.direction ?? [0.4, 0.8, 0.45],
             "Light direction",
         );
+        if (Math.hypot(...lightDirection) === 0) {
+            throw new RangeError("Light direction cannot be zero.");
+        }
         const lightColor = this._ReadVector3(
             lighting.color ?? [1, 1, 1],
             "Light color",
@@ -248,6 +286,15 @@ export class WebGPURenderer {
 
         const floatsPerDraw =
             this._uniformStride / Float32Array.BYTES_PER_ELEMENT;
+
+        this._frameData.set(viewMatrix, 0);
+        this._frameData.set(projectionMatrix, 16);
+        this._frameData.set(lightDirection, 32);
+        this._frameData[35] = 0;
+        this._frameData.set(lightColor, 36);
+        this._frameData[39] = lightIntensity;
+        this._frameData.set(cameraPosition, 40);
+        this._frameData[43] = 1;
 
         for (let index = 0; index < renderItems.length; index += 1) {
             const renderItem = renderItems[index];
@@ -297,25 +344,17 @@ export class WebGPURenderer {
 
             const matrixOffset = index * floatsPerDraw;
             this._matrixData.set(renderItem.modelMatrix, matrixOffset);
-            this._matrixData.set(viewMatrix, matrixOffset + 16);
-            this._matrixData.set(projectionMatrix, matrixOffset + 32);
             this._matrixData.set(
                 SetNormalMatrix4(new Float32Array(16), renderItem.modelMatrix),
-                matrixOffset + 48,
-            );
-            this._matrixData.set(
-                [...lightDirection, 0],
-                matrixOffset + 64,
-            );
-            this._matrixData.set(
-                [...lightColor, lightIntensity],
-                matrixOffset + 68,
-            );
-            this._matrixData.set(
-                [...cameraPosition, 1],
-                matrixOffset + 72,
+                matrixOffset + 16,
             );
         }
+
+        this._device.queue.writeBuffer(
+            this._frameBuffer,
+            0,
+            this._frameData,
+        );
 
         if (renderItems.length > 0) {
             const usedFloatCount = floatsPerDraw * renderItems.length;
@@ -490,12 +529,13 @@ export class WebGPURenderer {
         });
 
         renderPass.setPipeline(this._pipeline);
+        renderPass.setBindGroup(0, this._frameBindGroup);
 
         for (const drawItem of this._drawItems) {
-            renderPass.setBindGroup(0, this._transformBindGroup, [
+            renderPass.setBindGroup(1, this._transformBindGroup, [
                 drawItem.transformOffset,
             ]);
-            renderPass.setBindGroup(1, drawItem.materialBindGroup);
+            renderPass.setBindGroup(2, drawItem.materialBindGroup);
             renderPass.setVertexBuffer(0, drawItem.vertexBuffer);
             if (drawItem.indexBuffer) {
                 renderPass.setIndexBuffer(
@@ -538,6 +578,10 @@ export class WebGPURenderer {
         this._gpuResourceCache = null;
         this._drawItems.length = 0;
         this._DestroyTrackedResource(
+            this._frameBuffer,
+            this._frameBufferMemoryToken,
+        );
+        this._DestroyTrackedResource(
             this._transformBuffer,
             this._transformBufferMemoryToken,
         );
@@ -551,10 +595,15 @@ export class WebGPURenderer {
         this._device = null;
         this._format = null;
         this._pipeline = null;
+        this._frameBindGroupLayout = null;
         this._transformBindGroupLayout = null;
         this._materialBindGroupLayout = null;
         this._textureSampler = null;
         this._linearTextureSampler = null;
+        this._frameBuffer = null;
+        this._frameBufferMemoryToken = null;
+        this._frameBindGroup = null;
+        this._frameData = new Float32Array(44);
         this._transformBuffer = null;
         this._transformBufferMemoryToken = null;
         this._transformBindGroup = null;

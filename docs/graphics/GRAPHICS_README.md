@@ -75,7 +75,7 @@ The graphics layer defines CPU-side meshes and materials, builds render items fr
 | Member | Behaviour |
 | --- | --- |
 | `Initialize()` | Requests a WebGPU adapter and device, configures the canvas, loads WGSL, and creates the pipeline and shared resources |
-| `SetRenderItems(renderItems, viewMatrix, projectionMatrix, lighting)` | Validates input, uploads transform and light data, and sends active resource data to the GPU resource cache |
+| `SetRenderItems(renderItems, viewMatrix, projectionMatrix, lighting)` | Validates input, uploads frame and object uniform data, and sends active resource data to the GPU resource cache |
 | `WebGpuResourceCache.GetMeshResource()` / `GetTextureResource()` / `GetMaterialBindGroup()` | Return cached resources or create and upload a GPU resource on the first request |
 | `WebGpuResourceCache.Prune()` / `Dispose()` | Release GPU resources that are no longer used or when the renderer shuts down |
 | `EnsureDepthTexture()` | Creates or resizes the depth attachment to match the canvas |
@@ -85,7 +85,7 @@ The graphics layer defines CPU-side meshes and materials, builds render items fr
 | `Shutdown()` | Unconfigures the canvas and destroys cached buffers, textures, depth resources, and the device |
 
 - Initialization rejects browsers without WebGPU, an adapter, or a WebGPU canvas context
-- Each draw uses a triangle-list pipeline, per-draw transform and light uniforms, and a material bind group
+- Each draw uses a triangle-list pipeline, shared per-frame camera and light uniforms, per-draw model and normal matrices, and a material bind group
 - Material bind groups carry base-color and metallic-roughness texture/sampler data and PBR factors; missing textures use shared fallback textures
 - Image uploads generate a complete mip chain with linear mip filtering
 - The renderer draws one range per mesh submesh and selects the material by slot name
@@ -96,7 +96,7 @@ The graphics layer defines CPU-side meshes and materials, builds render items fr
 
 ## Current scope
 
-- The shader supports direct Cook-Torrance PBR lighting with one directional light; it does not support ambient or image-based lighting, shadows, normal maps, emissive lighting, occlusion, or transparent blending
+- The shader supports direct Cook-Torrance PBR lighting with one directional light and ACES tone mapping for SDR output; it does not support ambient or image-based lighting, shadows, normal maps, emissive lighting, occlusion, or transparent blending
 - The WebGPU renderer supports the static mesh and PBR material slice described in [GLB Assets](GLB_ASSETS_README.md)
 - Mesh vertex attributes use `Float32Array`; draw data can be non-indexed or use `Uint16Array` or `Uint32Array` indices
 - The renderer draws the scene's render items and does not perform visibility culling or batching

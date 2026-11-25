@@ -12,7 +12,7 @@
 | `register-scene-components.js` | Serializes and deserializes `directionalLight` component data as version 1 |
 | `DirectionalLightInspector` | Edits light direction, color, and intensity in the editor |
 | `RenderSystem.PrepareRender()` | Selects the first active light or uses default lighting |
-| `WebGPURenderer.SetRenderItems()` | Uploads the selected light data for each render item |
+| `WebGPURenderer.SetRenderItems()` | Uploads the selected light data once for the frame |
 | `triangle.wgsl` | Applies direct Cook-Torrance lighting to lit materials |
 
 ## Light data
@@ -46,7 +46,7 @@
 1. Scene serialization creates the version 1 component through `register-scene-components.js`
 2. Editor changes call `DirectionalLight.SetSettings()`
 3. `RenderSystem.PrepareRender()` selects the first active light or the default
-4. `WebGPURenderer.SetRenderItems()` copies the light values into per-draw uniform data
+4. `WebGPURenderer.SetRenderItems()` copies the light values into the frame uniform data once
 5. `triangle.wgsl` uses the light values when shading each material
 
 ## Current scope

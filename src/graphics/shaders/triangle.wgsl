@@ -1,16 +1,22 @@
 const PI: f32 = 3.14159265359;
 
-struct TransformUniform {
-    modelMatrix: mat4x4<f32>,
+struct FrameUniform {
     viewMatrix: mat4x4<f32>,
     projectionMatrix: mat4x4<f32>,
-    normalMatrix: mat4x4<f32>,
     lightDirection: vec4f,
     lightColorIntensity: vec4f,
     cameraPosition: vec4f,
 };
 
 @group(0) @binding(0)
+var<uniform> frame: FrameUniform;
+
+struct TransformUniform {
+    modelMatrix: mat4x4<f32>,
+    normalMatrix: mat4x4<f32>,
+};
+
+@group(1) @binding(0)
 var<uniform> transform: TransformUniform;
 
 struct MaterialUniform {
@@ -19,19 +25,19 @@ struct MaterialUniform {
     textureInfo: vec4f,
 };
 
-@group(1) @binding(0)
+@group(2) @binding(0)
 var baseColorTexture: texture_2d<f32>;
 
-@group(1) @binding(1)
+@group(2) @binding(1)
 var baseColorSampler: sampler;
 
-@group(1) @binding(2)
+@group(2) @binding(2)
 var<uniform> material: MaterialUniform;
 
-@group(1) @binding(3)
+@group(2) @binding(3)
 var metallicRoughnessTexture: texture_2d<f32>;
 
-@group(1) @binding(4)
+@group(2) @binding(4)
 var metallicRoughnessSampler: sampler;
 
 struct VertexInput {
@@ -55,7 +61,7 @@ struct VertexOutput {
 fn VertexMain(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
     let worldPosition = transform.modelMatrix * vec4f(input.position, 1.0);
-    output.position = transform.projectionMatrix * transform.viewMatrix * worldPosition;
+    output.position = frame.projectionMatrix * frame.viewMatrix * worldPosition;
     output.worldPosition = worldPosition.xyz;
     output.normal = normalize((transform.normalMatrix * vec4f(input.normal, 0.0)).xyz);
     output.uv0 = input.uv0;
@@ -80,6 +86,27 @@ fn FresnelSchlick(cosine: f32, f0: vec3f) -> vec3f {
     return f0 + (vec3f(1.0) - f0) * pow(1.0 - cosine, 5.0);
 }
 
+fn ToneMapAces(color: vec3f) -> vec3f {
+    let a = 2.51;
+    let b = 0.03;
+    let c = 2.43;
+    let d = 0.59;
+    let e = 0.14;
+    return clamp(
+        (color * (a * color + b)) /
+            (color * (c * color + d) + e),
+        vec3f(0.0),
+        vec3f(1.0),
+    );
+}
+
+fn LinearToSrgb(color: vec3f) -> vec3f {
+    let bounded = clamp(color, vec3f(0.0), vec3f(1.0));
+    let low = bounded * 12.92;
+    let high = 1.055 * pow(bounded, vec3f(1.0 / 2.4)) - 0.055;
+    return select(high, low, bounded <= vec3f(0.0031308));
+}
+
 @fragment
 fn FragmentMain(input: VertexOutput) -> @location(0) vec4f {
     let baseUv = select(input.uv0, input.uv1, material.textureInfo.x > 0.5);
@@ -90,7 +117,7 @@ fn FragmentMain(input: VertexOutput) -> @location(0) vec4f {
         discard;
     }
     if (material.textureInfo.z > 0.5) {
-        return vec4f(baseColor.rgb, 1.0);
+        return vec4f(LinearToSrgb(baseColor.rgb), 1.0);
     }
 
     let metallicRoughness = textureSample(
@@ -101,8 +128,8 @@ fn FragmentMain(input: VertexOutput) -> @location(0) vec4f {
     let metallic = clamp(material.pbrAlpha.x * metallicRoughness.b, 0.0, 1.0);
     let roughness = clamp(material.pbrAlpha.y * metallicRoughness.g, 0.04, 1.0);
     let normal = normalize(input.normal);
-    let viewDirection = normalize(transform.cameraPosition.xyz - input.worldPosition);
-    let lightDirection = normalize(transform.lightDirection.xyz);
+    let viewDirection = normalize(frame.cameraPosition.xyz - input.worldPosition);
+    let lightDirection = normalize(frame.lightDirection.xyz);
     let halfwayDirection = normalize(viewDirection + lightDirection);
     let nDotL = max(dot(normal, lightDirection), 0.0);
     let nDotV = max(dot(normal, viewDirection), 0.0001);
@@ -118,8 +145,8 @@ fn FragmentMain(input: VertexOutput) -> @location(0) vec4f {
         max(4.0 * nDotV * max(nDotL, 0.0001), 0.0001);
     let diffuseWeight = (vec3f(1.0) - fresnel) * (1.0 - metallic);
     let diffuse = diffuseWeight * baseColor.rgb / PI;
-    let radiance = transform.lightColorIntensity.rgb *
-        transform.lightColorIntensity.a;
+    let radiance = frame.lightColorIntensity.rgb *
+        frame.lightColorIntensity.a;
     let litColor = (diffuse + specular) * radiance * nDotL;
-    return vec4f(litColor, 1.0);
+    return vec4f(LinearToSrgb(ToneMapAces(litColor)), 1.0);
 }
