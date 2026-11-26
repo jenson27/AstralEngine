@@ -1,0 +1,49 @@
+{
+    "version": 1,
+    "textureAssetId": "texture:neutrophil-sheet",
+    "grid": {
+        "frameWidth": 128,
+        "frameHeight": 128,
+        "columns": 6,
+        "margin": [0, 0],
+        "spacing": [0, 0]
+    },
+    "pixelsPerUnit": 128,
+    "pivot": [0.5, 0],
+    "defaultClip": "idle",
+    "eventToClip": {
+        "attack": "attack"
+    },
+    "clips": {
+        "idle": {
+            "priority": 0,
+            "loop": true,
+            "frameRate": 4,
+            "startFrame": 0,
+            "endFrameExclusive": 3
+        },
+        "attack": {
+            "priority": 1,
+            "loop": false,
+            "replayOnEvent": true,
+            "returnToDefault": true,
+            "frames": [
+                { "frame": 3, "durationMs": 100 },
+                {
+                    "frame": 4,
+                    "durationMs": 100,
+                    "triggers": [
+                        {
+                            "action": "AttackImpact",
+                            "payload": {
+                                "targetEntityId": "a1100000-0000-4000-8000-000000000006",
+                                "damage": 10
+                            }
+                        }
+                    ]
+                },
+                { "frame": 5, "durationMs": 100 }
+            ]
+        }
+    }
+}

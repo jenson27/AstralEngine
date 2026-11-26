@@ -4,6 +4,8 @@ import { Camera } from "../components/graphics/camera.js";
 import { DirectionalLight } from "../components/graphics/directional-light.js";
 import { MeshRenderer } from "../components/graphics/mesh-renderer.js";
 import { ModelRenderer } from "../components/graphics/model-renderer.js";
+import { SpriteAnimator } from "../components/graphics/sprite-animator.js";
+import { SpriteRenderer } from "../components/graphics/sprite-renderer.js";
 import { Parent } from "../components/parent.js";
 import { Transform } from "../components/transform.js";
 import { GetSceneAssetReferences } from "../core/scene/scene-asset-references.js";
@@ -14,6 +16,8 @@ import { CameraInspector } from "./panels/inspector/components/camera-inspector.
 import { DirectionalLightInspector } from "./panels/inspector/components/directional-light-inspector.js";
 import { MeshRendererInspector } from "./panels/inspector/components/mesh-renderer-inspector.js";
 import { ModelRendererInspector } from "./panels/inspector/components/model-renderer-inspector.js";
+import { SpriteAnimatorInspector } from "./panels/inspector/components/sprite-animator-inspector.js";
+import { SpriteRendererInspector } from "./panels/inspector/components/sprite-renderer-inspector.js";
 import { ParentInspector } from "./panels/inspector/components/parent-inspector.js";
 import { TransformInspector } from "./panels/inspector/components/transform-inspector.js";
 import {
@@ -24,6 +28,10 @@ import {
     CreateModelRenderer,
     RenderModelRendererAddFields,
 } from "./component-authoring/model-renderer-authoring.js";
+import {
+    CreateSpriteAnimator,
+    RenderSpriteAnimatorAddFields,
+} from "./component-authoring/sprite-animator-authoring.js";
 
 function ValidateAssetIds(assetIds) {
     if (
@@ -277,6 +285,19 @@ export function CreateEditorComponentAuthoringCatalog() {
         renderAddFields: RenderModelRendererAddFields,
         requiredComponentTypes: [Transform],
         inspector: ModelRendererInspector,
+    });
+    catalog.Register("spriteRenderer", SpriteRenderer, {
+        title: "Sprite Renderer",
+        create: () => new SpriteRenderer(),
+        requiredComponentTypes: [Transform],
+        inspector: SpriteRendererInspector,
+    });
+    catalog.Register("spriteAnimator", SpriteAnimator, {
+        title: "Sprite Animator",
+        create: CreateSpriteAnimator,
+        renderAddFields: RenderSpriteAnimatorAddFields,
+        requiredComponentTypes: [Transform, SpriteRenderer],
+        inspector: SpriteAnimatorInspector,
     });
     return catalog;
 }

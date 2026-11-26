@@ -24,6 +24,10 @@ import { BuiltinMeshLoader } from "./graphics/assets/builtin-mesh-loader.js";
 import { ImageTextureLoader } from "./graphics/assets/image-texture-loader.js";
 import { MaterialLoader } from "./graphics/assets/material-loader.js";
 import { GlbModelLoader } from "./graphics/assets/glb-model-loader.js";
+import { SpriteAnimationLoader } from "./graphics/assets/sprite-animation-loader.js";
+import { SpriteActionRegistry } from "./systems/sprite-action-registry.js";
+import { SpriteAnimationEventQueue } from "./systems/sprite-animation-event-queue.js";
+import { SpriteAnimationSystem } from "./systems/sprite-animation-system.js";
 
 async function FetchRequiredResponse(url, resourceName) {
     const response = await fetch(url);
@@ -37,9 +41,9 @@ async function FetchRequiredResponse(url, resourceName) {
     return response;
 }
 
-async function CreateAssetRuntime(memoryTracker, profiler) {
+async function CreateAssetRuntime(memoryTracker, profiler, game) {
     const manifestResponse = await FetchRequiredResponse(
-        "/assets/asset-manifest.json",
+        game.AssetManifestUrl,
         "asset manifest",
     );
     const assetCatalog = new AssetCatalog();
@@ -62,6 +66,8 @@ async function CreateAssetRuntime(memoryTracker, profiler) {
         "gltf:glb",
         new GlbModelLoader(undefined, undefined, undefined, profiler),
     );
+    const spriteAnimationLoader = new SpriteAnimationLoader();
+    assetLoaderRegistry.Register("sprite:animation", spriteAnimationLoader);
 
     const assetManager = new AssetManager(
         assetCatalog,
@@ -76,45 +82,70 @@ async function CreateAssetRuntime(memoryTracker, profiler) {
     };
 }
 
-function CreateSceneManager({ renderer, inputManager, assetManager }) {
+function CreateSceneManager({
+    renderer,
+    inputManager,
+    assetManager,
+    spriteActionRegistry,
+    game,
+}) {
     const componentRegistry = CreateSceneComponentRegistry();
+    game.RegisterSceneTypes(componentRegistry);
     const sceneLoader = new SceneLoader(componentRegistry);
 
     return new SceneManager(
         sceneLoader,
-        (url, assetScope) => ({
-            systems: [
-                {
-                    phase: SystemPhase.FixedUpdate,
-                    system: new TransformSnapshotSystem(),
+        (url, assetScope) => {
+            const spriteAnimationEvents = new SpriteAnimationEventQueue();
+            const gameSystems = game.CreateSystems();
+            if (!Array.isArray(gameSystems)) {
+                throw new TypeError("Game CreateSystems() must return an array.");
+            }
+            return {
+                systems: [
+                    {
+                        phase: SystemPhase.FixedUpdate,
+                        system: new TransformSnapshotSystem(),
+                    },
+                    {
+                        phase: SystemPhase.FixedUpdate,
+                        system: new AngularVelocitySystem(),
+                    },
+                    {
+                        phase: SystemPhase.FixedUpdate,
+                        system: new CameraControlSystem(),
+                    },
+                    ...gameSystems,
+                    {
+                        phase: SystemPhase.FixedUpdate,
+                        system: new SpriteAnimationSystem(),
+                    },
+                    {
+                        phase: SystemPhase.PrepareRender,
+                        system: new TransformHierarchySystem(),
+                    },
+                    {
+                        phase: SystemPhase.PrepareRender,
+                        system: new RenderSystem(renderer),
+                    },
+                ],
+                services: {
+                    input: inputManager,
+                    spriteAnimationEvents,
+                    spriteActionRegistry,
+                    QueueSpriteAnimationEvent: (entityId, eventName, payload) =>
+                        spriteAnimationEvents.Enqueue(entityId, eventName, payload),
+                    ResolveMeshHandle: (meshAssetId) =>
+                        assetScope.GetHandleRequired(meshAssetId),
+                    ResolveMaterialHandle: (materialAssetId) =>
+                        assetScope.GetHandleRequired(materialAssetId),
+                    ResolveModelHandle: (modelAssetId) =>
+                        assetScope.GetHandleRequired(modelAssetId),
+                    ResolveSpriteAnimationHandle: (assetId) =>
+                        assetScope.GetHandleRequired(assetId),
                 },
-                {
-                    phase: SystemPhase.FixedUpdate,
-                    system: new AngularVelocitySystem(),
-                },
-                {
-                    phase: SystemPhase.FixedUpdate,
-                    system: new CameraControlSystem(),
-                },
-                {
-                    phase: SystemPhase.PrepareRender,
-                    system: new TransformHierarchySystem(),
-                },
-                {
-                    phase: SystemPhase.PrepareRender,
-                    system: new RenderSystem(renderer),
-                },
-            ],
-            services: {
-                input: inputManager,
-                ResolveMeshHandle: (meshAssetId) =>
-                    assetScope.GetHandleRequired(meshAssetId),
-                ResolveMaterialHandle: (materialAssetId) =>
-                    assetScope.GetHandleRequired(materialAssetId),
-                ResolveModelHandle: (modelAssetId) =>
-                    assetScope.GetHandleRequired(modelAssetId),
-            },
-        }),
+            };
+        },
         () => new AssetScope(assetManager),
     );
 }
@@ -122,9 +153,22 @@ function CreateSceneManager({ renderer, inputManager, assetManager }) {
 export async function StartBrowserApplication({
     canvas,
     status,
+    game,
     profiler = null,
     memoryTracker = null,
 }) {
+    if (
+        !game ||
+        typeof game.AssetManifestUrl !== "string" ||
+        typeof game.InputMapUrl !== "string" ||
+        typeof game.StartSceneUrl !== "string" ||
+        typeof game.RegisterSceneTypes !== "function" ||
+        typeof game.RegisterSpriteActions !== "function" ||
+        typeof game.CreateSystems !== "function"
+    ) {
+        throw new TypeError("StartBrowserApplication requires a valid game definition.");
+    }
+
     let platform;
     let inputSource;
     let inputManager;
@@ -174,7 +218,7 @@ export async function StartBrowserApplication({
         await renderer.Initialize();
 
         const inputMapResponse = await FetchRequiredResponse(
-            "/assets/input/default.input-map.json",
+            game.InputMapUrl,
             "input action map",
         );
 
@@ -184,14 +228,23 @@ export async function StartBrowserApplication({
             await inputMapResponse.json(),
         );
 
-        const assetRuntime = await CreateAssetRuntime(memoryTracker, profiler);
+        const spriteActionRegistry = new SpriteActionRegistry();
+        game.RegisterSpriteActions(spriteActionRegistry);
+
+        const assetRuntime = await CreateAssetRuntime(
+            memoryTracker,
+            profiler,
+            game,
+        );
         sceneManager = CreateSceneManager({
             renderer,
             inputManager,
             assetManager: assetRuntime.manager,
+            spriteActionRegistry,
+            game,
         });
 
-        await sceneManager.LoadScene("/assets/scenes/main.scene.json");
+        await sceneManager.LoadScene(game.StartSceneUrl);
 
         hotReloadClient = new HotReloadClient(
             assetRuntime,

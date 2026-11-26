@@ -15,6 +15,7 @@ import { CreateEditorComponentAuthoringCatalog } from "./component-authoring-cat
 import { EditorSceneAuthoringController } from "./scene-authoring-controller.js";
 import { EditorShell } from "./ui/editor-shell.js";
 import { RegisterEditorPanels } from "./register-editor-panels.js";
+import { NeutrophilGame } from "../games/neutrophil-game.js";
 
 const root = document.getElementById("editor-shell");
 const canvas = document.getElementById("game-canvas");
@@ -25,8 +26,11 @@ const editorShell = new EditorShell(root);
 const editorSelection = new EditorSelection();
 const editorCommandHistory = new EditorCommandHistory();
 const editorComponentCatalog = CreateEditorComponentAuthoringCatalog();
+NeutrophilGame.RegisterEditorComponents(editorComponentCatalog);
+const sceneComponentRegistry = CreateSceneComponentRegistry();
+NeutrophilGame.RegisterSceneTypes(sceneComponentRegistry);
 const editorDocumentAdapter = new EcsDocumentAdapter(
-    CreateSceneComponentRegistry(),
+    sceneComponentRegistry,
 );
 let application = null;
 let editorSceneAuthoringController = null;
@@ -134,6 +138,12 @@ window.addEventListener(
     { once: true },
 );
 
-StartBrowserApplication({ canvas, status, profiler, memoryTracker })
+StartBrowserApplication({
+    canvas,
+    status,
+    profiler,
+    memoryTracker,
+    game: NeutrophilGame,
+})
     .then(MountRunningApplication)
     .catch(HandleEditorStartupFailure);

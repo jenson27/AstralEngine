@@ -30,6 +30,9 @@
         },
         "run": {
             "bindings": [{ "device": "keyboard", "code": "ShiftLeft" }]
+        },
+        "attack": {
+            "bindings": [{ "device": "keyboard", "code": "KeyF" }]
         }
     }
 }

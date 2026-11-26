@@ -90,5 +90,16 @@ export function GetSceneAssetReferences(typeId, source = {}) {
         ];
     }
 
+    if (typeId === "spriteAnimator") {
+        if (!hasRuntimeSource) {
+            return [["animationAssetId", data?.animationAssetId]];
+        }
+        const animationHandle =
+            state?.animationHandle ?? component?.AnimationHandle;
+        return animationHandle
+            ? [["animationAssetId", animationHandle.AssetId]]
+            : [];
+    }
+
     return [];
 }

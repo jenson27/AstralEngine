@@ -11,7 +11,8 @@
         "builtin:capsule",
         "material:grass",
         "material:grass-top",
-        "material:dirt"
+        "material:dirt",
+        "sprite-animation:neutrophil"
     ],
     "activeCameraEntityId": "6475b38a-9cc8-43c6-93f5-28017a3d2cf1",
     "entities": [
@@ -290,6 +291,75 @@
                             "default": "material:grass"
                         }
                     }
+                }
+            ]
+        },
+        {
+            "name": "Training Target",
+            "id": "a1100000-0000-4000-8000-000000000006",
+            "components": [
+                {
+                    "typeId": "transform",
+                    "version": 1,
+                    "data": {
+                        "position": [4, -0.2, -0.8],
+                        "rotation": [0, 0, 0],
+                        "scale": [0.45, 0.45, 0.45]
+                    }
+                },
+                {
+                    "typeId": "meshRenderer",
+                    "version": 1,
+                    "data": {
+                        "meshAssetId": "builtin:cube",
+                        "materialsBySlot": {
+                            "side": "material:grass",
+                            "top": "material:grass-top",
+                            "bottom": "material:dirt"
+                        }
+                    }
+                },
+                {
+                    "typeId": "hitPoints",
+                    "version": 1,
+                    "data": { "current": 100, "maximum": 100 }
+                }
+            ]
+        },
+        {
+            "name": "Nuetrophil",
+            "id": "a1100000-0000-4000-8000-000000000007",
+            "components": [
+                {
+                    "typeId": "transform",
+                    "version": 1,
+                    "data": {
+                        "position": [2, -0.2, 0.1],
+                        "rotation": [0, 0, 0],
+                        "scale": [1, 1, 1]
+                    }
+                },
+                {
+                    "typeId": "spriteRenderer",
+                    "version": 1,
+                    "data": {
+                        "billboardMode": "spherical",
+                        "tint": [1, 1, 1, 1],
+                        "renderOrder": 0
+                    }
+                },
+                {
+                    "typeId": "spriteAnimator",
+                    "version": 1,
+                    "data": {
+                        "animationAssetId": "sprite-animation:neutrophil",
+                        "initialClip": "idle"
+                    }
+                },
+                {
+                    "typeId": "playerControlled",
+                    "version": 1,
+                    "data": {}
                 }
             ]
         },

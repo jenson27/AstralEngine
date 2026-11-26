@@ -10,6 +10,8 @@ import { MeshRenderer } from "./graphics/mesh-renderer.js";
 import { ModelRenderer } from "./graphics/model-renderer.js";
 import { DirectionalLight } from "./graphics/directional-light.js";
 import { AngularVelocity } from "./angular-velocity.js";
+import { SpriteRenderer } from "./graphics/sprite-renderer.js";
+import { SpriteAnimator } from "./graphics/sprite-animator.js";
 
 function ReadVector3(value, name) {
     if (
@@ -273,5 +275,56 @@ export function CreateSceneComponentRegistry() {
         },
     );
 
+    registry.Register(
+        "spriteRenderer",
+        SpriteRenderer,
+        (data) => new SpriteRenderer(data),
+        {
+            Version: 1,
+            Serialize: (spriteRenderer) => ({
+                billboardMode: spriteRenderer.billboardMode,
+                tint: ReadVector4(spriteRenderer.tint, "Sprite tint"),
+                renderOrder: spriteRenderer.renderOrder,
+            }),
+        },
+    );
+
+    registry.Register(
+        "spriteAnimator",
+        SpriteAnimator,
+        (data, context) => {
+            const resolveHandle = context.RequireService(
+                "ResolveSpriteAnimationHandle",
+            );
+            return new SpriteAnimator(
+                resolveHandle(data.animationAssetId),
+                data.initialClip ?? null,
+            );
+        },
+        {
+            Version: 1,
+            Serialize: (spriteAnimator) => {
+                const data = {
+                    animationAssetId: spriteAnimator.AnimationHandle.AssetId,
+                };
+                if (spriteAnimator.InitialClip !== null) {
+                    data.initialClip = spriteAnimator.InitialClip;
+                }
+                return data;
+            },
+        },
+    );
+
     return registry;
+}
+
+function ReadVector4(value, name) {
+    if (
+        !Array.isArray(value) ||
+        value.length !== 4 ||
+        !value.every(Number.isFinite)
+    ) {
+        throw new TypeError(name + " must contain four finite numbers.");
+    }
+    return [...value];
 }

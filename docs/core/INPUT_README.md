@@ -11,7 +11,7 @@
 | `BrowserInputSource(canvas)` | Collects browser events and returns one frame's input state |
 | `InputManager(inputSource, actionMap)` | Validates an action map and queries named action state |
 | `CameraControlSystem` | Reads movement actions and pointer delta during fixed updates |
-| `assets/input/default.input-map.json` | Defines the current keyboard bindings |
+| `assets/inputs/default.input-map.json` | Defines the current keyboard bindings |
 
 ## Action map
 
@@ -67,4 +67,4 @@
 - `src/platform/browser-input-source.js`
 - `src/core/input/input-manager.js`
 - `src/systems/camera-control-system.js`
-- `assets/input/default.input-map.json`
+- `assets/inputs/default.input-map.json`

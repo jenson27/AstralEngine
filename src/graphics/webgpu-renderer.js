@@ -5,6 +5,7 @@ import { AstralLogger } from "../diagnostics/logger.js";
 import { Material } from "./material.js";
 import { GpuTimingTracker } from "./gpu-timing-tracker.js";
 import { WebGpuResourceCache } from "./webgpu-resource-cache.js";
+import { WebGpuSpriteRenderer } from "./webgpu-sprite-renderer.js";
 import { CreateWebGpuPipeline } from "./webgpu-pipeline-builder.js";
 import { SetNormalMatrix4 } from "../math/matrix4.js";
 
@@ -46,6 +47,7 @@ export class WebGPURenderer {
         this._format = null;
         this._pipeline = null;
         this._gpuResourceCache = null;
+        this._spriteRenderer = null;
         this._drawItems = [];
         this._frameBindGroupLayout = null;
         this._transformBindGroupLayout = null;
@@ -130,6 +132,17 @@ export class WebGPURenderer {
             destroyGpuResource: (resource, memoryToken) =>
                 this._DestroyTrackedResource(resource, memoryToken),
         });
+        this._spriteRenderer = new WebGpuSpriteRenderer({
+            device: this._device,
+            format: this._format,
+            depthFormat: this._depthFormat,
+            resourceCache: this._gpuResourceCache,
+            trackGpuResource: (label, resourceType, bytes) =>
+                this._TrackGpuResource(label, resourceType, bytes),
+            destroyGpuResource: (resource, memoryToken) =>
+                this._DestroyTrackedResource(resource, memoryToken),
+        });
+        await this._spriteRenderer.Initialize();
         this._InitializeFrameResources();
         this._InitializeTransformResources();
     }
@@ -245,6 +258,7 @@ export class WebGPURenderer {
         viewMatrix,
         projectionMatrix,
         lighting = {},
+        spriteRenderItems = [],
     ) {
         if (!Array.isArray(renderItems)) {
             throw new TypeError("Render items must be an array.");
@@ -365,18 +379,42 @@ export class WebGPURenderer {
             );
         }
 
-        this._gpuResourceCache.Prune(activeMeshes, activeMaterials);
+        if (this._spriteRenderer) {
+            this._spriteRenderer.SetRenderItems(
+                spriteRenderItems,
+                viewMatrix,
+                projectionMatrix,
+            );
+        } else {
+            if (spriteRenderItems.length > 0) {
+                throw new Error("Sprite renderer is not initialized.");
+            }
+        }
+
+        this._PruneRenderResources(activeMeshes, activeMaterials);
     }
 
     ClearRenderItems() {
-        if (this._drawItems.length === 0) {
+        this._drawItems.length = 0;
+        this._spriteRenderer?.ClearRenderItems();
+        this._PruneRenderResources(
+            EMPTY_RESOURCE_SET,
+            EMPTY_RESOURCE_SET,
+        );
+    }
+
+    _PruneRenderResources(activeMeshes, activeMaterials) {
+        if (!this._gpuResourceCache) {
             return;
         }
 
-        this._drawItems.length = 0;
-        this._gpuResourceCache?.Prune(
-            EMPTY_RESOURCE_SET,
-            EMPTY_RESOURCE_SET,
+        const activeSpriteImages =
+            this._spriteRenderer?.ActiveImages ?? EMPTY_RESOURCE_SET;
+        this._spriteRenderer?.Prune(activeSpriteImages);
+        this._gpuResourceCache.Prune(
+            activeMeshes,
+            activeMaterials,
+            activeSpriteImages,
         );
     }
 
@@ -556,6 +594,8 @@ export class WebGPURenderer {
             }
         }
 
+        this._spriteRenderer?.Draw(renderPass);
+
         renderPass.end();
 
         timingFrame?.Resolve(commandEncoder);
@@ -574,6 +614,8 @@ export class WebGPURenderer {
     Shutdown() {
         this._context?.unconfigure();
         this._gpuTimingTracker.Destroy();
+        this._spriteRenderer?.Dispose();
+        this._spriteRenderer = null;
         this._gpuResourceCache?.Dispose();
         this._gpuResourceCache = null;
         this._drawItems.length = 0;

@@ -2,6 +2,7 @@
 
 import { StartBrowserApplication } from "./browser-application.js";
 import { AstralLogger } from "./diagnostics/logger.js";
+import { NeutrophilGame } from "./games/neutrophil-game.js";
 
 const canvas = document.getElementById("game-canvas");
 const status = document.getElementById("engine-status");
@@ -15,7 +16,7 @@ window.addEventListener(
     { once: true },
 );
 
-StartBrowserApplication({ canvas, status })
+StartBrowserApplication({ canvas, status, game: NeutrophilGame })
     .then((runningApplication) => {
         application = runningApplication;
     })

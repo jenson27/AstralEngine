@@ -391,7 +391,7 @@ export class WebGpuResourceCache {
         return sampler;
     }
 
-    Prune(activeMeshes, activeMaterials) {
+    Prune(activeMeshes, activeMaterials, activeSpriteImages = new Set()) {
         for (const [mesh, meshResource] of this._meshResources) {
             if (!activeMeshes.has(mesh)) {
                 this._destroyGpuResource(
@@ -422,6 +422,9 @@ export class WebGpuResourceCache {
         for (const material of activeMaterials) {
             AddActiveTexture(material.BaseColorTexture, "srgb");
             AddActiveTexture(material.MetallicRoughnessTexture, "linear");
+        }
+        for (const imageAsset of activeSpriteImages) {
+            AddActiveTexture(imageAsset, "srgb");
         }
 
         for (const [material, materialResource] of this._materialBindGroups) {
