@@ -32,7 +32,7 @@ const MAX_TIMELINE_SCOPES = 250;
 const MAX_SCOPE_ROWS = 500;
 
 export class ProfilerPanel {
-    constructor(profiler, panelElement, renderer = null) {
+    constructor(profiler, panelElement, gpuTiming = null) {
         if (
             !profiler ||
             typeof profiler.GetFrames !== "function" ||
@@ -47,7 +47,7 @@ export class ProfilerPanel {
         }
 
         this._profiler = profiler;
-        this._renderer = renderer;
+        this._gpuTiming = gpuTiming;
         this._root = panelElement;
         this._root.classList.add("diagnostic-panel", "profiler-panel");
         this._refreshTimer = null;
@@ -236,7 +236,7 @@ export class ProfilerPanel {
         const status = this._root.querySelector(
             '[data-role="gpu-timing-status"]',
         );
-        const nextText = this._renderer?.GpuTimingSupported
+        const nextText = this._gpuTiming?.IsSupported?.()
             ? "GPU timestamps available"
             : "GPU timestamps unavailable";
         const didChange = status.textContent !== nextText;
@@ -589,7 +589,7 @@ export class ProfilerPanel {
     }
 
     _FormatGpuFrameTime(frame) {
-        if (!this._renderer?.GpuTimingSupported) {
+        if (!this._gpuTiming?.IsSupported?.()) {
             return "Unavailable";
         }
 

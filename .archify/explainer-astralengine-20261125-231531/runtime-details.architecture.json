@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Browser runtime and render path",
+    "output": "runtime-details.html",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/jenson27/AstralEngine.git",
+      "revision": "a2fa702aa8803508e5af88829874d7eda4ec5042",
+      "link_mode": "local-only"
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "origin": [72, 72],
+    "cols": 4,
+    "gapX": 100,
+    "gapY": 90
+  },
+  "components": [
+    { "id": "arch-runtime", "type": "backend", "label": "BrowserRuntime", "row": 0, "col": 0, "sources": [{ "path": "src/browser/browser-runtime.js", "line": 144, "end_line": 223, "label": "Browser runtime" }] },
+    { "id": "arch-factory", "type": "backend", "label": "Runtime module factory", "row": 0, "col": 1, "size": [150, 64], "sources": [{ "path": "src/browser/browser-application.js", "line": 40, "end_line": 104, "label": "Application setup" }] },
+    { "id": "arch-input", "type": "backend", "label": "Input runtime", "row": 0, "col": 2, "sources": [{ "path": "src/core/input/input-manager.js", "line": 37, "end_line": 133, "label": "Input manager" }] },
+    { "id": "arch-assets", "type": "backend", "label": "Browser asset runtime", "row": 0, "col": 3, "size": [145, 64], "sources": [{ "path": "src/browser/browser-asset-runtime.js", "line": 22, "end_line": 64, "label": "Asset runtime" }] },
+    { "id": "arch-engine", "type": "backend", "label": "Engine loop", "row": 1, "col": 0, "sources": [{ "path": "src/core/engine.js", "line": 194, "end_line": 216, "label": "Engine loop" }] },
+    { "id": "arch-scene-setup", "type": "backend", "label": "Browser scene setup", "row": 1, "col": 1, "sources": [{ "path": "src/browser/browser-scene-runtime.js", "line": 15, "end_line": 106, "label": "Scene setup" }] },
+    { "id": "arch-manager", "type": "backend", "label": "SceneManager", "row": 1, "col": 2, "sources": [{ "path": "src/core/scene/scene-manager.js", "line": 99, "end_line": 170, "label": "Scene manager" }] },
+    { "id": "arch-scene", "type": "backend", "label": "Scene + ECS", "row": 1, "col": 3, "sources": [{ "path": "src/core/scene/scene-builder.js", "line": 10, "end_line": 108, "label": "Scene builder" }] },
+    { "id": "arch-systems", "type": "backend", "label": "Scene systems", "row": 2, "col": 0, "sources": [{ "path": "src/core/scene/system-scheduler.js", "line": 1, "end_line": 89, "label": "System scheduler" }, { "path": "src/core/scene/scene.js", "line": 224, "end_line": 272, "label": "Scene phases" }] },
+    { "id": "arch-editor-entry", "type": "frontend", "label": "Editor entry", "row": 2, "col": 1, "sources": [{ "path": "src/editor/main.js", "line": 1, "end_line": 137, "label": "Editor entry" }] },
+    { "id": "arch-editor-shell", "type": "frontend", "label": "Editor shell", "row": 2, "col": 2, "sources": [{ "path": "src/editor/register-editor-panels.js", "line": 8, "end_line": 71, "label": "Editor panels" }] },
+    { "id": "arch-diagnostics", "type": "frontend", "label": "Diagnostics panels", "row": 2, "col": 3, "sources": [{ "path": "src/editor/register-editor-panels.js", "line": 8, "end_line": 71, "label": "Editor diagnostics" }, { "path": "src/diagnostics/profiling/profiler.js", "line": 1, "end_line": 1, "label": "Profiler" }, { "path": "src/diagnostics/profiling/memory-tracker.js", "line": 147, "end_line": 213, "label": "Memory tracking" }] },
+    { "id": "arch-render-system", "type": "backend", "label": "RenderSystem", "row": 3, "col": 0, "sources": [{ "path": "src/systems/render-system.js", "line": 27, "end_line": 110, "label": "Render system" }] },
+    { "id": "arch-renderer", "type": "backend", "label": "WebGPU renderer", "row": 3, "col": 1, "sources": [{ "path": "src/graphics/webgpu-renderer.js", "line": 459, "end_line": 525, "label": "Render submission" }] },
+    { "id": "arch-device", "type": "external", "label": "GPUDevice", "row": 3, "col": 2, "sources": [{ "path": "src/graphics/webgpu-renderer.js", "line": 74, "end_line": 120, "label": "Renderer initialization" }] }
+  ],
+  "connections": [
+    { "id": "runtime-to-factory", "from": "arch-runtime", "to": "arch-factory", "label": "creates modules" },
+    { "id": "factory-to-input", "from": "arch-factory", "to": "arch-input", "label": "creates" },
+    { "id": "runtime-to-input", "from": "arch-runtime", "to": "arch-input", "label": "starts + updates" },
+    { "id": "factory-to-assets", "from": "arch-factory", "to": "arch-assets", "label": "creates" },
+    { "id": "factory-to-scene-setup", "from": "arch-factory", "to": "arch-scene-setup", "label": "creates" },
+    { "id": "scene-setup-to-assets", "from": "arch-scene-setup", "to": "arch-assets", "label": "scene scope" },
+    { "id": "scene-setup-to-manager", "from": "arch-scene-setup", "to": "arch-manager", "label": "configures" },
+    { "id": "scene-setup-to-systems", "from": "arch-scene-setup", "to": "arch-systems", "label": "registers" },
+    { "id": "runtime-to-manager", "from": "arch-runtime", "to": "arch-manager", "label": "loads + updates" },
+    { "id": "manager-to-scene", "from": "arch-manager", "to": "arch-scene", "label": "activates" },
+    { "id": "scene-to-systems", "from": "arch-scene", "to": "arch-systems", "label": "runs phases" },
+    { "id": "systems-to-render-system", "from": "arch-systems", "to": "arch-render-system", "label": "runs" },
+    { "id": "runtime-to-engine", "from": "arch-runtime", "to": "arch-engine", "label": "starts" },
+    { "id": "engine-to-runtime", "from": "arch-engine", "to": "arch-runtime", "label": "runs callbacks" },
+    { "id": "engine-to-renderer", "from": "arch-engine", "to": "arch-renderer", "label": "renders frames" },
+    { "id": "render-system-to-renderer", "from": "arch-render-system", "to": "arch-renderer", "label": "render items" },
+    { "id": "renderer-to-device", "from": "arch-renderer", "to": "arch-device", "label": "submits draws" },
+    { "id": "editor-entry-to-shell", "from": "arch-editor-entry", "to": "arch-editor-shell", "label": "mounts" },
+    { "id": "editor-shell-to-manager", "from": "arch-editor-shell", "to": "arch-manager", "label": "edits scenes" },
+    { "id": "editor-shell-to-diagnostics", "from": "arch-editor-shell", "to": "arch-diagnostics", "label": "mounts panels" }
+  ]
+}

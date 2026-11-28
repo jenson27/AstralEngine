@@ -35,7 +35,9 @@ export class SceneLoader {
         AstralLogger.Info("Loading scene.", { url });
 
         try {
-            const response = await this._fetcher(url);
+            const response = await this._fetcher(url, {
+                signal: options.signal,
+            });
             AstralLogger.Debug("Scene response received.", {
                 url,
                 status: response.status,

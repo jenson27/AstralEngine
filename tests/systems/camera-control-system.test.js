@@ -91,9 +91,9 @@ function CreateCameraScene({
     scene.SetActiveCameraEntity(cameraEntityId);
     scene.AddSystem(
         SystemPhase.FixedUpdate,
-        new CameraControlSystem(),
+        new CameraControlSystem({ input }),
     );
-    scene.Initialize({ input });
+    scene.Initialize();
 
     return { scene, transform, parentTransform };
 }

@@ -4,9 +4,9 @@ import { CreateAssetSelectField } from "../ui/asset-select-field.js";
 
 export function RenderModelRendererAddFields(
     container,
-    { getAssetCatalog },
+    { getAssetMetadata },
 ) {
-    const assetCatalog = getAssetCatalog?.();
+    const assetCatalog = getAssetMetadata?.();
     const options = assetCatalog?.GetAll?.()
         .filter((descriptor) => descriptor.typeId === "model")
         .map((descriptor) => [descriptor.id, descriptor.id]) ?? [];
@@ -29,7 +29,7 @@ export function RenderModelRendererAddFields(
 
 export async function CreateModelRenderer({
     acquireAssetHandle,
-    getAssetCatalog,
+    getAssetMetadata,
     values,
 }) {
     const modelAssetId = values?.modelAssetId;
@@ -37,7 +37,7 @@ export async function CreateModelRenderer({
         throw new TypeError("Choose a model asset.");
     }
 
-    const assetCatalog = getAssetCatalog?.();
+    const assetCatalog = getAssetMetadata?.();
     if (!assetCatalog || typeof assetCatalog.GetRequired !== "function") {
         throw new Error("Asset catalog is not available.");
     }

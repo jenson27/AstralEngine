@@ -167,19 +167,17 @@ export function CreateSceneComponentRegistry() {
         "meshRenderer",
         MeshRenderer,
         (data, context) => {
-            const resolveMeshHandle = context.RequireService(
-                "ResolveMeshHandle",
+            const resolveAssetHandle = context.RequireService(
+                "ResolveAssetHandle",
             );
-            const resolveMaterialHandle = context.RequireService(
-                "ResolveMaterialHandle",
-            );
-            const meshHandle = resolveMeshHandle(data.meshAssetId);
+            const meshHandle = resolveAssetHandle(data.meshAssetId, "mesh");
             const mesh = meshHandle.Current;
             let materialHandlesBySlot;
 
             if (data.defaultMaterialAssetId !== undefined) {
-                const defaultMaterialHandle = resolveMaterialHandle(
+                const defaultMaterialHandle = resolveAssetHandle(
                     data.defaultMaterialAssetId,
+                    "material",
                 );
                 materialHandlesBySlot = Object.fromEntries(
                     mesh.Submeshes.map(({ materialSlot }) => [
@@ -202,7 +200,7 @@ export function CreateSceneComponentRegistry() {
                     Object.entries(data.materialsBySlot).map(
                         ([materialSlot, materialAssetId]) => [
                             materialSlot,
-                            resolveMaterialHandle(materialAssetId),
+                            resolveAssetHandle(materialAssetId, "material"),
                         ],
                     ),
                 );
@@ -252,10 +250,12 @@ export function CreateSceneComponentRegistry() {
         "modelRenderer",
         ModelRenderer,
         (data, context) => {
-            const resolveModelHandle = context.RequireService(
-                "ResolveModelHandle",
+            const resolveAssetHandle = context.RequireService(
+                "ResolveAssetHandle",
             );
-            return new ModelRenderer(resolveModelHandle(data.modelAssetId));
+            return new ModelRenderer(
+                resolveAssetHandle(data.modelAssetId, "model"),
+            );
         },
         {
             Version: 1,
@@ -293,11 +293,14 @@ export function CreateSceneComponentRegistry() {
         "spriteAnimator",
         SpriteAnimator,
         (data, context) => {
-            const resolveHandle = context.RequireService(
-                "ResolveSpriteAnimationHandle",
+            const resolveAssetHandle = context.RequireService(
+                "ResolveAssetHandle",
             );
             return new SpriteAnimator(
-                resolveHandle(data.animationAssetId),
+                resolveAssetHandle(
+                    data.animationAssetId,
+                    "sprite-animation",
+                ),
                 data.initialClip ?? null,
             );
         },

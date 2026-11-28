@@ -8,7 +8,7 @@ function ValidateDependencies(
     sceneManager,
     selection,
     rootElement,
-    getAssetCatalog,
+    getAssetMetadata,
     commandHistory,
     componentCatalog,
     authoringController,
@@ -32,8 +32,8 @@ function ValidateDependencies(
         throw new TypeError("InspectorPanel requires a content element.");
     }
     if (
-        getAssetCatalog !== null &&
-        typeof getAssetCatalog !== "function"
+        getAssetMetadata !== null &&
+        typeof getAssetMetadata !== "function"
     ) {
         throw new TypeError("InspectorPanel asset catalog must be a function.");
     }
@@ -76,7 +76,7 @@ export class InspectorPanel {
         sceneManager,
         selection,
         rootElement,
-        getAssetCatalog = null,
+        getAssetMetadata = null,
         commandHistory = null,
         componentCatalog,
         authoringController,
@@ -86,7 +86,7 @@ export class InspectorPanel {
             sceneManager,
             selection,
             rootElement,
-            getAssetCatalog,
+            getAssetMetadata,
             commandHistory,
             componentCatalog,
             authoringController,
@@ -96,7 +96,7 @@ export class InspectorPanel {
         this._sceneManager = sceneManager;
         this._selection = selection;
         this._root = rootElement;
-        this._getAssetCatalog = getAssetCatalog;
+        this._getAssetMetadata = getAssetMetadata;
         this._history = commandHistory ?? new EditorCommandHistory();
         this._componentCatalog = componentCatalog;
         this._authoringController = authoringController;
@@ -112,7 +112,7 @@ export class InspectorPanel {
             selection,
             history: this._history,
             componentCatalog: this._componentCatalog,
-            getAssetCatalog,
+            getAssetMetadata,
             componentTypesByKey: this._componentTypesByKey,
             onPendingChange: (delta, pendingEditCount) => {
                 this._UpdateHistoryControls();
@@ -124,7 +124,7 @@ export class InspectorPanel {
         this._componentView = new InspectorComponentView({
             root: this._root,
             componentCatalog: this._componentCatalog,
-            getAssetCatalog: this._getAssetCatalog,
+            getAssetMetadata: this._getAssetMetadata,
             assetAccess: this._editController.AssetAccess,
             componentTypesByKey: this._componentTypesByKey,
             isBusy: () =>

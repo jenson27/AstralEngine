@@ -15,9 +15,9 @@ function GetAssetOptions(assetCatalog) {
 
 export function RenderSpriteAnimatorAddFields(
     container,
-    { getAssetCatalog },
+    { getAssetMetadata },
 ) {
-    const options = GetAssetOptions(getAssetCatalog?.());
+    const options = GetAssetOptions(getAssetMetadata?.());
     const select = CreateAssetSelectField(
         container,
         "Sprite animation",
@@ -37,7 +37,7 @@ export function RenderSpriteAnimatorAddFields(
 
 export async function CreateSpriteAnimator({
     acquireAssetHandle,
-    getAssetCatalog,
+    getAssetMetadata,
     values,
 }) {
     const animationAssetId = values?.animationAssetId;
@@ -48,7 +48,7 @@ export async function CreateSpriteAnimator({
         throw new TypeError("Choose a sprite animation asset.");
     }
 
-    const assetCatalog = getAssetCatalog?.();
+    const assetCatalog = getAssetMetadata?.();
     if (!assetCatalog || typeof assetCatalog.GetRequired !== "function") {
         throw new Error("Asset catalog is not available.");
     }

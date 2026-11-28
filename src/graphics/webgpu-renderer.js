@@ -13,6 +13,12 @@ const shaderUrl = new URL("./shaders/triangle.wgsl", import.meta.url);
 const mipmapShaderUrl = new URL("./shaders/mipmap.wgsl", import.meta.url);
 const EMPTY_RESOURCE_SET = new Set();
 
+function ThrowIfAborted(signal) {
+    if (signal?.aborted) {
+        throw signal.reason ?? new Error("WebGPU initialization was aborted.");
+    }
+}
+
 export class WebGPURenderer {
     constructor(canvas, memoryTracker = null, profiler = null) {
         if (
@@ -80,14 +86,17 @@ export class WebGPURenderer {
     }
 
     // Initialize the WebGPU renderer by requesting a GPU adapter and device, and configuring the canvas context.
-    async Initialize() {
-        await this._InitializeDevice();
+    async Initialize({ signal } = {}) {
+        ThrowIfAborted(signal);
+        await this._InitializeDevice(signal);
+        ThrowIfAborted(signal);
         this._ConfigureCanvasContext();
 
         const [shaderCode, mipmapShaderCode] = await Promise.all([
-            this._LoadShader(shaderUrl, "triangle"),
-            this._LoadShader(mipmapShaderUrl, "mipmap"),
+            this._LoadShader(shaderUrl, "triangle", signal),
+            this._LoadShader(mipmapShaderUrl, "mipmap", signal),
         ]);
+        ThrowIfAborted(signal);
 
         const pipelineResources = await CreateWebGpuPipeline({
             device: this._device,
@@ -98,6 +107,7 @@ export class WebGPURenderer {
             shaderCode,
             mipmapShaderCode,
         });
+        ThrowIfAborted(signal);
         this._pipeline = pipelineResources.pipeline;
         this._frameBindGroupLayout =
             pipelineResources.frameBindGroupLayout;
@@ -143,17 +153,20 @@ export class WebGPURenderer {
             destroyGpuResource: (resource, memoryToken) =>
                 this._DestroyTrackedResource(resource, memoryToken),
         });
-        await this._spriteRenderer.Initialize();
+        await this._spriteRenderer.Initialize({ signal });
+        ThrowIfAborted(signal);
         this._InitializeFrameResources();
         this._InitializeTransformResources();
     }
 
-    async _InitializeDevice() {
+    async _InitializeDevice(signal) {
+        ThrowIfAborted(signal);
         if (!navigator.gpu) {
             throw new Error("WebGPU is not available in this browser.");
         }
 
         const adapter = await navigator.gpu.requestAdapter();
+        ThrowIfAborted(signal);
 
         if (!adapter) {
             throw new Error("The browser could not access a GPU adapter.");
@@ -165,6 +178,7 @@ export class WebGPURenderer {
         this._device = await adapter.requestDevice(
             requiredFeatures.length > 0 ? { requiredFeatures } : undefined,
         );
+        ThrowIfAborted(signal);
         this._deviceLostInfo = null;
         this._gpuTimingTracker.Initialize(this._device);
 
@@ -209,8 +223,8 @@ export class WebGPURenderer {
         this.EnsureDepthTexture();
     }
 
-    async _LoadShader(url, shaderName) {
-        const shaderResponse = await fetch(url);
+    async _LoadShader(url, shaderName, signal) {
+        const shaderResponse = await fetch(url, { signal });
 
         if (!shaderResponse.ok) {
             throw new Error(

@@ -7,13 +7,13 @@
   "quality": "showcase",
   "specification": {
     "path": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\candidate.archify.md",
-    "sha256": "c342b362a7a87ecdd202ff261a36a4b6484b7baca8e4f940536cc4592032c973",
-    "bytes": 15130
+    "sha256": "ab5234a6b13e7afa94fe80436d616dc49c34c3a11f56ad207c8797e63dc3bf2d",
+    "bytes": 14753
   },
   "artifact": {
     "path": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\astralengine.html",
-    "sha256": "431a72694a1b8dbe0aa0aa759490796e783628c5b060c3f9b28f5e788cca4382",
-    "bytes": 2274155
+    "sha256": "e08b8bf781b332ed09bf51da3604a1491e0f6c61b75ff03bfdc9882447ea6506",
+    "bytes": 2994204
   },
   "gates": {
     "validate": "pass",
@@ -31,8 +31,18 @@
     "receipt": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\astralengine.finalize.json",
     "summaryReceipt": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\explainer-astralengine-20261125-231531\\astralengine.finalize-summary.json"
   },
+  "update": {
+    "status": "current",
+    "installedVersion": "3.3.2",
+    "availableVersion": "3.3.2",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-28T14:00:33.665Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  },
   "visualReview": "not-requested",
-  "durationMs": 2439,
+  "durationMs": 4738,
   "browserCheck": {
     "requested": false,
     "ran": false

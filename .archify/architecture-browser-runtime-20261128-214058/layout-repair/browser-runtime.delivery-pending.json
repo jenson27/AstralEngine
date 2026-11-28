@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "command": "deliver",
+  "status": "pending",
+  "receiptId": "4c512a23-20dc-48ba-b038-7686750e1c8e",
+  "input": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\candidate.json",
+  "output": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\layout-repair\\browser-runtime.html"
+}

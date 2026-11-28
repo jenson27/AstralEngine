@@ -10,14 +10,14 @@ export class InspectorComponentView {
     constructor({
         root,
         componentCatalog,
-        getAssetCatalog,
+        getAssetMetadata,
         assetAccess,
         componentTypesByKey,
         isBusy,
     }) {
         this._root = root;
         this._componentCatalog = componentCatalog;
-        this._getAssetCatalog = getAssetCatalog;
+        this._getAssetMetadata = getAssetMetadata;
         this._assetAccess = assetAccess;
         this._componentTypesByKey = componentTypesByKey;
         this._isBusy = isBusy;
@@ -132,7 +132,7 @@ export class InspectorComponentView {
         const definition = this._componentCatalog.GetById(typeId);
         try {
             definition?.renderAddFields?.(container, {
-                getAssetCatalog: this._getAssetCatalog,
+                getAssetMetadata: this._getAssetMetadata,
             });
         } catch (error) {
             const status = this._root.querySelector(

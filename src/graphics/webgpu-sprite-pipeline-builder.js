@@ -3,8 +3,9 @@ export async function CreateWebGpuSpritePipeline({
     format,
     depthFormat,
     shaderUrl,
+    signal,
 }) {
-    const response = await fetch(shaderUrl);
+    const response = await fetch(shaderUrl, { signal });
     if (!response.ok) {
         throw new Error(`Could not load sprite shader. HTTP ${response.status}.`);
     }

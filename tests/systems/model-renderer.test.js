@@ -48,8 +48,9 @@ test("serializes and restores a model renderer with version 1 data", () => {
     });
 
     const restored = registry.DeserializeComponent(record, {
-        ResolveModelHandle(assetId) {
+        ResolveAssetHandle(assetId, expectedTypeId) {
             assert.equal(assetId, "model:test");
+            assert.equal(expectedTypeId, "model");
             return modelHandle;
         },
     });

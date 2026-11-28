@@ -31,7 +31,7 @@ export class InspectorEditController {
         selection,
         history,
         componentCatalog,
-        getAssetCatalog,
+        getAssetMetadata,
         componentTypesByKey = new Map(),
         onPendingChange = () => {},
     }) {
@@ -39,7 +39,7 @@ export class InspectorEditController {
         this._selection = selection;
         this._history = history;
         this._componentCatalog = componentCatalog;
-        this._assetAccess = new InspectorAssetAccess(sceneManager, getAssetCatalog);
+        this._assetAccess = new InspectorAssetAccess(sceneManager, getAssetMetadata);
         this._componentTypesByKey = componentTypesByKey;
         this._onPendingChange = onPendingChange;
         this._pendingEdits = 0;

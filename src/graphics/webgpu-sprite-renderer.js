@@ -51,13 +51,17 @@ export class WebGpuSpriteRenderer {
         return new Set(this._activeImages);
     }
 
-    async Initialize() {
+    async Initialize({ signal } = {}) {
         const resources = await CreateWebGpuSpritePipeline({
             device: this._device,
             format: this._format,
             depthFormat: this._depthFormat,
             shaderUrl: spriteShaderUrl,
+            signal,
         });
+        if (signal?.aborted) {
+            throw signal.reason ?? new Error("Sprite initialization was aborted.");
+        }
         this._pipeline = resources.pipeline;
         this._frameBuffer = this._device.createBuffer({
             size: 128,

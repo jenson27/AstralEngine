@@ -1,0 +1,3545 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "architecture",
+  "quality": "showcase",
+  "startedAt": "2026-11-28T14:09:37.329Z",
+  "specification": {
+    "path": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\candidate.json",
+    "sha256": "af099fb4b7d9a9e0ffbd24e575aeae0dbc6ff04e7314c7dbd564dbe3dc72d81c",
+    "bytes": 10619
+  },
+  "artifact": {
+    "path": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\layout-repair\\browser-runtime.html"
+  },
+  "stages": {
+    "validate": {
+      "status": "fail",
+      "exitCode": 1,
+      "durationMs": null,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "deliver",
+        "architecture",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\candidate.json",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\layout-repair\\browser-runtime.html",
+        "--quality",
+        "showcase",
+        "--repo-root",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": false,
+        "command": "deliver",
+        "receiptId": "4c512a23-20dc-48ba-b038-7686750e1c8e",
+        "stage": "render",
+        "type": "architecture",
+        "input": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\candidate.json",
+        "output": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\layout-repair\\browser-runtime.html",
+        "error": "Architecture layout validation failed:\n- [clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"module-factory\" (unrelated to this relationship) on segment 0 [838, 192] -> [838, 632] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.\n- [clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"browser-runtime\" (unrelated to this relationship) on segment 0 [838, 192] -> [838, 632] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.\n- [clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"scene-setup\" (unrelated to this relationship) on segment 0 [838, 192] -> [838, 632] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.\n- [clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"scene-manager\" (unrelated to this relationship) on segment 0 [838, 192] -> [838, 632] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.\n- [clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"scene\" (unrelated to this relationship) on segment 2 [803, 632] -> [803, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.\n- [clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"scene-systems\" (unrelated to this relationship) on segment 2 [803, 632] -> [803, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.\n- [clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"render-system\" (unrelated to this relationship) on segment 2 [803, 632] -> [803, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.\n- [clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"module-factory\" (unrelated to this relationship) on segment 0 [817, 276] -> [817, 674] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.\n- [clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"scene-setup\" (unrelated to this relationship) on segment 0 [817, 276] -> [817, 674] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.\n- [clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"scene-manager\" (unrelated to this relationship) on segment 0 [817, 276] -> [817, 674] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.\n- [clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"scene\" (unrelated to this relationship) on segment 2 [831, 674] -> [831, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.\n- [clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"scene-systems\" (unrelated to this relationship) on segment 2 [831, 674] -> [831, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.\n- [clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"render-system\" (unrelated to this relationship) on segment 2 [831, 674] -> [831, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.\n- [composition/ambiguous-corridor] showcase architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" shares a 14px corridor with connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" at [837.5, 290] -> [837.5, 304] (segments 0 and 2; minimum 8px) — adjust route/via or fromSide/toSide so distinct connections do not visually merge.\n- [composition/short-interior-segment] showcase architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" has a 14px interior segment 1 [816.5, 674] -> [830.5, 674] that is below the 16px interior-segment floor — move route/via points into a wider corridor or move the component so every turn has room to read.\n- Label \"starts game\" overlaps component \"game-entry\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [799, 88, 63, 14]\n  component \"game-entry\" rect: [764, 48, 120, 60]\n  Suggested fix: set labelAt [831, 122] or set labelDx 1 with labelDy 24 (below); or set labelAt [831, 40] or set labelDx 1 with labelDy -58 (above)\n- Label \"returns API\" overlaps component \"editor-entry\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [941, 70, 63, 14]\n  component \"editor-entry\" rect: [948, 48, 135, 60]\n  Suggested fix: set labelAt [973, 122] or set labelDx 37 with labelDy 43 (below); or set labelAt [973, 40] or set labelDx 37 with labelDy -39 (above)\n- Label \"defines startup callback\" overlaps component \"browser-runtime\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [648, 208, 125, 14]\n  component \"browser-runtime\" rect: [734, 216, 179, 60]\n  Suggested fix: set labelAt [711, 290] or set labelDx 1 with labelDy 72 (below); or set labelAt [711, 208] or set labelDx 1 with labelDy -10 (above)\n- Label \"constructs + starts\" overlaps component \"browser-application\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [755, 184, 101, 14]\n  component \"browser-application\" rect: [735, 132, 178, 60]\n  Suggested fix: set labelAt [806, 206] or set labelDy 12 (below); or set labelAt [806, 124] or set labelDy -70 (above)\n- Label \"invokes at startup\" overlaps component \"browser-runtime\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [765, 270, 96, 14]\n  component \"browser-runtime\" rect: [734, 216, 179, 60]\n  Suggested fix: set labelAt [813, 290] or set labelDy 10 (below); or set labelAt [813, 208] or set labelDy -72 (above)\n- Label \"returns input, assets + scenes\" overlaps component \"browser-runtime\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [766, 260, 154, 14]\n  component \"browser-runtime\" rect: [734, 216, 179, 60]\n  Suggested fix: set labelAt [843, 290] or set labelDy 20 (below); or set labelAt [843, 208] or set labelDy -62 (above)\n- Label \"creates\" overlaps component \"module-factory\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [802, 344, 44, 14]\n  component \"module-factory\" rect: [720, 304, 207, 60]\n  Suggested fix: set labelAt [824, 378] or set labelDx 1 with labelDy 24 (below); or set labelAt [824, 296] or set labelDx 1 with labelDy -58 (above)\n- Label \"includes\" overlaps component \"scene-systems\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [799, 856, 48, 14]\n  component \"scene-systems\" rect: [728, 816, 191, 60]\n  Suggested fix: set labelAt [824, 890] or set labelDx 1 with labelDy 24 (below); or set labelAt [824, 808] or set labelDx 1 with labelDy -58 (above)\n- [composition/label-route-clearance] showcase architecture label \"returns Dispose\" on connections[1] id \"game-dispose\" \"browser-application\" -> \"game-entry\" label \"returns Dispose\" is 0px from connections[0] id \"game-start\" \"game-entry\" -> \"browser-application\" label \"starts game\" segment 0 [830.5, 108] -> [830.5, 132] (label rect [776, 112, 82, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"returns Dispose\" on connections[1] id \"game-dispose\" \"browser-application\" -> \"game-entry\" label \"returns Dispose\" is 3px from connections[5] id \"app-platform-setup\" \"browser-application\" -> \"browser-platform\" label \"constructs\" segment 2 [710.5, 129] -> [973.5, 129] (label rect [776, 112, 82, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"starts editor\" on connections[2] id \"editor-start\" \"editor-entry\" -> \"browser-application\" label \"starts editor\" is 0px from connections[3] id \"editor-api\" \"browser-application\" -> \"editor-entry\" label \"returns API\" segment 1 [936.5, 155] -> [936.5, 24] (label rect [894, 107, 72, 14]; minimum 4px) — if the authored labelDx are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"returns API\" on connections[3] id \"editor-api\" \"browser-application\" -> \"editor-entry\" label \"returns API\" is 1.5px from connections[2] id \"editor-start\" \"editor-entry\" -> \"browser-application\" label \"starts editor\" segment 0 [947.5, 85] -> [930, 85] (label rect [941, 70, 63, 14]; minimum 4px) — if the authored labelDx are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"defines startup callback\" on connections[9] id \"app-defines-factory\" \"browser-application\" -> \"module-factory\" label \"defines startup callback\" is 0px from connections[11] id \"app-injects-factory\" \"browser-application\" -> \"browser-runtime\" label \"injects module factory\" segment 1 [710, 162] -> [710, 232] (label rect [648, 208, 125, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"constructs + starts\" on connections[10] id \"app-creates-runtime\" \"browser-application\" -> \"browser-runtime\" label \"constructs + starts\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 0 [837.5, 192] -> [837.5, 632] (label rect [755, 184, 101, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"invokes at startup\" on connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"invokes at startup\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 0 [837.5, 192] -> [837.5, 632] (label rect [765, 270, 96, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"invokes at startup\" on connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"invokes at startup\" is 0px from connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" label \"initializes / shuts down\" segment 0 [816.5, 276] -> [816.5, 674] (label rect [765, 270, 96, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"invokes at startup\" on connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"invokes at startup\" is 0px from connections[9] id \"app-defines-factory\" \"browser-application\" -> \"module-factory\" label \"defines startup callback\" segment 2 [710.5, 280] -> [809.5, 280] (label rect [765, 270, 96, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"invokes at startup\" on connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"invokes at startup\" is 0px from connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" segment 0 [823.5, 304] -> [823.5, 280] (label rect [765, 270, 96, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"returns input, assets + scenes\" on connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 0 [837.5, 192] -> [837.5, 632] (label rect [766, 260, 154, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"returns input, assets + scenes\" on connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" is 2px from connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" label \"initializes / shuts down\" segment 0 [816.5, 276] -> [816.5, 674] (label rect [766, 260, 154, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"returns input, assets + scenes\" on connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" is 2px from connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"invokes at startup\" segment 0 [788.5, 276] -> [788.5, 290] (label rect [766, 260, 154, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"returns input, assets + scenes\" on connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" is 2px from connections[26] id \"runtime-creates-engine\" \"browser-runtime\" -> \"engine\" label \"creates + starts with callbacks\" segment 0 [872.5, 276] -> [872.5, 300] (label rect [766, 260, 154, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"returns input, assets + scenes\" on connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" is 0px from connections[27] id \"engine-callbacks\" \"engine\" -> \"browser-runtime\" label \"runs injected callbacks\" segment 1 [1340.5, 260] -> [913, 260] (label rect [766, 260, 154, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"creates\" on connections[17] id \"factory-scene-setup\" \"module-factory\" -> \"scene-setup\" label \"creates\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 0 [837.5, 192] -> [837.5, 632] (label rect [802, 344, 44, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"creates\" on connections[17] id \"factory-scene-setup\" \"module-factory\" -> \"scene-setup\" label \"creates\" is 0px from connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" label \"initializes / shuts down\" segment 0 [816.5, 276] -> [816.5, 674] (label rect [802, 344, 44, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[18] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[16] id \"factory-assets\" \"module-factory\" -> \"asset-runtime\" label \"loads manifest + builds loaders\" segment 1 [688, 341] -> [688, 590] (label rect [623, 499, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[18] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[21] id \"runtime-loads-scene\" \"browser-runtime\" -> \"scene-manager\" label \"loads start scene\" segment 1 [712, 260] -> [712, 576] (label rect [623, 499, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"includes\" on connections[25] id \"systems-render-system\" \"scene-systems\" -> \"render-system\" label \"includes\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 2 [802.5, 632] -> [802.5, 1072] (label rect [799, 856, 48, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"includes\" on connections[25] id \"systems-render-system\" \"scene-systems\" -> \"render-system\" label \"includes\" is 0px from connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" label \"initializes / shuts down\" segment 2 [830.5, 674] -> [830.5, 1072] (label rect [799, 856, 48, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"creates + starts with callbacks\" on connections[26] id \"runtime-creates-engine\" \"browser-runtime\" -> \"engine\" label \"creates + starts with callbacks\" is 0px from connections[5] id \"app-platform-setup\" \"browser-application\" -> \"browser-platform\" label \"constructs\" segment 4 [973.5, 280] -> [1082.5, 280] (label rect [981, 280, 159, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+        "diagnostics": [
+          {
+            "code": "clean-flow/edge-through-node",
+            "severity": "error",
+            "message": "[clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"module-factory\" (unrelated to this relationship) on segment 0 [838, 192] -> [838, 632] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 7,
+              "id": "app-renderer-setup",
+              "from": "browser-application",
+              "to": "webgpu-renderer"
+            },
+            "evidence": {
+              "obstacleKind": "component",
+              "obstacleId": "module-factory",
+              "segmentIndex": 0,
+              "from": [
+                837.5,
+                192
+              ],
+              "to": [
+                837.5,
+                632
+              ],
+              "clearancePx": 2
+            },
+            "supportedFixes": [
+              "adjust fromSide/toSide, set route/via, or move the component"
+            ]
+          },
+          {
+            "code": "clean-flow/edge-through-node",
+            "severity": "error",
+            "message": "[clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"browser-runtime\" (unrelated to this relationship) on segment 0 [838, 192] -> [838, 632] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 7,
+              "id": "app-renderer-setup",
+              "from": "browser-application",
+              "to": "webgpu-renderer"
+            },
+            "evidence": {
+              "obstacleKind": "component",
+              "obstacleId": "browser-runtime",
+              "segmentIndex": 0,
+              "from": [
+                837.5,
+                192
+              ],
+              "to": [
+                837.5,
+                632
+              ],
+              "clearancePx": 2
+            },
+            "supportedFixes": [
+              "adjust fromSide/toSide, set route/via, or move the component"
+            ]
+          },
+          {
+            "code": "clean-flow/edge-through-node",
+            "severity": "error",
+            "message": "[clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"scene-setup\" (unrelated to this relationship) on segment 0 [838, 192] -> [838, 632] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 7,
+              "id": "app-renderer-setup",
+              "from": "browser-application",
+              "to": "webgpu-renderer"
+            },
+            "evidence": {
+              "obstacleKind": "component",
+              "obstacleId": "scene-setup",
+              "segmentIndex": 0,
+              "from": [
+                837.5,
+                192
+              ],
+              "to": [
+                837.5,
+                632
+              ],
+              "clearancePx": 2
+            },
+            "supportedFixes": [
+              "adjust fromSide/toSide, set route/via, or move the component"
+            ]
+          },
+          {
+            "code": "clean-flow/edge-through-node",
+            "severity": "error",
+            "message": "[clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"scene-manager\" (unrelated to this relationship) on segment 0 [838, 192] -> [838, 632] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 7,
+              "id": "app-renderer-setup",
+              "from": "browser-application",
+              "to": "webgpu-renderer"
+            },
+            "evidence": {
+              "obstacleKind": "component",
+              "obstacleId": "scene-manager",
+              "segmentIndex": 0,
+              "from": [
+                837.5,
+                192
+              ],
+              "to": [
+                837.5,
+                632
+              ],
+              "clearancePx": 2
+            },
+            "supportedFixes": [
+              "adjust fromSide/toSide, set route/via, or move the component"
+            ]
+          },
+          {
+            "code": "clean-flow/edge-through-node",
+            "severity": "error",
+            "message": "[clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"scene\" (unrelated to this relationship) on segment 2 [803, 632] -> [803, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 7,
+              "id": "app-renderer-setup",
+              "from": "browser-application",
+              "to": "webgpu-renderer"
+            },
+            "evidence": {
+              "obstacleKind": "component",
+              "obstacleId": "scene",
+              "segmentIndex": 2,
+              "from": [
+                802.5,
+                632
+              ],
+              "to": [
+                802.5,
+                1072
+              ],
+              "clearancePx": 2
+            },
+            "supportedFixes": [
+              "adjust fromSide/toSide, set route/via, or move the component"
+            ]
+          },
+          {
+            "code": "clean-flow/edge-through-node",
+            "severity": "error",
+            "message": "[clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"scene-systems\" (unrelated to this relationship) on segment 2 [803, 632] -> [803, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 7,
+              "id": "app-renderer-setup",
+              "from": "browser-application",
+              "to": "webgpu-renderer"
+            },
+            "evidence": {
+              "obstacleKind": "component",
+              "obstacleId": "scene-systems",
+              "segmentIndex": 2,
+              "from": [
+                802.5,
+                632
+              ],
+              "to": [
+                802.5,
+                1072
+              ],
+              "clearancePx": 2
+            },
+            "supportedFixes": [
+              "adjust fromSide/toSide, set route/via, or move the component"
+            ]
+          },
+          {
+            "code": "clean-flow/edge-through-node",
+            "severity": "error",
+            "message": "[clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"render-system\" (unrelated to this relationship) on segment 2 [803, 632] -> [803, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 7,
+              "id": "app-renderer-setup",
+              "from": "browser-application",
+              "to": "webgpu-renderer"
+            },
+            "evidence": {
+              "obstacleKind": "component",
+              "obstacleId": "render-system",
+              "segmentIndex": 2,
+              "from": [
+                802.5,
+                632
+              ],
+              "to": [
+                802.5,
+                1072
+              ],
+              "clearancePx": 2
+            },
+            "supportedFixes": [
+              "adjust fromSide/toSide, set route/via, or move the component"
+            ]
+          },
+          {
+            "code": "clean-flow/edge-through-node",
+            "severity": "error",
+            "message": "[clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"module-factory\" (unrelated to this relationship) on segment 0 [817, 276] -> [817, 674] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 8,
+              "id": "runtime-renderer-lifecycle",
+              "from": "browser-runtime",
+              "to": "webgpu-renderer"
+            },
+            "evidence": {
+              "obstacleKind": "component",
+              "obstacleId": "module-factory",
+              "segmentIndex": 0,
+              "from": [
+                816.5,
+                276
+              ],
+              "to": [
+                816.5,
+                674
+              ],
+              "clearancePx": 2
+            },
+            "supportedFixes": [
+              "adjust fromSide/toSide, set route/via, or move the component"
+            ]
+          },
+          {
+            "code": "clean-flow/edge-through-node",
+            "severity": "error",
+            "message": "[clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"scene-setup\" (unrelated to this relationship) on segment 0 [817, 276] -> [817, 674] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 8,
+              "id": "runtime-renderer-lifecycle",
+              "from": "browser-runtime",
+              "to": "webgpu-renderer"
+            },
+            "evidence": {
+              "obstacleKind": "component",
+              "obstacleId": "scene-setup",
+              "segmentIndex": 0,
+              "from": [
+                816.5,
+                276
+              ],
+              "to": [
+                816.5,
+                674
+              ],
+              "clearancePx": 2
+            },
+            "supportedFixes": [
+              "adjust fromSide/toSide, set route/via, or move the component"
+            ]
+          },
+          {
+            "code": "clean-flow/edge-through-node",
+            "severity": "error",
+            "message": "[clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"scene-manager\" (unrelated to this relationship) on segment 0 [817, 276] -> [817, 674] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 8,
+              "id": "runtime-renderer-lifecycle",
+              "from": "browser-runtime",
+              "to": "webgpu-renderer"
+            },
+            "evidence": {
+              "obstacleKind": "component",
+              "obstacleId": "scene-manager",
+              "segmentIndex": 0,
+              "from": [
+                816.5,
+                276
+              ],
+              "to": [
+                816.5,
+                674
+              ],
+              "clearancePx": 2
+            },
+            "supportedFixes": [
+              "adjust fromSide/toSide, set route/via, or move the component"
+            ]
+          },
+          {
+            "code": "clean-flow/edge-through-node",
+            "severity": "error",
+            "message": "[clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"scene\" (unrelated to this relationship) on segment 2 [831, 674] -> [831, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 8,
+              "id": "runtime-renderer-lifecycle",
+              "from": "browser-runtime",
+              "to": "webgpu-renderer"
+            },
+            "evidence": {
+              "obstacleKind": "component",
+              "obstacleId": "scene",
+              "segmentIndex": 2,
+              "from": [
+                830.5,
+                674
+              ],
+              "to": [
+                830.5,
+                1072
+              ],
+              "clearancePx": 2
+            },
+            "supportedFixes": [
+              "adjust fromSide/toSide, set route/via, or move the component"
+            ]
+          },
+          {
+            "code": "clean-flow/edge-through-node",
+            "severity": "error",
+            "message": "[clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"scene-systems\" (unrelated to this relationship) on segment 2 [831, 674] -> [831, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 8,
+              "id": "runtime-renderer-lifecycle",
+              "from": "browser-runtime",
+              "to": "webgpu-renderer"
+            },
+            "evidence": {
+              "obstacleKind": "component",
+              "obstacleId": "scene-systems",
+              "segmentIndex": 2,
+              "from": [
+                830.5,
+                674
+              ],
+              "to": [
+                830.5,
+                1072
+              ],
+              "clearancePx": 2
+            },
+            "supportedFixes": [
+              "adjust fromSide/toSide, set route/via, or move the component"
+            ]
+          },
+          {
+            "code": "clean-flow/edge-through-node",
+            "severity": "error",
+            "message": "[clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"render-system\" (unrelated to this relationship) on segment 2 [831, 674] -> [831, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 8,
+              "id": "runtime-renderer-lifecycle",
+              "from": "browser-runtime",
+              "to": "webgpu-renderer"
+            },
+            "evidence": {
+              "obstacleKind": "component",
+              "obstacleId": "render-system",
+              "segmentIndex": 2,
+              "from": [
+                830.5,
+                674
+              ],
+              "to": [
+                830.5,
+                1072
+              ],
+              "clearancePx": 2
+            },
+            "supportedFixes": [
+              "adjust fromSide/toSide, set route/via, or move the component"
+            ]
+          },
+          {
+            "code": "composition/ambiguous-corridor",
+            "severity": "error",
+            "message": "[composition/ambiguous-corridor] showcase architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" shares a 14px corridor with connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" at [837.5, 290] -> [837.5, 304] (segments 0 and 2; minimum 8px) — adjust route/via or fromSide/toSide so distinct connections do not visually merge.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 7,
+              "id": "app-renderer-setup",
+              "from": "browser-application",
+              "to": "webgpu-renderer"
+            },
+            "evidence": {
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 12,
+                "id": "runtime-invokes-factory",
+                "from": "browser-runtime",
+                "to": "module-factory"
+              },
+              "overlapLengthPx": 14,
+              "minimumPx": 8,
+              "from": [
+                837.5,
+                290
+              ],
+              "to": [
+                837.5,
+                304
+              ],
+              "segmentIndex": 0,
+              "otherSegmentIndex": 2
+            },
+            "supportedFixes": [
+              "adjust route/via or fromSide/toSide so distinct connections do not visually merge"
+            ]
+          },
+          {
+            "code": "composition/short-interior-segment",
+            "severity": "error",
+            "message": "[composition/short-interior-segment] showcase architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" has a 14px interior segment 1 [816.5, 674] -> [830.5, 674] that is below the 16px interior-segment floor — move route/via points into a wider corridor or move the component so every turn has room to read.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 8,
+              "id": "runtime-renderer-lifecycle",
+              "from": "browser-runtime",
+              "to": "webgpu-renderer"
+            },
+            "evidence": {
+              "segmentIndex": 1,
+              "position": "interior",
+              "lengthPx": 14,
+              "minimumPx": 16,
+              "from": [
+                816.5,
+                674
+              ],
+              "to": [
+                830.5,
+                674
+              ]
+            },
+            "supportedFixes": [
+              "move route/via points into a wider corridor or move the component so every turn has room to read"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"returns Dispose\" on connections[1] id \"game-dispose\" \"browser-application\" -> \"game-entry\" label \"returns Dispose\" is 0px from connections[0] id \"game-start\" \"game-entry\" -> \"browser-application\" label \"starts game\" segment 0 [830.5, 108] -> [830.5, 132] (label rect [776, 112, 82, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 1,
+              "id": "game-dispose",
+              "from": "browser-application",
+              "to": "game-entry"
+            },
+            "evidence": {
+              "label": "returns Dispose",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 0,
+                "id": "game-start",
+                "from": "game-entry",
+                "to": "browser-application"
+              },
+              "segmentIndex": 0,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "game-dispose",
+                  "from": "browser-application",
+                  "to": "game-entry",
+                  "label": "returns Dispose"
+                },
+                "relationIndex": 1,
+                "label": "returns Dispose",
+                "x": 775.5,
+                "y": 112,
+                "width": 82,
+                "height": 14,
+                "lx": 816.5,
+                "ly": 122
+              },
+              "from": [
+                830.5,
+                108
+              ],
+              "to": [
+                830.5,
+                132
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"returns Dispose\" on connections[1] id \"game-dispose\" \"browser-application\" -> \"game-entry\" label \"returns Dispose\" is 3px from connections[5] id \"app-platform-setup\" \"browser-application\" -> \"browser-platform\" label \"constructs\" segment 2 [710.5, 129] -> [973.5, 129] (label rect [776, 112, 82, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 1,
+              "id": "game-dispose",
+              "from": "browser-application",
+              "to": "game-entry"
+            },
+            "evidence": {
+              "label": "returns Dispose",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 5,
+                "id": "app-platform-setup",
+                "from": "browser-application",
+                "to": "browser-platform"
+              },
+              "segmentIndex": 2,
+              "clearancePx": 3,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "game-dispose",
+                  "from": "browser-application",
+                  "to": "game-entry",
+                  "label": "returns Dispose"
+                },
+                "relationIndex": 1,
+                "label": "returns Dispose",
+                "x": 775.5,
+                "y": 112,
+                "width": 82,
+                "height": 14,
+                "lx": 816.5,
+                "ly": 122
+              },
+              "from": [
+                710.5,
+                129
+              ],
+              "to": [
+                973.5,
+                129
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"starts editor\" on connections[2] id \"editor-start\" \"editor-entry\" -> \"browser-application\" label \"starts editor\" is 0px from connections[3] id \"editor-api\" \"browser-application\" -> \"editor-entry\" label \"returns API\" segment 1 [936.5, 155] -> [936.5, 24] (label rect [894, 107, 72, 14]; minimum 4px) — if the authored labelDx are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 2,
+              "id": "editor-start",
+              "from": "editor-entry",
+              "to": "browser-application"
+            },
+            "evidence": {
+              "label": "starts editor",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 3,
+                "id": "editor-api",
+                "from": "browser-application",
+                "to": "editor-entry"
+              },
+              "segmentIndex": 1,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "editor-start",
+                  "from": "editor-entry",
+                  "to": "browser-application",
+                  "label": "starts editor"
+                },
+                "relationIndex": 2,
+                "label": "starts editor",
+                "x": 893.8,
+                "y": 107,
+                "width": 72.4,
+                "height": 14,
+                "lx": 930,
+                "ly": 117
+              },
+              "from": [
+                936.5,
+                155
+              ],
+              "to": [
+                936.5,
+                24
+              ]
+            },
+            "supportedFixes": [
+              "if the authored labelDx are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"returns API\" on connections[3] id \"editor-api\" \"browser-application\" -> \"editor-entry\" label \"returns API\" is 1.5px from connections[2] id \"editor-start\" \"editor-entry\" -> \"browser-application\" label \"starts editor\" segment 0 [947.5, 85] -> [930, 85] (label rect [941, 70, 63, 14]; minimum 4px) — if the authored labelDx are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 3,
+              "id": "editor-api",
+              "from": "browser-application",
+              "to": "editor-entry"
+            },
+            "evidence": {
+              "label": "returns API",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 2,
+                "id": "editor-start",
+                "from": "editor-entry",
+                "to": "browser-application"
+              },
+              "segmentIndex": 0,
+              "clearancePx": 1.5,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "editor-api",
+                  "from": "browser-application",
+                  "to": "editor-entry",
+                  "label": "returns API",
+                  "labelDx": 36
+                },
+                "relationIndex": 3,
+                "label": "returns API",
+                "x": 941.1,
+                "y": 69.5,
+                "width": 62.8,
+                "height": 14,
+                "lx": 972.5,
+                "ly": 79.5
+              },
+              "from": [
+                947.5,
+                85
+              ],
+              "to": [
+                930,
+                85
+              ]
+            },
+            "supportedFixes": [
+              "if the authored labelDx are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"defines startup callback\" on connections[9] id \"app-defines-factory\" \"browser-application\" -> \"module-factory\" label \"defines startup callback\" is 0px from connections[11] id \"app-injects-factory\" \"browser-application\" -> \"browser-runtime\" label \"injects module factory\" segment 1 [710, 162] -> [710, 232] (label rect [648, 208, 125, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 9,
+              "id": "app-defines-factory",
+              "from": "browser-application",
+              "to": "module-factory"
+            },
+            "evidence": {
+              "label": "defines startup callback",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 11,
+                "id": "app-injects-factory",
+                "from": "browser-application",
+                "to": "browser-runtime"
+              },
+              "segmentIndex": 1,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "app-defines-factory",
+                  "from": "browser-application",
+                  "to": "module-factory",
+                  "label": "defines startup callback"
+                },
+                "relationIndex": 9,
+                "label": "defines startup callback",
+                "x": 647.9,
+                "y": 208,
+                "width": 125.19999999999999,
+                "height": 14,
+                "lx": 710.5,
+                "ly": 218
+              },
+              "from": [
+                710,
+                162
+              ],
+              "to": [
+                710,
+                232
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"constructs + starts\" on connections[10] id \"app-creates-runtime\" \"browser-application\" -> \"browser-runtime\" label \"constructs + starts\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 0 [837.5, 192] -> [837.5, 632] (label rect [755, 184, 101, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 10,
+              "id": "app-creates-runtime",
+              "from": "browser-application",
+              "to": "browser-runtime"
+            },
+            "evidence": {
+              "label": "constructs + starts",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 7,
+                "id": "app-renderer-setup",
+                "from": "browser-application",
+                "to": "webgpu-renderer"
+              },
+              "segmentIndex": 0,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "app-creates-runtime",
+                  "from": "browser-application",
+                  "to": "browser-runtime",
+                  "label": "constructs + starts"
+                },
+                "relationIndex": 10,
+                "label": "constructs + starts",
+                "x": 755.4,
+                "y": 184,
+                "width": 101.2,
+                "height": 14,
+                "lx": 806,
+                "ly": 194
+              },
+              "from": [
+                837.5,
+                192
+              ],
+              "to": [
+                837.5,
+                632
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"invokes at startup\" on connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"invokes at startup\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 0 [837.5, 192] -> [837.5, 632] (label rect [765, 270, 96, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 12,
+              "id": "runtime-invokes-factory",
+              "from": "browser-runtime",
+              "to": "module-factory"
+            },
+            "evidence": {
+              "label": "invokes at startup",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 7,
+                "id": "app-renderer-setup",
+                "from": "browser-application",
+                "to": "webgpu-renderer"
+              },
+              "segmentIndex": 0,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "runtime-invokes-factory",
+                  "from": "browser-runtime",
+                  "to": "module-factory",
+                  "label": "invokes at startup"
+                },
+                "relationIndex": 12,
+                "label": "invokes at startup",
+                "x": 764.8,
+                "y": 270,
+                "width": 96.39999999999999,
+                "height": 14,
+                "lx": 813,
+                "ly": 280
+              },
+              "from": [
+                837.5,
+                192
+              ],
+              "to": [
+                837.5,
+                632
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"invokes at startup\" on connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"invokes at startup\" is 0px from connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" label \"initializes / shuts down\" segment 0 [816.5, 276] -> [816.5, 674] (label rect [765, 270, 96, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 12,
+              "id": "runtime-invokes-factory",
+              "from": "browser-runtime",
+              "to": "module-factory"
+            },
+            "evidence": {
+              "label": "invokes at startup",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 8,
+                "id": "runtime-renderer-lifecycle",
+                "from": "browser-runtime",
+                "to": "webgpu-renderer"
+              },
+              "segmentIndex": 0,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "runtime-invokes-factory",
+                  "from": "browser-runtime",
+                  "to": "module-factory",
+                  "label": "invokes at startup"
+                },
+                "relationIndex": 12,
+                "label": "invokes at startup",
+                "x": 764.8,
+                "y": 270,
+                "width": 96.39999999999999,
+                "height": 14,
+                "lx": 813,
+                "ly": 280
+              },
+              "from": [
+                816.5,
+                276
+              ],
+              "to": [
+                816.5,
+                674
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"invokes at startup\" on connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"invokes at startup\" is 0px from connections[9] id \"app-defines-factory\" \"browser-application\" -> \"module-factory\" label \"defines startup callback\" segment 2 [710.5, 280] -> [809.5, 280] (label rect [765, 270, 96, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 12,
+              "id": "runtime-invokes-factory",
+              "from": "browser-runtime",
+              "to": "module-factory"
+            },
+            "evidence": {
+              "label": "invokes at startup",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 9,
+                "id": "app-defines-factory",
+                "from": "browser-application",
+                "to": "module-factory"
+              },
+              "segmentIndex": 2,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "runtime-invokes-factory",
+                  "from": "browser-runtime",
+                  "to": "module-factory",
+                  "label": "invokes at startup"
+                },
+                "relationIndex": 12,
+                "label": "invokes at startup",
+                "x": 764.8,
+                "y": 270,
+                "width": 96.39999999999999,
+                "height": 14,
+                "lx": 813,
+                "ly": 280
+              },
+              "from": [
+                710.5,
+                280
+              ],
+              "to": [
+                809.5,
+                280
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"invokes at startup\" on connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"invokes at startup\" is 0px from connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" segment 0 [823.5, 304] -> [823.5, 280] (label rect [765, 270, 96, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 12,
+              "id": "runtime-invokes-factory",
+              "from": "browser-runtime",
+              "to": "module-factory"
+            },
+            "evidence": {
+              "label": "invokes at startup",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 13,
+                "id": "factory-returns-modules",
+                "from": "module-factory",
+                "to": "browser-runtime"
+              },
+              "segmentIndex": 0,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "runtime-invokes-factory",
+                  "from": "browser-runtime",
+                  "to": "module-factory",
+                  "label": "invokes at startup"
+                },
+                "relationIndex": 12,
+                "label": "invokes at startup",
+                "x": 764.8,
+                "y": 270,
+                "width": 96.39999999999999,
+                "height": 14,
+                "lx": 813,
+                "ly": 280
+              },
+              "from": [
+                823.5,
+                304
+              ],
+              "to": [
+                823.5,
+                280
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"returns input, assets + scenes\" on connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 0 [837.5, 192] -> [837.5, 632] (label rect [766, 260, 154, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 13,
+              "id": "factory-returns-modules",
+              "from": "module-factory",
+              "to": "browser-runtime"
+            },
+            "evidence": {
+              "label": "returns input, assets + scenes",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 7,
+                "id": "app-renderer-setup",
+                "from": "browser-application",
+                "to": "webgpu-renderer"
+              },
+              "segmentIndex": 0,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "factory-returns-modules",
+                  "from": "module-factory",
+                  "to": "browser-runtime",
+                  "label": "returns input, assets + scenes"
+                },
+                "relationIndex": 13,
+                "label": "returns input, assets + scenes",
+                "x": 766,
+                "y": 260,
+                "width": 154,
+                "height": 14,
+                "lx": 843,
+                "ly": 270
+              },
+              "from": [
+                837.5,
+                192
+              ],
+              "to": [
+                837.5,
+                632
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"returns input, assets + scenes\" on connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" is 2px from connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" label \"initializes / shuts down\" segment 0 [816.5, 276] -> [816.5, 674] (label rect [766, 260, 154, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 13,
+              "id": "factory-returns-modules",
+              "from": "module-factory",
+              "to": "browser-runtime"
+            },
+            "evidence": {
+              "label": "returns input, assets + scenes",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 8,
+                "id": "runtime-renderer-lifecycle",
+                "from": "browser-runtime",
+                "to": "webgpu-renderer"
+              },
+              "segmentIndex": 0,
+              "clearancePx": 2,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "factory-returns-modules",
+                  "from": "module-factory",
+                  "to": "browser-runtime",
+                  "label": "returns input, assets + scenes"
+                },
+                "relationIndex": 13,
+                "label": "returns input, assets + scenes",
+                "x": 766,
+                "y": 260,
+                "width": 154,
+                "height": 14,
+                "lx": 843,
+                "ly": 270
+              },
+              "from": [
+                816.5,
+                276
+              ],
+              "to": [
+                816.5,
+                674
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"returns input, assets + scenes\" on connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" is 2px from connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"invokes at startup\" segment 0 [788.5, 276] -> [788.5, 290] (label rect [766, 260, 154, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 13,
+              "id": "factory-returns-modules",
+              "from": "module-factory",
+              "to": "browser-runtime"
+            },
+            "evidence": {
+              "label": "returns input, assets + scenes",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 12,
+                "id": "runtime-invokes-factory",
+                "from": "browser-runtime",
+                "to": "module-factory"
+              },
+              "segmentIndex": 0,
+              "clearancePx": 2,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "factory-returns-modules",
+                  "from": "module-factory",
+                  "to": "browser-runtime",
+                  "label": "returns input, assets + scenes"
+                },
+                "relationIndex": 13,
+                "label": "returns input, assets + scenes",
+                "x": 766,
+                "y": 260,
+                "width": 154,
+                "height": 14,
+                "lx": 843,
+                "ly": 270
+              },
+              "from": [
+                788.5,
+                276
+              ],
+              "to": [
+                788.5,
+                290
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"returns input, assets + scenes\" on connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" is 2px from connections[26] id \"runtime-creates-engine\" \"browser-runtime\" -> \"engine\" label \"creates + starts with callbacks\" segment 0 [872.5, 276] -> [872.5, 300] (label rect [766, 260, 154, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 13,
+              "id": "factory-returns-modules",
+              "from": "module-factory",
+              "to": "browser-runtime"
+            },
+            "evidence": {
+              "label": "returns input, assets + scenes",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 26,
+                "id": "runtime-creates-engine",
+                "from": "browser-runtime",
+                "to": "engine"
+              },
+              "segmentIndex": 0,
+              "clearancePx": 2,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "factory-returns-modules",
+                  "from": "module-factory",
+                  "to": "browser-runtime",
+                  "label": "returns input, assets + scenes"
+                },
+                "relationIndex": 13,
+                "label": "returns input, assets + scenes",
+                "x": 766,
+                "y": 260,
+                "width": 154,
+                "height": 14,
+                "lx": 843,
+                "ly": 270
+              },
+              "from": [
+                872.5,
+                276
+              ],
+              "to": [
+                872.5,
+                300
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"returns input, assets + scenes\" on connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" is 0px from connections[27] id \"engine-callbacks\" \"engine\" -> \"browser-runtime\" label \"runs injected callbacks\" segment 1 [1340.5, 260] -> [913, 260] (label rect [766, 260, 154, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 13,
+              "id": "factory-returns-modules",
+              "from": "module-factory",
+              "to": "browser-runtime"
+            },
+            "evidence": {
+              "label": "returns input, assets + scenes",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 27,
+                "id": "engine-callbacks",
+                "from": "engine",
+                "to": "browser-runtime"
+              },
+              "segmentIndex": 1,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "factory-returns-modules",
+                  "from": "module-factory",
+                  "to": "browser-runtime",
+                  "label": "returns input, assets + scenes"
+                },
+                "relationIndex": 13,
+                "label": "returns input, assets + scenes",
+                "x": 766,
+                "y": 260,
+                "width": 154,
+                "height": 14,
+                "lx": 843,
+                "ly": 270
+              },
+              "from": [
+                1340.5,
+                260
+              ],
+              "to": [
+                913,
+                260
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"creates\" on connections[17] id \"factory-scene-setup\" \"module-factory\" -> \"scene-setup\" label \"creates\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 0 [837.5, 192] -> [837.5, 632] (label rect [802, 344, 44, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 17,
+              "id": "factory-scene-setup",
+              "from": "module-factory",
+              "to": "scene-setup"
+            },
+            "evidence": {
+              "label": "creates",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 7,
+                "id": "app-renderer-setup",
+                "from": "browser-application",
+                "to": "webgpu-renderer"
+              },
+              "segmentIndex": 0,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "factory-scene-setup",
+                  "from": "module-factory",
+                  "to": "scene-setup",
+                  "label": "creates"
+                },
+                "relationIndex": 17,
+                "label": "creates",
+                "x": 801.7,
+                "y": 344,
+                "width": 43.6,
+                "height": 14,
+                "lx": 823.5,
+                "ly": 354
+              },
+              "from": [
+                837.5,
+                192
+              ],
+              "to": [
+                837.5,
+                632
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"creates\" on connections[17] id \"factory-scene-setup\" \"module-factory\" -> \"scene-setup\" label \"creates\" is 0px from connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" label \"initializes / shuts down\" segment 0 [816.5, 276] -> [816.5, 674] (label rect [802, 344, 44, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 17,
+              "id": "factory-scene-setup",
+              "from": "module-factory",
+              "to": "scene-setup"
+            },
+            "evidence": {
+              "label": "creates",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 8,
+                "id": "runtime-renderer-lifecycle",
+                "from": "browser-runtime",
+                "to": "webgpu-renderer"
+              },
+              "segmentIndex": 0,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "factory-scene-setup",
+                  "from": "module-factory",
+                  "to": "scene-setup",
+                  "label": "creates"
+                },
+                "relationIndex": 17,
+                "label": "creates",
+                "x": 801.7,
+                "y": 344,
+                "width": 43.6,
+                "height": 14,
+                "lx": 823.5,
+                "ly": 354
+              },
+              "from": [
+                816.5,
+                276
+              ],
+              "to": [
+                816.5,
+                674
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[18] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[16] id \"factory-assets\" \"module-factory\" -> \"asset-runtime\" label \"loads manifest + builds loaders\" segment 1 [688, 341] -> [688, 590] (label rect [623, 499, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 18,
+              "id": "scene-setup-assets",
+              "from": "scene-setup",
+              "to": "asset-runtime"
+            },
+            "evidence": {
+              "label": "uses manager for scene scopes",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 16,
+                "id": "factory-assets",
+                "from": "module-factory",
+                "to": "asset-runtime"
+              },
+              "segmentIndex": 1,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "scene-setup-assets",
+                  "from": "scene-setup",
+                  "to": "asset-runtime",
+                  "label": "uses manager for scene scopes"
+                },
+                "relationIndex": 18,
+                "label": "uses manager for scene scopes",
+                "x": 622.9,
+                "y": 499,
+                "width": 149.2,
+                "height": 14,
+                "lx": 697.5,
+                "ly": 509
+              },
+              "from": [
+                688,
+                341
+              ],
+              "to": [
+                688,
+                590
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[18] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[21] id \"runtime-loads-scene\" \"browser-runtime\" -> \"scene-manager\" label \"loads start scene\" segment 1 [712, 260] -> [712, 576] (label rect [623, 499, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 18,
+              "id": "scene-setup-assets",
+              "from": "scene-setup",
+              "to": "asset-runtime"
+            },
+            "evidence": {
+              "label": "uses manager for scene scopes",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 21,
+                "id": "runtime-loads-scene",
+                "from": "browser-runtime",
+                "to": "scene-manager"
+              },
+              "segmentIndex": 1,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "scene-setup-assets",
+                  "from": "scene-setup",
+                  "to": "asset-runtime",
+                  "label": "uses manager for scene scopes"
+                },
+                "relationIndex": 18,
+                "label": "uses manager for scene scopes",
+                "x": 622.9,
+                "y": 499,
+                "width": 149.2,
+                "height": 14,
+                "lx": 697.5,
+                "ly": 509
+              },
+              "from": [
+                712,
+                260
+              ],
+              "to": [
+                712,
+                576
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"includes\" on connections[25] id \"systems-render-system\" \"scene-systems\" -> \"render-system\" label \"includes\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 2 [802.5, 632] -> [802.5, 1072] (label rect [799, 856, 48, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 25,
+              "id": "systems-render-system",
+              "from": "scene-systems",
+              "to": "render-system"
+            },
+            "evidence": {
+              "label": "includes",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 7,
+                "id": "app-renderer-setup",
+                "from": "browser-application",
+                "to": "webgpu-renderer"
+              },
+              "segmentIndex": 2,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "systems-render-system",
+                  "from": "scene-systems",
+                  "to": "render-system",
+                  "label": "includes"
+                },
+                "relationIndex": 25,
+                "label": "includes",
+                "x": 799.3,
+                "y": 856,
+                "width": 48.4,
+                "height": 14,
+                "lx": 823.5,
+                "ly": 866
+              },
+              "from": [
+                802.5,
+                632
+              ],
+              "to": [
+                802.5,
+                1072
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"includes\" on connections[25] id \"systems-render-system\" \"scene-systems\" -> \"render-system\" label \"includes\" is 0px from connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" label \"initializes / shuts down\" segment 2 [830.5, 674] -> [830.5, 1072] (label rect [799, 856, 48, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 25,
+              "id": "systems-render-system",
+              "from": "scene-systems",
+              "to": "render-system"
+            },
+            "evidence": {
+              "label": "includes",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 8,
+                "id": "runtime-renderer-lifecycle",
+                "from": "browser-runtime",
+                "to": "webgpu-renderer"
+              },
+              "segmentIndex": 2,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "systems-render-system",
+                  "from": "scene-systems",
+                  "to": "render-system",
+                  "label": "includes"
+                },
+                "relationIndex": 25,
+                "label": "includes",
+                "x": 799.3,
+                "y": 856,
+                "width": 48.4,
+                "height": 14,
+                "lx": 823.5,
+                "ly": 866
+              },
+              "from": [
+                830.5,
+                674
+              ],
+              "to": [
+                830.5,
+                1072
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"creates + starts with callbacks\" on connections[26] id \"runtime-creates-engine\" \"browser-runtime\" -> \"engine\" label \"creates + starts with callbacks\" is 0px from connections[5] id \"app-platform-setup\" \"browser-application\" -> \"browser-platform\" label \"constructs\" segment 4 [973.5, 280] -> [1082.5, 280] (label rect [981, 280, 159, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 26,
+              "id": "runtime-creates-engine",
+              "from": "browser-runtime",
+              "to": "engine"
+            },
+            "evidence": {
+              "label": "creates + starts with callbacks",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 5,
+                "id": "app-platform-setup",
+                "from": "browser-application",
+                "to": "browser-platform"
+              },
+              "segmentIndex": 4,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "runtime-creates-engine",
+                  "from": "browser-runtime",
+                  "to": "engine",
+                  "label": "creates + starts with callbacks"
+                },
+                "relationIndex": 26,
+                "label": "creates + starts with callbacks",
+                "x": 981.35,
+                "y": 280,
+                "width": 158.79999999999998,
+                "height": 14,
+                "lx": 1060.75,
+                "ly": 290
+              },
+              "from": [
+                973.5,
+                280
+              ],
+              "to": [
+                1082.5,
+                280
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "layout/constraint",
+            "severity": "error",
+            "message": "Label \"starts game\" overlaps component \"game-entry\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [799, 88, 63, 14]\n  component \"game-entry\" rect: [764, 48, 120, 60]\n  Suggested fix: set labelAt [831, 122] or set labelDx 1 with labelDy 24 (below); or set labelAt [831, 40] or set labelDx 1 with labelDy -58 (above)",
+            "subject": {
+              "diagramType": "architecture"
+            },
+            "evidence": {},
+            "supportedFixes": []
+          },
+          {
+            "code": "layout/constraint",
+            "severity": "error",
+            "message": "Label \"returns API\" overlaps component \"editor-entry\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [941, 70, 63, 14]\n  component \"editor-entry\" rect: [948, 48, 135, 60]\n  Suggested fix: set labelAt [973, 122] or set labelDx 37 with labelDy 43 (below); or set labelAt [973, 40] or set labelDx 37 with labelDy -39 (above)",
+            "subject": {
+              "diagramType": "architecture"
+            },
+            "evidence": {},
+            "supportedFixes": []
+          },
+          {
+            "code": "layout/constraint",
+            "severity": "error",
+            "message": "Label \"defines startup callback\" overlaps component \"browser-runtime\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [648, 208, 125, 14]\n  component \"browser-runtime\" rect: [734, 216, 179, 60]\n  Suggested fix: set labelAt [711, 290] or set labelDx 1 with labelDy 72 (below); or set labelAt [711, 208] or set labelDx 1 with labelDy -10 (above)",
+            "subject": {
+              "diagramType": "architecture"
+            },
+            "evidence": {},
+            "supportedFixes": []
+          },
+          {
+            "code": "layout/constraint",
+            "severity": "error",
+            "message": "Label \"constructs + starts\" overlaps component \"browser-application\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [755, 184, 101, 14]\n  component \"browser-application\" rect: [735, 132, 178, 60]\n  Suggested fix: set labelAt [806, 206] or set labelDy 12 (below); or set labelAt [806, 124] or set labelDy -70 (above)",
+            "subject": {
+              "diagramType": "architecture"
+            },
+            "evidence": {},
+            "supportedFixes": []
+          },
+          {
+            "code": "layout/constraint",
+            "severity": "error",
+            "message": "Label \"invokes at startup\" overlaps component \"browser-runtime\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [765, 270, 96, 14]\n  component \"browser-runtime\" rect: [734, 216, 179, 60]\n  Suggested fix: set labelAt [813, 290] or set labelDy 10 (below); or set labelAt [813, 208] or set labelDy -72 (above)",
+            "subject": {
+              "diagramType": "architecture"
+            },
+            "evidence": {},
+            "supportedFixes": []
+          },
+          {
+            "code": "layout/constraint",
+            "severity": "error",
+            "message": "Label \"returns input, assets + scenes\" overlaps component \"browser-runtime\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [766, 260, 154, 14]\n  component \"browser-runtime\" rect: [734, 216, 179, 60]\n  Suggested fix: set labelAt [843, 290] or set labelDy 20 (below); or set labelAt [843, 208] or set labelDy -62 (above)",
+            "subject": {
+              "diagramType": "architecture"
+            },
+            "evidence": {},
+            "supportedFixes": []
+          },
+          {
+            "code": "layout/constraint",
+            "severity": "error",
+            "message": "Label \"creates\" overlaps component \"module-factory\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [802, 344, 44, 14]\n  component \"module-factory\" rect: [720, 304, 207, 60]\n  Suggested fix: set labelAt [824, 378] or set labelDx 1 with labelDy 24 (below); or set labelAt [824, 296] or set labelDx 1 with labelDy -58 (above)",
+            "subject": {
+              "diagramType": "architecture"
+            },
+            "evidence": {},
+            "supportedFixes": []
+          },
+          {
+            "code": "layout/constraint",
+            "severity": "error",
+            "message": "Label \"includes\" overlaps component \"scene-systems\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [799, 856, 48, 14]\n  component \"scene-systems\" rect: [728, 816, 191, 60]\n  Suggested fix: set labelAt [824, 890] or set labelDx 1 with labelDy 24 (below); or set labelAt [824, 808] or set labelDx 1 with labelDy -58 (above)",
+            "subject": {
+              "diagramType": "architecture"
+            },
+            "evidence": {},
+            "supportedFixes": []
+          }
+        ],
+        "provenance": "absent",
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      },
+      "execution": "embedded-in-deliver"
+    },
+    "deliver": {
+      "status": "not-run",
+      "execution": "blocked-by-validate"
+    }
+  },
+  "browserCheck": {
+    "requested": true,
+    "ran": false
+  },
+  "diagnostics": [
+    {
+      "code": "clean-flow/edge-through-node",
+      "severity": "error",
+      "message": "[clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"module-factory\" (unrelated to this relationship) on segment 0 [838, 192] -> [838, 632] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 7,
+        "id": "app-renderer-setup",
+        "from": "browser-application",
+        "to": "webgpu-renderer"
+      },
+      "evidence": {
+        "obstacleKind": "component",
+        "obstacleId": "module-factory",
+        "segmentIndex": 0,
+        "from": [
+          837.5,
+          192
+        ],
+        "to": [
+          837.5,
+          632
+        ],
+        "clearancePx": 2
+      },
+      "supportedFixes": [
+        "adjust fromSide/toSide, set route/via, or move the component"
+      ]
+    },
+    {
+      "code": "clean-flow/edge-through-node",
+      "severity": "error",
+      "message": "[clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"browser-runtime\" (unrelated to this relationship) on segment 0 [838, 192] -> [838, 632] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 7,
+        "id": "app-renderer-setup",
+        "from": "browser-application",
+        "to": "webgpu-renderer"
+      },
+      "evidence": {
+        "obstacleKind": "component",
+        "obstacleId": "browser-runtime",
+        "segmentIndex": 0,
+        "from": [
+          837.5,
+          192
+        ],
+        "to": [
+          837.5,
+          632
+        ],
+        "clearancePx": 2
+      },
+      "supportedFixes": [
+        "adjust fromSide/toSide, set route/via, or move the component"
+      ]
+    },
+    {
+      "code": "clean-flow/edge-through-node",
+      "severity": "error",
+      "message": "[clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"scene-setup\" (unrelated to this relationship) on segment 0 [838, 192] -> [838, 632] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 7,
+        "id": "app-renderer-setup",
+        "from": "browser-application",
+        "to": "webgpu-renderer"
+      },
+      "evidence": {
+        "obstacleKind": "component",
+        "obstacleId": "scene-setup",
+        "segmentIndex": 0,
+        "from": [
+          837.5,
+          192
+        ],
+        "to": [
+          837.5,
+          632
+        ],
+        "clearancePx": 2
+      },
+      "supportedFixes": [
+        "adjust fromSide/toSide, set route/via, or move the component"
+      ]
+    },
+    {
+      "code": "clean-flow/edge-through-node",
+      "severity": "error",
+      "message": "[clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"scene-manager\" (unrelated to this relationship) on segment 0 [838, 192] -> [838, 632] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 7,
+        "id": "app-renderer-setup",
+        "from": "browser-application",
+        "to": "webgpu-renderer"
+      },
+      "evidence": {
+        "obstacleKind": "component",
+        "obstacleId": "scene-manager",
+        "segmentIndex": 0,
+        "from": [
+          837.5,
+          192
+        ],
+        "to": [
+          837.5,
+          632
+        ],
+        "clearancePx": 2
+      },
+      "supportedFixes": [
+        "adjust fromSide/toSide, set route/via, or move the component"
+      ]
+    },
+    {
+      "code": "clean-flow/edge-through-node",
+      "severity": "error",
+      "message": "[clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"scene\" (unrelated to this relationship) on segment 2 [803, 632] -> [803, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 7,
+        "id": "app-renderer-setup",
+        "from": "browser-application",
+        "to": "webgpu-renderer"
+      },
+      "evidence": {
+        "obstacleKind": "component",
+        "obstacleId": "scene",
+        "segmentIndex": 2,
+        "from": [
+          802.5,
+          632
+        ],
+        "to": [
+          802.5,
+          1072
+        ],
+        "clearancePx": 2
+      },
+      "supportedFixes": [
+        "adjust fromSide/toSide, set route/via, or move the component"
+      ]
+    },
+    {
+      "code": "clean-flow/edge-through-node",
+      "severity": "error",
+      "message": "[clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"scene-systems\" (unrelated to this relationship) on segment 2 [803, 632] -> [803, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 7,
+        "id": "app-renderer-setup",
+        "from": "browser-application",
+        "to": "webgpu-renderer"
+      },
+      "evidence": {
+        "obstacleKind": "component",
+        "obstacleId": "scene-systems",
+        "segmentIndex": 2,
+        "from": [
+          802.5,
+          632
+        ],
+        "to": [
+          802.5,
+          1072
+        ],
+        "clearancePx": 2
+      },
+      "supportedFixes": [
+        "adjust fromSide/toSide, set route/via, or move the component"
+      ]
+    },
+    {
+      "code": "clean-flow/edge-through-node",
+      "severity": "error",
+      "message": "[clean-flow/edge-through-node] architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" crosses component \"render-system\" (unrelated to this relationship) on segment 2 [803, 632] -> [803, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 7,
+        "id": "app-renderer-setup",
+        "from": "browser-application",
+        "to": "webgpu-renderer"
+      },
+      "evidence": {
+        "obstacleKind": "component",
+        "obstacleId": "render-system",
+        "segmentIndex": 2,
+        "from": [
+          802.5,
+          632
+        ],
+        "to": [
+          802.5,
+          1072
+        ],
+        "clearancePx": 2
+      },
+      "supportedFixes": [
+        "adjust fromSide/toSide, set route/via, or move the component"
+      ]
+    },
+    {
+      "code": "clean-flow/edge-through-node",
+      "severity": "error",
+      "message": "[clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"module-factory\" (unrelated to this relationship) on segment 0 [817, 276] -> [817, 674] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 8,
+        "id": "runtime-renderer-lifecycle",
+        "from": "browser-runtime",
+        "to": "webgpu-renderer"
+      },
+      "evidence": {
+        "obstacleKind": "component",
+        "obstacleId": "module-factory",
+        "segmentIndex": 0,
+        "from": [
+          816.5,
+          276
+        ],
+        "to": [
+          816.5,
+          674
+        ],
+        "clearancePx": 2
+      },
+      "supportedFixes": [
+        "adjust fromSide/toSide, set route/via, or move the component"
+      ]
+    },
+    {
+      "code": "clean-flow/edge-through-node",
+      "severity": "error",
+      "message": "[clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"scene-setup\" (unrelated to this relationship) on segment 0 [817, 276] -> [817, 674] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 8,
+        "id": "runtime-renderer-lifecycle",
+        "from": "browser-runtime",
+        "to": "webgpu-renderer"
+      },
+      "evidence": {
+        "obstacleKind": "component",
+        "obstacleId": "scene-setup",
+        "segmentIndex": 0,
+        "from": [
+          816.5,
+          276
+        ],
+        "to": [
+          816.5,
+          674
+        ],
+        "clearancePx": 2
+      },
+      "supportedFixes": [
+        "adjust fromSide/toSide, set route/via, or move the component"
+      ]
+    },
+    {
+      "code": "clean-flow/edge-through-node",
+      "severity": "error",
+      "message": "[clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"scene-manager\" (unrelated to this relationship) on segment 0 [817, 276] -> [817, 674] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 8,
+        "id": "runtime-renderer-lifecycle",
+        "from": "browser-runtime",
+        "to": "webgpu-renderer"
+      },
+      "evidence": {
+        "obstacleKind": "component",
+        "obstacleId": "scene-manager",
+        "segmentIndex": 0,
+        "from": [
+          816.5,
+          276
+        ],
+        "to": [
+          816.5,
+          674
+        ],
+        "clearancePx": 2
+      },
+      "supportedFixes": [
+        "adjust fromSide/toSide, set route/via, or move the component"
+      ]
+    },
+    {
+      "code": "clean-flow/edge-through-node",
+      "severity": "error",
+      "message": "[clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"scene\" (unrelated to this relationship) on segment 2 [831, 674] -> [831, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 8,
+        "id": "runtime-renderer-lifecycle",
+        "from": "browser-runtime",
+        "to": "webgpu-renderer"
+      },
+      "evidence": {
+        "obstacleKind": "component",
+        "obstacleId": "scene",
+        "segmentIndex": 2,
+        "from": [
+          830.5,
+          674
+        ],
+        "to": [
+          830.5,
+          1072
+        ],
+        "clearancePx": 2
+      },
+      "supportedFixes": [
+        "adjust fromSide/toSide, set route/via, or move the component"
+      ]
+    },
+    {
+      "code": "clean-flow/edge-through-node",
+      "severity": "error",
+      "message": "[clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"scene-systems\" (unrelated to this relationship) on segment 2 [831, 674] -> [831, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 8,
+        "id": "runtime-renderer-lifecycle",
+        "from": "browser-runtime",
+        "to": "webgpu-renderer"
+      },
+      "evidence": {
+        "obstacleKind": "component",
+        "obstacleId": "scene-systems",
+        "segmentIndex": 2,
+        "from": [
+          830.5,
+          674
+        ],
+        "to": [
+          830.5,
+          1072
+        ],
+        "clearancePx": 2
+      },
+      "supportedFixes": [
+        "adjust fromSide/toSide, set route/via, or move the component"
+      ]
+    },
+    {
+      "code": "clean-flow/edge-through-node",
+      "severity": "error",
+      "message": "[clean-flow/edge-through-node] architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" crosses component \"render-system\" (unrelated to this relationship) on segment 2 [831, 674] -> [831, 1072] (2px clearance) — adjust fromSide/toSide, set route/via, or move the component.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 8,
+        "id": "runtime-renderer-lifecycle",
+        "from": "browser-runtime",
+        "to": "webgpu-renderer"
+      },
+      "evidence": {
+        "obstacleKind": "component",
+        "obstacleId": "render-system",
+        "segmentIndex": 2,
+        "from": [
+          830.5,
+          674
+        ],
+        "to": [
+          830.5,
+          1072
+        ],
+        "clearancePx": 2
+      },
+      "supportedFixes": [
+        "adjust fromSide/toSide, set route/via, or move the component"
+      ]
+    },
+    {
+      "code": "composition/ambiguous-corridor",
+      "severity": "error",
+      "message": "[composition/ambiguous-corridor] showcase architecture connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" shares a 14px corridor with connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" at [837.5, 290] -> [837.5, 304] (segments 0 and 2; minimum 8px) — adjust route/via or fromSide/toSide so distinct connections do not visually merge.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 7,
+        "id": "app-renderer-setup",
+        "from": "browser-application",
+        "to": "webgpu-renderer"
+      },
+      "evidence": {
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 12,
+          "id": "runtime-invokes-factory",
+          "from": "browser-runtime",
+          "to": "module-factory"
+        },
+        "overlapLengthPx": 14,
+        "minimumPx": 8,
+        "from": [
+          837.5,
+          290
+        ],
+        "to": [
+          837.5,
+          304
+        ],
+        "segmentIndex": 0,
+        "otherSegmentIndex": 2
+      },
+      "supportedFixes": [
+        "adjust route/via or fromSide/toSide so distinct connections do not visually merge"
+      ]
+    },
+    {
+      "code": "composition/short-interior-segment",
+      "severity": "error",
+      "message": "[composition/short-interior-segment] showcase architecture connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" has a 14px interior segment 1 [816.5, 674] -> [830.5, 674] that is below the 16px interior-segment floor — move route/via points into a wider corridor or move the component so every turn has room to read.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 8,
+        "id": "runtime-renderer-lifecycle",
+        "from": "browser-runtime",
+        "to": "webgpu-renderer"
+      },
+      "evidence": {
+        "segmentIndex": 1,
+        "position": "interior",
+        "lengthPx": 14,
+        "minimumPx": 16,
+        "from": [
+          816.5,
+          674
+        ],
+        "to": [
+          830.5,
+          674
+        ]
+      },
+      "supportedFixes": [
+        "move route/via points into a wider corridor or move the component so every turn has room to read"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"returns Dispose\" on connections[1] id \"game-dispose\" \"browser-application\" -> \"game-entry\" label \"returns Dispose\" is 0px from connections[0] id \"game-start\" \"game-entry\" -> \"browser-application\" label \"starts game\" segment 0 [830.5, 108] -> [830.5, 132] (label rect [776, 112, 82, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 1,
+        "id": "game-dispose",
+        "from": "browser-application",
+        "to": "game-entry"
+      },
+      "evidence": {
+        "label": "returns Dispose",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 0,
+          "id": "game-start",
+          "from": "game-entry",
+          "to": "browser-application"
+        },
+        "segmentIndex": 0,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "game-dispose",
+            "from": "browser-application",
+            "to": "game-entry",
+            "label": "returns Dispose"
+          },
+          "relationIndex": 1,
+          "label": "returns Dispose",
+          "x": 775.5,
+          "y": 112,
+          "width": 82,
+          "height": 14,
+          "lx": 816.5,
+          "ly": 122
+        },
+        "from": [
+          830.5,
+          108
+        ],
+        "to": [
+          830.5,
+          132
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"returns Dispose\" on connections[1] id \"game-dispose\" \"browser-application\" -> \"game-entry\" label \"returns Dispose\" is 3px from connections[5] id \"app-platform-setup\" \"browser-application\" -> \"browser-platform\" label \"constructs\" segment 2 [710.5, 129] -> [973.5, 129] (label rect [776, 112, 82, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 1,
+        "id": "game-dispose",
+        "from": "browser-application",
+        "to": "game-entry"
+      },
+      "evidence": {
+        "label": "returns Dispose",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 5,
+          "id": "app-platform-setup",
+          "from": "browser-application",
+          "to": "browser-platform"
+        },
+        "segmentIndex": 2,
+        "clearancePx": 3,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "game-dispose",
+            "from": "browser-application",
+            "to": "game-entry",
+            "label": "returns Dispose"
+          },
+          "relationIndex": 1,
+          "label": "returns Dispose",
+          "x": 775.5,
+          "y": 112,
+          "width": 82,
+          "height": 14,
+          "lx": 816.5,
+          "ly": 122
+        },
+        "from": [
+          710.5,
+          129
+        ],
+        "to": [
+          973.5,
+          129
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"starts editor\" on connections[2] id \"editor-start\" \"editor-entry\" -> \"browser-application\" label \"starts editor\" is 0px from connections[3] id \"editor-api\" \"browser-application\" -> \"editor-entry\" label \"returns API\" segment 1 [936.5, 155] -> [936.5, 24] (label rect [894, 107, 72, 14]; minimum 4px) — if the authored labelDx are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 2,
+        "id": "editor-start",
+        "from": "editor-entry",
+        "to": "browser-application"
+      },
+      "evidence": {
+        "label": "starts editor",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 3,
+          "id": "editor-api",
+          "from": "browser-application",
+          "to": "editor-entry"
+        },
+        "segmentIndex": 1,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "editor-start",
+            "from": "editor-entry",
+            "to": "browser-application",
+            "label": "starts editor"
+          },
+          "relationIndex": 2,
+          "label": "starts editor",
+          "x": 893.8,
+          "y": 107,
+          "width": 72.4,
+          "height": 14,
+          "lx": 930,
+          "ly": 117
+        },
+        "from": [
+          936.5,
+          155
+        ],
+        "to": [
+          936.5,
+          24
+        ]
+      },
+      "supportedFixes": [
+        "if the authored labelDx are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"returns API\" on connections[3] id \"editor-api\" \"browser-application\" -> \"editor-entry\" label \"returns API\" is 1.5px from connections[2] id \"editor-start\" \"editor-entry\" -> \"browser-application\" label \"starts editor\" segment 0 [947.5, 85] -> [930, 85] (label rect [941, 70, 63, 14]; minimum 4px) — if the authored labelDx are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 3,
+        "id": "editor-api",
+        "from": "browser-application",
+        "to": "editor-entry"
+      },
+      "evidence": {
+        "label": "returns API",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 2,
+          "id": "editor-start",
+          "from": "editor-entry",
+          "to": "browser-application"
+        },
+        "segmentIndex": 0,
+        "clearancePx": 1.5,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "editor-api",
+            "from": "browser-application",
+            "to": "editor-entry",
+            "label": "returns API",
+            "labelDx": 36
+          },
+          "relationIndex": 3,
+          "label": "returns API",
+          "x": 941.1,
+          "y": 69.5,
+          "width": 62.8,
+          "height": 14,
+          "lx": 972.5,
+          "ly": 79.5
+        },
+        "from": [
+          947.5,
+          85
+        ],
+        "to": [
+          930,
+          85
+        ]
+      },
+      "supportedFixes": [
+        "if the authored labelDx are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"defines startup callback\" on connections[9] id \"app-defines-factory\" \"browser-application\" -> \"module-factory\" label \"defines startup callback\" is 0px from connections[11] id \"app-injects-factory\" \"browser-application\" -> \"browser-runtime\" label \"injects module factory\" segment 1 [710, 162] -> [710, 232] (label rect [648, 208, 125, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 9,
+        "id": "app-defines-factory",
+        "from": "browser-application",
+        "to": "module-factory"
+      },
+      "evidence": {
+        "label": "defines startup callback",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 11,
+          "id": "app-injects-factory",
+          "from": "browser-application",
+          "to": "browser-runtime"
+        },
+        "segmentIndex": 1,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "app-defines-factory",
+            "from": "browser-application",
+            "to": "module-factory",
+            "label": "defines startup callback"
+          },
+          "relationIndex": 9,
+          "label": "defines startup callback",
+          "x": 647.9,
+          "y": 208,
+          "width": 125.19999999999999,
+          "height": 14,
+          "lx": 710.5,
+          "ly": 218
+        },
+        "from": [
+          710,
+          162
+        ],
+        "to": [
+          710,
+          232
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"constructs + starts\" on connections[10] id \"app-creates-runtime\" \"browser-application\" -> \"browser-runtime\" label \"constructs + starts\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 0 [837.5, 192] -> [837.5, 632] (label rect [755, 184, 101, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 10,
+        "id": "app-creates-runtime",
+        "from": "browser-application",
+        "to": "browser-runtime"
+      },
+      "evidence": {
+        "label": "constructs + starts",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 7,
+          "id": "app-renderer-setup",
+          "from": "browser-application",
+          "to": "webgpu-renderer"
+        },
+        "segmentIndex": 0,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "app-creates-runtime",
+            "from": "browser-application",
+            "to": "browser-runtime",
+            "label": "constructs + starts"
+          },
+          "relationIndex": 10,
+          "label": "constructs + starts",
+          "x": 755.4,
+          "y": 184,
+          "width": 101.2,
+          "height": 14,
+          "lx": 806,
+          "ly": 194
+        },
+        "from": [
+          837.5,
+          192
+        ],
+        "to": [
+          837.5,
+          632
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"invokes at startup\" on connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"invokes at startup\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 0 [837.5, 192] -> [837.5, 632] (label rect [765, 270, 96, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 12,
+        "id": "runtime-invokes-factory",
+        "from": "browser-runtime",
+        "to": "module-factory"
+      },
+      "evidence": {
+        "label": "invokes at startup",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 7,
+          "id": "app-renderer-setup",
+          "from": "browser-application",
+          "to": "webgpu-renderer"
+        },
+        "segmentIndex": 0,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "runtime-invokes-factory",
+            "from": "browser-runtime",
+            "to": "module-factory",
+            "label": "invokes at startup"
+          },
+          "relationIndex": 12,
+          "label": "invokes at startup",
+          "x": 764.8,
+          "y": 270,
+          "width": 96.39999999999999,
+          "height": 14,
+          "lx": 813,
+          "ly": 280
+        },
+        "from": [
+          837.5,
+          192
+        ],
+        "to": [
+          837.5,
+          632
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"invokes at startup\" on connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"invokes at startup\" is 0px from connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" label \"initializes / shuts down\" segment 0 [816.5, 276] -> [816.5, 674] (label rect [765, 270, 96, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 12,
+        "id": "runtime-invokes-factory",
+        "from": "browser-runtime",
+        "to": "module-factory"
+      },
+      "evidence": {
+        "label": "invokes at startup",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 8,
+          "id": "runtime-renderer-lifecycle",
+          "from": "browser-runtime",
+          "to": "webgpu-renderer"
+        },
+        "segmentIndex": 0,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "runtime-invokes-factory",
+            "from": "browser-runtime",
+            "to": "module-factory",
+            "label": "invokes at startup"
+          },
+          "relationIndex": 12,
+          "label": "invokes at startup",
+          "x": 764.8,
+          "y": 270,
+          "width": 96.39999999999999,
+          "height": 14,
+          "lx": 813,
+          "ly": 280
+        },
+        "from": [
+          816.5,
+          276
+        ],
+        "to": [
+          816.5,
+          674
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"invokes at startup\" on connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"invokes at startup\" is 0px from connections[9] id \"app-defines-factory\" \"browser-application\" -> \"module-factory\" label \"defines startup callback\" segment 2 [710.5, 280] -> [809.5, 280] (label rect [765, 270, 96, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 12,
+        "id": "runtime-invokes-factory",
+        "from": "browser-runtime",
+        "to": "module-factory"
+      },
+      "evidence": {
+        "label": "invokes at startup",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 9,
+          "id": "app-defines-factory",
+          "from": "browser-application",
+          "to": "module-factory"
+        },
+        "segmentIndex": 2,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "runtime-invokes-factory",
+            "from": "browser-runtime",
+            "to": "module-factory",
+            "label": "invokes at startup"
+          },
+          "relationIndex": 12,
+          "label": "invokes at startup",
+          "x": 764.8,
+          "y": 270,
+          "width": 96.39999999999999,
+          "height": 14,
+          "lx": 813,
+          "ly": 280
+        },
+        "from": [
+          710.5,
+          280
+        ],
+        "to": [
+          809.5,
+          280
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"invokes at startup\" on connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"invokes at startup\" is 0px from connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" segment 0 [823.5, 304] -> [823.5, 280] (label rect [765, 270, 96, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 12,
+        "id": "runtime-invokes-factory",
+        "from": "browser-runtime",
+        "to": "module-factory"
+      },
+      "evidence": {
+        "label": "invokes at startup",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 13,
+          "id": "factory-returns-modules",
+          "from": "module-factory",
+          "to": "browser-runtime"
+        },
+        "segmentIndex": 0,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "runtime-invokes-factory",
+            "from": "browser-runtime",
+            "to": "module-factory",
+            "label": "invokes at startup"
+          },
+          "relationIndex": 12,
+          "label": "invokes at startup",
+          "x": 764.8,
+          "y": 270,
+          "width": 96.39999999999999,
+          "height": 14,
+          "lx": 813,
+          "ly": 280
+        },
+        "from": [
+          823.5,
+          304
+        ],
+        "to": [
+          823.5,
+          280
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"returns input, assets + scenes\" on connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 0 [837.5, 192] -> [837.5, 632] (label rect [766, 260, 154, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 13,
+        "id": "factory-returns-modules",
+        "from": "module-factory",
+        "to": "browser-runtime"
+      },
+      "evidence": {
+        "label": "returns input, assets + scenes",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 7,
+          "id": "app-renderer-setup",
+          "from": "browser-application",
+          "to": "webgpu-renderer"
+        },
+        "segmentIndex": 0,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "factory-returns-modules",
+            "from": "module-factory",
+            "to": "browser-runtime",
+            "label": "returns input, assets + scenes"
+          },
+          "relationIndex": 13,
+          "label": "returns input, assets + scenes",
+          "x": 766,
+          "y": 260,
+          "width": 154,
+          "height": 14,
+          "lx": 843,
+          "ly": 270
+        },
+        "from": [
+          837.5,
+          192
+        ],
+        "to": [
+          837.5,
+          632
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"returns input, assets + scenes\" on connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" is 2px from connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" label \"initializes / shuts down\" segment 0 [816.5, 276] -> [816.5, 674] (label rect [766, 260, 154, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 13,
+        "id": "factory-returns-modules",
+        "from": "module-factory",
+        "to": "browser-runtime"
+      },
+      "evidence": {
+        "label": "returns input, assets + scenes",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 8,
+          "id": "runtime-renderer-lifecycle",
+          "from": "browser-runtime",
+          "to": "webgpu-renderer"
+        },
+        "segmentIndex": 0,
+        "clearancePx": 2,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "factory-returns-modules",
+            "from": "module-factory",
+            "to": "browser-runtime",
+            "label": "returns input, assets + scenes"
+          },
+          "relationIndex": 13,
+          "label": "returns input, assets + scenes",
+          "x": 766,
+          "y": 260,
+          "width": 154,
+          "height": 14,
+          "lx": 843,
+          "ly": 270
+        },
+        "from": [
+          816.5,
+          276
+        ],
+        "to": [
+          816.5,
+          674
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"returns input, assets + scenes\" on connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" is 2px from connections[12] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"invokes at startup\" segment 0 [788.5, 276] -> [788.5, 290] (label rect [766, 260, 154, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 13,
+        "id": "factory-returns-modules",
+        "from": "module-factory",
+        "to": "browser-runtime"
+      },
+      "evidence": {
+        "label": "returns input, assets + scenes",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 12,
+          "id": "runtime-invokes-factory",
+          "from": "browser-runtime",
+          "to": "module-factory"
+        },
+        "segmentIndex": 0,
+        "clearancePx": 2,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "factory-returns-modules",
+            "from": "module-factory",
+            "to": "browser-runtime",
+            "label": "returns input, assets + scenes"
+          },
+          "relationIndex": 13,
+          "label": "returns input, assets + scenes",
+          "x": 766,
+          "y": 260,
+          "width": 154,
+          "height": 14,
+          "lx": 843,
+          "ly": 270
+        },
+        "from": [
+          788.5,
+          276
+        ],
+        "to": [
+          788.5,
+          290
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"returns input, assets + scenes\" on connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" is 2px from connections[26] id \"runtime-creates-engine\" \"browser-runtime\" -> \"engine\" label \"creates + starts with callbacks\" segment 0 [872.5, 276] -> [872.5, 300] (label rect [766, 260, 154, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 13,
+        "id": "factory-returns-modules",
+        "from": "module-factory",
+        "to": "browser-runtime"
+      },
+      "evidence": {
+        "label": "returns input, assets + scenes",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 26,
+          "id": "runtime-creates-engine",
+          "from": "browser-runtime",
+          "to": "engine"
+        },
+        "segmentIndex": 0,
+        "clearancePx": 2,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "factory-returns-modules",
+            "from": "module-factory",
+            "to": "browser-runtime",
+            "label": "returns input, assets + scenes"
+          },
+          "relationIndex": 13,
+          "label": "returns input, assets + scenes",
+          "x": 766,
+          "y": 260,
+          "width": 154,
+          "height": 14,
+          "lx": 843,
+          "ly": 270
+        },
+        "from": [
+          872.5,
+          276
+        ],
+        "to": [
+          872.5,
+          300
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"returns input, assets + scenes\" on connections[13] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns input, assets + scenes\" is 0px from connections[27] id \"engine-callbacks\" \"engine\" -> \"browser-runtime\" label \"runs injected callbacks\" segment 1 [1340.5, 260] -> [913, 260] (label rect [766, 260, 154, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 13,
+        "id": "factory-returns-modules",
+        "from": "module-factory",
+        "to": "browser-runtime"
+      },
+      "evidence": {
+        "label": "returns input, assets + scenes",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 27,
+          "id": "engine-callbacks",
+          "from": "engine",
+          "to": "browser-runtime"
+        },
+        "segmentIndex": 1,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "factory-returns-modules",
+            "from": "module-factory",
+            "to": "browser-runtime",
+            "label": "returns input, assets + scenes"
+          },
+          "relationIndex": 13,
+          "label": "returns input, assets + scenes",
+          "x": 766,
+          "y": 260,
+          "width": 154,
+          "height": 14,
+          "lx": 843,
+          "ly": 270
+        },
+        "from": [
+          1340.5,
+          260
+        ],
+        "to": [
+          913,
+          260
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"creates\" on connections[17] id \"factory-scene-setup\" \"module-factory\" -> \"scene-setup\" label \"creates\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 0 [837.5, 192] -> [837.5, 632] (label rect [802, 344, 44, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 17,
+        "id": "factory-scene-setup",
+        "from": "module-factory",
+        "to": "scene-setup"
+      },
+      "evidence": {
+        "label": "creates",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 7,
+          "id": "app-renderer-setup",
+          "from": "browser-application",
+          "to": "webgpu-renderer"
+        },
+        "segmentIndex": 0,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "factory-scene-setup",
+            "from": "module-factory",
+            "to": "scene-setup",
+            "label": "creates"
+          },
+          "relationIndex": 17,
+          "label": "creates",
+          "x": 801.7,
+          "y": 344,
+          "width": 43.6,
+          "height": 14,
+          "lx": 823.5,
+          "ly": 354
+        },
+        "from": [
+          837.5,
+          192
+        ],
+        "to": [
+          837.5,
+          632
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"creates\" on connections[17] id \"factory-scene-setup\" \"module-factory\" -> \"scene-setup\" label \"creates\" is 0px from connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" label \"initializes / shuts down\" segment 0 [816.5, 276] -> [816.5, 674] (label rect [802, 344, 44, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 17,
+        "id": "factory-scene-setup",
+        "from": "module-factory",
+        "to": "scene-setup"
+      },
+      "evidence": {
+        "label": "creates",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 8,
+          "id": "runtime-renderer-lifecycle",
+          "from": "browser-runtime",
+          "to": "webgpu-renderer"
+        },
+        "segmentIndex": 0,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "factory-scene-setup",
+            "from": "module-factory",
+            "to": "scene-setup",
+            "label": "creates"
+          },
+          "relationIndex": 17,
+          "label": "creates",
+          "x": 801.7,
+          "y": 344,
+          "width": 43.6,
+          "height": 14,
+          "lx": 823.5,
+          "ly": 354
+        },
+        "from": [
+          816.5,
+          276
+        ],
+        "to": [
+          816.5,
+          674
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[18] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[16] id \"factory-assets\" \"module-factory\" -> \"asset-runtime\" label \"loads manifest + builds loaders\" segment 1 [688, 341] -> [688, 590] (label rect [623, 499, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 18,
+        "id": "scene-setup-assets",
+        "from": "scene-setup",
+        "to": "asset-runtime"
+      },
+      "evidence": {
+        "label": "uses manager for scene scopes",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 16,
+          "id": "factory-assets",
+          "from": "module-factory",
+          "to": "asset-runtime"
+        },
+        "segmentIndex": 1,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "scene-setup-assets",
+            "from": "scene-setup",
+            "to": "asset-runtime",
+            "label": "uses manager for scene scopes"
+          },
+          "relationIndex": 18,
+          "label": "uses manager for scene scopes",
+          "x": 622.9,
+          "y": 499,
+          "width": 149.2,
+          "height": 14,
+          "lx": 697.5,
+          "ly": 509
+        },
+        "from": [
+          688,
+          341
+        ],
+        "to": [
+          688,
+          590
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[18] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[21] id \"runtime-loads-scene\" \"browser-runtime\" -> \"scene-manager\" label \"loads start scene\" segment 1 [712, 260] -> [712, 576] (label rect [623, 499, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 18,
+        "id": "scene-setup-assets",
+        "from": "scene-setup",
+        "to": "asset-runtime"
+      },
+      "evidence": {
+        "label": "uses manager for scene scopes",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 21,
+          "id": "runtime-loads-scene",
+          "from": "browser-runtime",
+          "to": "scene-manager"
+        },
+        "segmentIndex": 1,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "scene-setup-assets",
+            "from": "scene-setup",
+            "to": "asset-runtime",
+            "label": "uses manager for scene scopes"
+          },
+          "relationIndex": 18,
+          "label": "uses manager for scene scopes",
+          "x": 622.9,
+          "y": 499,
+          "width": 149.2,
+          "height": 14,
+          "lx": 697.5,
+          "ly": 509
+        },
+        "from": [
+          712,
+          260
+        ],
+        "to": [
+          712,
+          576
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"includes\" on connections[25] id \"systems-render-system\" \"scene-systems\" -> \"render-system\" label \"includes\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 2 [802.5, 632] -> [802.5, 1072] (label rect [799, 856, 48, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 25,
+        "id": "systems-render-system",
+        "from": "scene-systems",
+        "to": "render-system"
+      },
+      "evidence": {
+        "label": "includes",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 7,
+          "id": "app-renderer-setup",
+          "from": "browser-application",
+          "to": "webgpu-renderer"
+        },
+        "segmentIndex": 2,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "systems-render-system",
+            "from": "scene-systems",
+            "to": "render-system",
+            "label": "includes"
+          },
+          "relationIndex": 25,
+          "label": "includes",
+          "x": 799.3,
+          "y": 856,
+          "width": 48.4,
+          "height": 14,
+          "lx": 823.5,
+          "ly": 866
+        },
+        "from": [
+          802.5,
+          632
+        ],
+        "to": [
+          802.5,
+          1072
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"includes\" on connections[25] id \"systems-render-system\" \"scene-systems\" -> \"render-system\" label \"includes\" is 0px from connections[8] id \"runtime-renderer-lifecycle\" \"browser-runtime\" -> \"webgpu-renderer\" label \"initializes / shuts down\" segment 2 [830.5, 674] -> [830.5, 1072] (label rect [799, 856, 48, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 25,
+        "id": "systems-render-system",
+        "from": "scene-systems",
+        "to": "render-system"
+      },
+      "evidence": {
+        "label": "includes",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 8,
+          "id": "runtime-renderer-lifecycle",
+          "from": "browser-runtime",
+          "to": "webgpu-renderer"
+        },
+        "segmentIndex": 2,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "systems-render-system",
+            "from": "scene-systems",
+            "to": "render-system",
+            "label": "includes"
+          },
+          "relationIndex": 25,
+          "label": "includes",
+          "x": 799.3,
+          "y": 856,
+          "width": 48.4,
+          "height": 14,
+          "lx": 823.5,
+          "ly": 866
+        },
+        "from": [
+          830.5,
+          674
+        ],
+        "to": [
+          830.5,
+          1072
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"creates + starts with callbacks\" on connections[26] id \"runtime-creates-engine\" \"browser-runtime\" -> \"engine\" label \"creates + starts with callbacks\" is 0px from connections[5] id \"app-platform-setup\" \"browser-application\" -> \"browser-platform\" label \"constructs\" segment 4 [973.5, 280] -> [1082.5, 280] (label rect [981, 280, 159, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 26,
+        "id": "runtime-creates-engine",
+        "from": "browser-runtime",
+        "to": "engine"
+      },
+      "evidence": {
+        "label": "creates + starts with callbacks",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 5,
+          "id": "app-platform-setup",
+          "from": "browser-application",
+          "to": "browser-platform"
+        },
+        "segmentIndex": 4,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "runtime-creates-engine",
+            "from": "browser-runtime",
+            "to": "engine",
+            "label": "creates + starts with callbacks"
+          },
+          "relationIndex": 26,
+          "label": "creates + starts with callbacks",
+          "x": 981.35,
+          "y": 280,
+          "width": 158.79999999999998,
+          "height": 14,
+          "lx": 1060.75,
+          "ly": 290
+        },
+        "from": [
+          973.5,
+          280
+        ],
+        "to": [
+          1082.5,
+          280
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "layout/constraint",
+      "severity": "error",
+      "message": "Label \"starts game\" overlaps component \"game-entry\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [799, 88, 63, 14]\n  component \"game-entry\" rect: [764, 48, 120, 60]\n  Suggested fix: set labelAt [831, 122] or set labelDx 1 with labelDy 24 (below); or set labelAt [831, 40] or set labelDx 1 with labelDy -58 (above)",
+      "subject": {
+        "diagramType": "architecture"
+      },
+      "evidence": {},
+      "supportedFixes": []
+    },
+    {
+      "code": "layout/constraint",
+      "severity": "error",
+      "message": "Label \"returns API\" overlaps component \"editor-entry\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [941, 70, 63, 14]\n  component \"editor-entry\" rect: [948, 48, 135, 60]\n  Suggested fix: set labelAt [973, 122] or set labelDx 37 with labelDy 43 (below); or set labelAt [973, 40] or set labelDx 37 with labelDy -39 (above)",
+      "subject": {
+        "diagramType": "architecture"
+      },
+      "evidence": {},
+      "supportedFixes": []
+    },
+    {
+      "code": "layout/constraint",
+      "severity": "error",
+      "message": "Label \"defines startup callback\" overlaps component \"browser-runtime\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [648, 208, 125, 14]\n  component \"browser-runtime\" rect: [734, 216, 179, 60]\n  Suggested fix: set labelAt [711, 290] or set labelDx 1 with labelDy 72 (below); or set labelAt [711, 208] or set labelDx 1 with labelDy -10 (above)",
+      "subject": {
+        "diagramType": "architecture"
+      },
+      "evidence": {},
+      "supportedFixes": []
+    },
+    {
+      "code": "layout/constraint",
+      "severity": "error",
+      "message": "Label \"constructs + starts\" overlaps component \"browser-application\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [755, 184, 101, 14]\n  component \"browser-application\" rect: [735, 132, 178, 60]\n  Suggested fix: set labelAt [806, 206] or set labelDy 12 (below); or set labelAt [806, 124] or set labelDy -70 (above)",
+      "subject": {
+        "diagramType": "architecture"
+      },
+      "evidence": {},
+      "supportedFixes": []
+    },
+    {
+      "code": "layout/constraint",
+      "severity": "error",
+      "message": "Label \"invokes at startup\" overlaps component \"browser-runtime\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [765, 270, 96, 14]\n  component \"browser-runtime\" rect: [734, 216, 179, 60]\n  Suggested fix: set labelAt [813, 290] or set labelDy 10 (below); or set labelAt [813, 208] or set labelDy -72 (above)",
+      "subject": {
+        "diagramType": "architecture"
+      },
+      "evidence": {},
+      "supportedFixes": []
+    },
+    {
+      "code": "layout/constraint",
+      "severity": "error",
+      "message": "Label \"returns input, assets + scenes\" overlaps component \"browser-runtime\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [766, 260, 154, 14]\n  component \"browser-runtime\" rect: [734, 216, 179, 60]\n  Suggested fix: set labelAt [843, 290] or set labelDy 20 (below); or set labelAt [843, 208] or set labelDy -62 (above)",
+      "subject": {
+        "diagramType": "architecture"
+      },
+      "evidence": {},
+      "supportedFixes": []
+    },
+    {
+      "code": "layout/constraint",
+      "severity": "error",
+      "message": "Label \"creates\" overlaps component \"module-factory\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [802, 344, 44, 14]\n  component \"module-factory\" rect: [720, 304, 207, 60]\n  Suggested fix: set labelAt [824, 378] or set labelDx 1 with labelDy 24 (below); or set labelAt [824, 296] or set labelDx 1 with labelDy -58 (above)",
+      "subject": {
+        "diagramType": "architecture"
+      },
+      "evidence": {},
+      "supportedFixes": []
+    },
+    {
+      "code": "layout/constraint",
+      "severity": "error",
+      "message": "Label \"includes\" overlaps component \"scene-systems\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [799, 856, 48, 14]\n  component \"scene-systems\" rect: [728, 816, 191, 60]\n  Suggested fix: set labelAt [824, 890] or set labelDx 1 with labelDy 24 (below); or set labelAt [824, 808] or set labelDx 1 with labelDy -58 (above)",
+      "subject": {
+        "diagramType": "architecture"
+      },
+      "evidence": {},
+      "supportedFixes": []
+    }
+  ],
+  "evidence": {
+    "receipt": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\layout-repair\\browser-runtime.finalize.json",
+    "summaryReceipt": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\layout-repair\\browser-runtime.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "failedStage": "validate",
+  "finishedAt": "2026-11-28T14:09:39.748Z",
+  "durationMs": 2419,
+  "update": {
+    "status": "current",
+    "installedVersion": "3.3.2",
+    "availableVersion": "3.3.2",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-28T14:00:33.665Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  }
+}

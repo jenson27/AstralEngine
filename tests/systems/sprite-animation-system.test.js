@@ -54,12 +54,12 @@ function CreateAnimationScene(animators, { queue, actions, name } = {}) {
         scene.EntityManager.AddComponent(entityId, SpriteAnimator, animator);
         return entityId;
     });
-    const system = new SpriteAnimationSystem();
-    scene.AddSystem("fixed-update", system);
-    scene.Initialize({
-        spriteAnimationEvents: queue,
-        spriteActionRegistry: actions,
+    const system = new SpriteAnimationSystem({
+        eventQueue: queue,
+        actionRegistry: actions,
     });
+    scene.AddSystem("fixed-update", system);
+    scene.Initialize();
     return { entityIds, scene, system };
 }
 
@@ -184,20 +184,17 @@ test("warns once per missing action for each animation asset", () => {
 });
 
 test("requires an animation event queue and action registry", () => {
-    const scene = new Scene("sprite-animation-service-validation");
-    const system = new SpriteAnimationSystem();
     const queue = new SpriteAnimationEventQueue();
     const actions = new SpriteActionRegistry();
 
     assert.throws(
-        () => system.Initialize(scene, { spriteActionRegistry: actions }),
+        () => new SpriteAnimationSystem({ actionRegistry: actions }),
         /requires an event queue/,
     );
     assert.throws(
-        () => system.Initialize(scene, { spriteAnimationEvents: queue }),
+        () => new SpriteAnimationSystem({ eventQueue: queue }),
         /requires an action registry/,
     );
-    scene.Dispose();
 });
 
 test("clears queued events when the scene shuts down", () => {

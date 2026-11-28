@@ -1,0 +1,249 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Browser Runtime Architecture",
+    "output": ".archify/architecture-browser-runtime-20261128-214058/layout-repair-5/browser-runtime.html",
+    "locale": "en",
+    "quality_profile": "showcase",
+    "repository": {
+      "url": "https://github.com/jenson27/AstralEngine.git",
+      "link_mode": "local-only",
+      "revision": "3380090d31548faee9d6f9228d455970a47ceffb"
+    }
+  },
+  "layout": {
+    "mode": "auto"
+  },
+  "components": [
+    {
+      "id": "game-entry",
+      "type": "frontend",
+      "label": "Game entry",
+      "sublabel": "browser game",
+      "sources": [
+        { "path": "src/main.js", "line": 19, "end_line": 22 }
+      ]
+    },
+    {
+      "id": "editor-entry",
+      "type": "frontend",
+      "label": "Editor entry",
+      "sublabel": "browser editor",
+      "sources": [
+        { "path": "src/editor/main.js", "line": 141, "end_line": 149 }
+      ]
+    },
+    {
+      "id": "browser-application",
+      "type": "frontend",
+      "label": "BrowserApplication",
+      "sublabel": "composition root",
+      "emphasis": true,
+      "sources": [
+        { "path": "src/browser-application.js", "line": 40, "end_line": 92 },
+        { "path": "src/browser-application.js", "line": 95, "end_line": 107 }
+      ]
+    },
+    {
+      "id": "module-factory",
+      "type": "backend",
+      "label": "Runtime module factory",
+      "sublabel": "input, assets, scene setup",
+      "sources": [
+        { "path": "src/browser-application.js", "line": 62, "end_line": 88 }
+      ]
+    },
+    {
+      "id": "browser-runtime",
+      "type": "backend",
+      "label": "BrowserRuntime",
+      "sublabel": "lifecycle + frame callbacks",
+      "emphasis": true,
+      "sources": [
+        { "path": "src/browser-runtime.js", "line": 133, "end_line": 193 },
+        { "path": "src/browser-runtime.js", "line": 208, "end_line": 223 }
+      ]
+    },
+    {
+      "id": "browser-platform",
+      "type": "backend",
+      "label": "BrowserPlatform",
+      "sublabel": "canvas sizing + browser events",
+      "sources": [
+        { "path": "src/platform/browser-platform.js", "line": 5, "end_line": 42 }
+      ]
+    },
+    {
+      "id": "input-runtime",
+      "type": "backend",
+      "label": "Input runtime",
+      "sublabel": "input source + action map",
+      "sources": [
+        { "path": "src/browser-application.js", "line": 63, "end_line": 71 },
+        { "path": "src/browser-runtime.js", "line": 165, "end_line": 175 }
+      ]
+    },
+    {
+      "id": "asset-runtime",
+      "type": "backend",
+      "label": "Browser asset runtime",
+      "sublabel": "catalog + loaders + manager",
+      "sources": [
+        { "path": "src/browser-asset-runtime.js", "line": 22, "end_line": 64 }
+      ]
+    },
+    {
+      "id": "scene-setup",
+      "type": "backend",
+      "label": "Browser scene setup",
+      "sublabel": "manager + ordered systems",
+      "sources": [
+        { "path": "src/browser-scene-runtime.js", "line": 15, "end_line": 50 },
+        { "path": "src/browser-scene-runtime.js", "line": 54, "end_line": 106 }
+      ]
+    },
+    {
+      "id": "scene-manager",
+      "type": "backend",
+      "label": "SceneManager",
+      "sublabel": "scene sessions + active scene",
+      "sources": [
+        { "path": "src/core/scene/scene-manager.js", "line": 99, "end_line": 125 },
+        { "path": "src/core/scene/scene-manager.js", "line": 205, "end_line": 220 }
+      ]
+    },
+    {
+      "id": "scene",
+      "type": "backend",
+      "label": "Scene",
+      "sublabel": "entities + components + scheduler",
+      "sources": [
+        { "path": "src/core/scene/scene.js", "line": 22, "end_line": 38 },
+        { "path": "src/core/scene/scene.js", "line": 224, "end_line": 270 }
+      ]
+    },
+    {
+      "id": "scene-systems",
+      "type": "backend",
+      "label": "Scene systems",
+      "sublabel": "fixed + prepare-render phases",
+      "sources": [
+        { "path": "src/browser-scene-runtime.js", "line": 15, "end_line": 50 },
+        { "path": "src/core/scene/scene.js", "line": 224, "end_line": 270 }
+      ]
+    },
+    {
+      "id": "engine",
+      "type": "backend",
+      "label": "Engine",
+      "sublabel": "fixed-step + animation frames",
+      "emphasis": true,
+      "sources": [
+        { "path": "src/core/engine.js", "line": 76, "end_line": 98 },
+        { "path": "src/core/engine.js", "line": 322, "end_line": 353 }
+      ]
+    },
+    {
+      "id": "render-system",
+      "type": "backend",
+      "label": "RenderSystem",
+      "sublabel": "builds render items",
+      "sources": [
+        { "path": "src/systems/render-system.js", "line": 37, "end_line": 44 },
+        { "path": "src/systems/render-system.js", "line": 201, "end_line": 210 }
+      ]
+    },
+    {
+      "id": "webgpu-renderer",
+      "type": "backend",
+      "label": "WebGPU renderer",
+      "sublabel": "draw submission",
+      "emphasis": true,
+      "sources": [
+        { "path": "src/graphics/webgpu-renderer.js", "line": 83, "end_line": 100 },
+        { "path": "src/graphics/webgpu-renderer.js", "line": 538, "end_line": 613 }
+      ]
+    },
+    {
+      "id": "webgpu-api",
+      "type": "external",
+      "label": "Browser WebGPU API",
+      "sublabel": "adapter + device access",
+      "sources": [
+        { "path": "src/graphics/webgpu-renderer.js", "line": 151, "end_line": 169 }
+      ]
+    },
+    {
+      "id": "gpu-device",
+      "type": "external",
+      "label": "GPUDevice",
+      "sublabel": "browser-provided device",
+      "sources": [
+        { "path": "src/graphics/webgpu-renderer.js", "line": 165, "end_line": 169 },
+        { "path": "src/graphics/webgpu-renderer.js", "line": 549, "end_line": 605 }
+      ]
+    },
+    {
+      "id": "editor-shell",
+      "type": "frontend",
+      "label": "Editor shell",
+      "sublabel": "authoring tools",
+      "sources": [
+        { "path": "src/editor/main.js", "line": 67, "end_line": 110 }
+      ]
+    }
+  ],
+  "connections": [
+    { "id": "game-start", "from": "game-entry", "to": "browser-application", "label": "starts game" },
+    { "id": "game-dispose", "from": "browser-application", "to": "game-entry", "label": "returns Dispose" },
+    { "id": "editor-start", "from": "editor-entry", "to": "browser-application", "label": "starts editor" },
+    { "id": "editor-api", "from": "browser-application", "to": "editor-entry", "label": "returns API", "labelAt": [585, 132] },
+    { "id": "editor-mount", "from": "editor-entry", "to": "editor-shell", "label": "passes scene, asset + GPU access" },
+    { "id": "app-platform-setup", "from": "browser-application", "to": "browser-platform", "label": "constructs" },
+    { "id": "runtime-platform-lifecycle", "from": "browser-runtime", "to": "browser-platform", "label": "starts / stops" },
+    { "id": "app-renderer-setup", "from": "browser-application", "to": "webgpu-renderer", "label": "constructs" },
+    { "id": "runtime-renderer-lifecycle", "from": "browser-runtime", "to": "webgpu-renderer", "label": "initializes / shuts down" },
+    { "id": "app-creates-runtime", "from": "browser-application", "to": "browser-runtime", "label": "constructs + starts with factory" },
+    { "id": "runtime-invokes-factory", "from": "browser-runtime", "to": "module-factory", "label": "calls", "labelAt": [410, 388] },
+    { "id": "factory-returns-modules", "from": "module-factory", "to": "browser-runtime", "label": "returns modules" },
+    { "id": "factory-input", "from": "module-factory", "to": "input-runtime", "label": "creates" },
+    { "id": "runtime-input", "from": "browser-runtime", "to": "input-runtime", "label": "starts source + updates input" },
+    { "id": "factory-assets", "from": "module-factory", "to": "asset-runtime", "label": "loads manifest + builds loaders" },
+    { "id": "factory-scene-setup", "from": "module-factory", "to": "scene-setup", "label": "creates" },
+    { "id": "scene-setup-assets", "from": "scene-setup", "to": "asset-runtime", "label": "uses manager for scene scopes" },
+    { "id": "scene-setup-manager", "from": "scene-setup", "to": "scene-manager", "label": "creates + configures" },
+    { "id": "scene-setup-systems", "from": "scene-setup", "to": "scene-systems", "label": "registers phases + order" },
+    { "id": "runtime-loads-scene", "from": "browser-runtime", "to": "scene-manager", "label": "loads start scene" },
+    { "id": "runtime-scene-updates", "from": "browser-runtime", "to": "scene-manager", "label": "fixed update + render prep" },
+    { "id": "manager-scene", "from": "scene-manager", "to": "scene", "label": "loads + activates" },
+    { "id": "scene-runs-systems", "from": "scene", "to": "scene-systems", "label": "runs by phase" },
+    { "id": "systems-render-system", "from": "scene-systems", "to": "render-system", "label": "includes" },
+    { "id": "runtime-creates-engine", "from": "browser-runtime", "to": "engine", "label": "creates + starts with callbacks" },
+    { "id": "engine-callbacks", "from": "engine", "to": "browser-runtime", "label": "runs injected callbacks" },
+    { "id": "engine-render", "from": "engine", "to": "webgpu-renderer", "label": "calls Render() each frame" },
+    { "id": "render-data", "from": "render-system", "to": "webgpu-renderer", "label": "sets render items" },
+    { "id": "renderer-requests-device", "from": "webgpu-renderer", "to": "webgpu-api", "label": "requests adapter + device" },
+    { "id": "api-provides-device", "from": "webgpu-api", "to": "webgpu-renderer", "label": "provides GPUDevice" },
+    { "id": "renderer-uses-device", "from": "webgpu-renderer", "to": "gpu-device", "label": "encodes + submits draws" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Responsibility split",
+      "items": [
+        "BrowserApplication is the composition root: its direct renderer and platform links are setup wiring.",
+        "BrowserRuntime owns lifecycle and frame callbacks. Engine owns fixed-step and animation-frame scheduling.",
+        "SceneManager owns scene sessions. Each Scene owns its ECS data and phase scheduler.",
+        "RenderSystem prepares render items; Engine calls the WebGPU renderer after render preparation."
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Source state",
+      "items": [
+        "Source references describe the current working tree and are not pinned to a Git commit."
+      ]
+    }
+  ]
+}

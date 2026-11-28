@@ -6,13 +6,13 @@ function GetAssetOptionLabel(descriptor) {
 }
 
 export class InspectorAssetAccess {
-    constructor(sceneManager, getAssetCatalog) {
+    constructor(sceneManager, getAssetMetadata) {
         this._sceneManager = sceneManager;
-        this._getAssetCatalog = getAssetCatalog;
+        this._getAssetMetadata = getAssetMetadata;
     }
 
     GetOptions(assetType) {
-        const catalog = this._getAssetCatalog?.();
+        const catalog = this._getAssetMetadata?.();
         if (!catalog || typeof catalog.GetAll !== "function") {
             return [];
         }
@@ -27,7 +27,7 @@ export class InspectorAssetAccess {
     }
 
     RequireType(assetId, assetType) {
-        const catalog = this._getAssetCatalog?.();
+        const catalog = this._getAssetMetadata?.();
         if (!catalog || typeof catalog.GetRequired !== "function") {
             throw new Error("Asset catalog is not available.");
         }

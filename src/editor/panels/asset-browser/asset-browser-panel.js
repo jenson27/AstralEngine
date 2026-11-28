@@ -9,14 +9,14 @@ export class AssetBrowserPanel {
         {
             logger = AstralLogger,
             fetcher = globalThis.fetch?.bind(globalThis),
-            getAssetCatalog = () => null,
+            getAssetMetadata = () => null,
             onOpenScene = () => {},
         } = {},
     ) {
         if (!(rootElement instanceof HTMLElement)) {
             throw new TypeError("AssetBrowserPanel requires a root element.");
         }
-        if (typeof getAssetCatalog !== "function") {
+        if (typeof getAssetMetadata !== "function") {
             throw new TypeError(
                 "AssetBrowserPanel requires an asset catalog getter.",
             );
@@ -28,7 +28,7 @@ export class AssetBrowserPanel {
         }
 
         this._logger = logger;
-        this._getAssetCatalog = getAssetCatalog;
+        this._getAssetMetadata = getAssetMetadata;
         this._refreshRevision = 0;
         this._statusMessage = "";
         this._statusState = "";
@@ -169,7 +169,7 @@ export class AssetBrowserPanel {
     }
 
     _GetCatalogAssetIds(relativePath) {
-        const assetCatalog = this._getAssetCatalog();
+        const assetCatalog = this._getAssetMetadata();
         if (typeof assetCatalog?.GetAssetIdsBySourcePath !== "function") {
             return [];
         }

@@ -1,21 +1,24 @@
 # AstralEngine: architecture and runtime flow {#astralengine-overview}
 
-AstralEngine runs its engine logic as browser JavaScript and renders through WebGPU. Node.js serves the local project, while game and editor pages share one V1 runtime: JSON scenes acquire assets, become scene-owned ECS data, and produce draw commands each frame.[](source:ref-game-page)[](source:ref-server)[](source:ref-app-start)
+AstralEngine runs its engine logic as browser JavaScript and renders through WebGPU. Node.js serves the project. The game and editor entries share one browser runtime: `BrowserApplication` wires startup dependencies, while `BrowserRuntime` owns lifecycle and frame callbacks. JSON scenes become scene-owned ECS data and produce render items each frame.[](source:ref-game-page)[](source:ref-server)[](source:ref-app-setup)[](source:ref-browser-runtime)
 
-- The game page starts `src/main.js`. The editor starts `src/editor/main.js` and mounts tools on that same runtime.[](source:ref-game-entry)[](source:ref-editor-entry)
-- `StartBrowserApplication()` wires the browser platform, WebGPU renderer, input, assets, scenes, engine, and hot reload.[](source:ref-app-start)
+- `src/main.js` starts the game runtime. `src/editor/main.js` starts the editor runtime and mounts its tools.[](source:ref-game-entry)[](source:ref-editor-entry)
+- `BrowserApplication` creates the platform and renderer, then starts `BrowserRuntime`.[](source:ref-app-setup)[](source:ref-browser-runtime)
 - Scene documents, asset manifests, input maps, and built-in component records stay at version 1.[](source:ref-scene-v1)[](source:ref-assets-v1)[](source:ref-input-v1)[](source:ref-codecs-v1)
 
-@answer scope="Current source at repository HEAD · browser runtime · version 1 data contracts"
-@meta locale=en quality_profile=showcase style=product repo_url=https://github.com/jenson27/AstralEngine.git repo_revision=2e0f305942d7c0c8d0bbab99ae1a75dcdc097abd
+@answer scope="Current local-only working-tree snapshot · browser runtime · version 1 data contracts"
+@meta locale=en quality_profile=showcase style=product repo_url=https://github.com/jenson27/AstralEngine.git repo_revision=a2fa702aa8803508e5af88829874d7eda4ec5042 repo_link_mode=local-only
 
 @source ref-project title="Project overview" path=README.md lines=1:16
-@source ref-game-page title="Game browser page" path=index.html lines=1:18
+@source ref-game-page title="Game browser page" path=index.html lines=1:17
 @source ref-editor-page title="Editor browser page" path=editor.html lines=1:22
 @source ref-game-entry title="Game entry module" path=src/main.js lines=1:30
 @source ref-editor-entry title="Editor entry module" path=src/editor/main.js lines=1:137
-@source ref-app-setup title="Asset and scene service setup" path=src/browser-application.js lines=40:120
-@source ref-app-start title="Engine app startup" path=src/browser-application.js lines=122:244
+@source ref-app-setup title="Browser application wiring" path=src/browser/browser-application.js lines=40:104
+@source ref-app-start title="Game and editor startup APIs" path=src/browser/browser-application.js lines=107:120
+@source ref-browser-runtime title="Browser runtime lifecycle and frame callbacks" path=src/browser/browser-runtime.js lines=144:223
+@source ref-browser-assets title="Browser asset runtime" path=src/browser/browser-asset-runtime.js lines=22:64
+@source ref-browser-scene-runtime title="Browser scene setup" path=src/browser/browser-scene-runtime.js lines=15:106
 @source ref-platform title="Browser canvas platform" path=src/platform/browser-platform.js lines=5:58
 @source ref-input title="Input map and action manager" path=src/core/input/input-manager.js lines=37:133
 @source ref-server title="Local HTTP server" path=server.cjs lines=359:442
@@ -45,7 +48,7 @@ AstralEngine runs its engine logic as browser JavaScript and renders through Web
 @source ref-asset-commit title="Asset reload transaction" path=src/core/assets/asset-manager.js lines=321:355
 @source ref-scene-v1 title="Version 1 scene document" path=assets/scenes/main.scene.json lines=1:8
 @source ref-assets-v1 title="Version 1 asset manifest" path=assets/asset-manifest.json lines=1:5
-@source ref-input-v1 title="Version 1 input map" path=assets/input/default.input-map.json lines=1:12
+@source ref-input-v1 title="Version 1 input map" path=assets/inputs/default.input-map.json lines=1:12
 @source ref-codecs-v1 title="Version 1 scene component codecs" path=src/components/register-scene-components.js lines=38:259
 @source ref-type-registry title="Per-type serializer versions and migrations" path=src/serialization/type-serializer-registry.js lines=92:155
 @source ref-json title="JSON value parsing and encoding" path=src/serialization/json-format.js lines=134:168
@@ -65,43 +68,17 @@ AstralEngine runs its engine logic as browser JavaScript and renders through Web
 @source ref-math title="Matrix math" path=src/math/matrix4.js lines=1:50
 @source ref-serialization title="Serialization package" path=src/serialization
 
-## How are the engine parts connected? {#architecture-panel}
+## How does the full codebase fit together? {#architecture-panel span=12}
 
-The game and editor start through separate modules, then share one application composition root. Scenes own their ECS state and system schedule. The local server serves pages, data, and development events.[](source:ref-game-entry)[](source:ref-editor-entry)[](source:ref-app-start)[](source:ref-server)
+Node.js serves the game and editor pages and the project data. Both entries converge at `BrowserApplication`, which wires the shared runtime, platform, and WebGPU renderer. This map covers the major codebase modules; the runtime map below expands scene and frame coordination.[](source:ref-server)[](source:ref-game-page)[](source:ref-editor-page)[](source:ref-app-setup)[](source:ref-browser-runtime)
 
-@architecture id=architecture-map title="AstralEngine V1 architecture"
-| role frontend | Browser entry |
-| role backend | Engine modules |
-| role external | Browser and GPU boundary |
-| arch-game | Game entry | frontend | source:ref-game-entry |
-| arch-editor | Editor entry | frontend | source:ref-editor-entry |
-| arch-app | Shared browser application | backend | source:ref-app-start |
-| arch-platform | Platform | backend | source:ref-platform |
-| arch-assets | Assets | backend | source:ref-asset-catalog |
-| arch-scenes | Scenes | backend | source:ref-scene-loader |
-| arch-ecs | ECS | backend | source:ref-ecs-query |
-| arch-engine | Engine loop | backend | source:ref-engine-loop |
-| arch-render | Render system | backend | source:ref-render-system |
-| arch-webgpu | WebGPU renderer | backend | source:ref-renderer-init |
-| arch-device | GPU device | external | source:ref-renderer-submit |
-| arch-editor-ui | Editor UI | backend | source:ref-editor-panels |
-| arch-diagnostics | Diagnostics | backend | source:ref-logger |
-| arch-game > arch-app | |
-| arch-editor > arch-app | |
-| arch-app > arch-platform | |
-| arch-app > arch-assets | |
-| arch-app > arch-scenes | |
-| arch-app > arch-engine | |
-| arch-app > arch-webgpu | |
-| arch-scenes > arch-assets | |
-| arch-scenes > arch-ecs | |
-| arch-engine > arch-scenes | |
-| arch-ecs > arch-render | |
-| arch-render > arch-webgpu | |
-| arch-webgpu > arch-device | |
-| arch-editor > arch-editor-ui | |
-| arch-editor-ui > arch-scenes | |
-| arch-editor-ui > arch-diagnostics | |
+@diagram architecture id=architecture-map source=codebase-overview.architecture.json title="AstralEngine codebase architecture"
+
+## What does BrowserRuntime coordinate? {#runtime-architecture-panel span=12}
+
+This full-width map adds runtime modules, scene ownership, editor access, and the render path to the setup overview above. The sequence panel below shows their startup and frame order.
+
+@diagram architecture id=runtime-details source=runtime-details.architecture.json title="Browser runtime and render path"
 
 ## How does startup data reach the GPU? {#flow-panel}
 

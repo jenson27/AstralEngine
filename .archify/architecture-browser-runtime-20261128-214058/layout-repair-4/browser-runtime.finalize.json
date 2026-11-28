@@ -1,0 +1,207 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "architecture",
+  "quality": "showcase",
+  "startedAt": "2026-11-28T14:26:01.288Z",
+  "specification": {
+    "path": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\candidate.json",
+    "sha256": "c156ad9620138947bd68122a38f9816568e692bb3d450325dc68c5c9f6ff553b",
+    "bytes": 10363
+  },
+  "artifact": {
+    "path": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\layout-repair-4\\browser-runtime.html"
+  },
+  "stages": {
+    "validate": {
+      "status": "fail",
+      "exitCode": 1,
+      "durationMs": null,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "deliver",
+        "architecture",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\candidate.json",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\layout-repair-4\\browser-runtime.html",
+        "--quality",
+        "showcase",
+        "--repo-root",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": false,
+        "command": "deliver",
+        "receiptId": "f4a59cfc-b7b6-4ca2-bedf-d78646eedc88",
+        "stage": "render",
+        "type": "architecture",
+        "input": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\candidate.json",
+        "output": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\layout-repair-4\\browser-runtime.html",
+        "error": "Architecture layout validation failed:\n- [composition/label-route-clearance] showcase architecture label \"calls\" on connections[10] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"calls\" is 0px from connections[11] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns modules\" segment 2 [372.5, 393] -> [372.5, 354] (label rect [371, 378, 34, 14]; minimum 4px) — if the authored labelAt are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+        "diagnostics": [
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"calls\" on connections[10] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"calls\" is 0px from connections[11] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns modules\" segment 2 [372.5, 393] -> [372.5, 354] (label rect [371, 378, 34, 14]; minimum 4px) — if the authored labelAt are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 10,
+              "id": "runtime-invokes-factory",
+              "from": "browser-runtime",
+              "to": "module-factory"
+            },
+            "evidence": {
+              "label": "calls",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 11,
+                "id": "factory-returns-modules",
+                "from": "module-factory",
+                "to": "browser-runtime"
+              },
+              "segmentIndex": 2,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "runtime-invokes-factory",
+                  "from": "browser-runtime",
+                  "to": "module-factory",
+                  "label": "calls",
+                  "labelAt": [
+                    388,
+                    388
+                  ]
+                },
+                "relationIndex": 10,
+                "label": "calls",
+                "x": 371,
+                "y": 378,
+                "width": 34,
+                "height": 14,
+                "lx": 388,
+                "ly": 388
+              },
+              "from": [
+                372.5,
+                393
+              ],
+              "to": [
+                372.5,
+                354
+              ]
+            },
+            "supportedFixes": [
+              "if the authored labelAt are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          }
+        ],
+        "provenance": "absent",
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      },
+      "execution": "embedded-in-deliver"
+    },
+    "deliver": {
+      "status": "not-run",
+      "execution": "blocked-by-validate"
+    }
+  },
+  "browserCheck": {
+    "requested": true,
+    "ran": false
+  },
+  "diagnostics": [
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"calls\" on connections[10] id \"runtime-invokes-factory\" \"browser-runtime\" -> \"module-factory\" label \"calls\" is 0px from connections[11] id \"factory-returns-modules\" \"module-factory\" -> \"browser-runtime\" label \"returns modules\" segment 2 [372.5, 393] -> [372.5, 354] (label rect [371, 378, 34, 14]; minimum 4px) — if the authored labelAt are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 10,
+        "id": "runtime-invokes-factory",
+        "from": "browser-runtime",
+        "to": "module-factory"
+      },
+      "evidence": {
+        "label": "calls",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 11,
+          "id": "factory-returns-modules",
+          "from": "module-factory",
+          "to": "browser-runtime"
+        },
+        "segmentIndex": 2,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "runtime-invokes-factory",
+            "from": "browser-runtime",
+            "to": "module-factory",
+            "label": "calls",
+            "labelAt": [
+              388,
+              388
+            ]
+          },
+          "relationIndex": 10,
+          "label": "calls",
+          "x": 371,
+          "y": 378,
+          "width": 34,
+          "height": 14,
+          "lx": 388,
+          "ly": 388
+        },
+        "from": [
+          372.5,
+          393
+        ],
+        "to": [
+          372.5,
+          354
+        ]
+      },
+      "supportedFixes": [
+        "if the authored labelAt are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    }
+  ],
+  "evidence": {
+    "receipt": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\layout-repair-4\\browser-runtime.finalize.json",
+    "summaryReceipt": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\layout-repair-4\\browser-runtime.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "failedStage": "validate",
+  "finishedAt": "2026-11-28T14:26:02.889Z",
+  "durationMs": 1600,
+  "update": {
+    "status": "current",
+    "installedVersion": "3.3.2",
+    "availableVersion": "3.3.2",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-28T14:00:33.665Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  }
+}

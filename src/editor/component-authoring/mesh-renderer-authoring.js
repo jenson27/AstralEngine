@@ -30,9 +30,9 @@ function RenderAssetSelect(container, labelText, fieldId, options) {
 
 export function RenderMeshRendererAddFields(
     container,
-    { getAssetCatalog },
+    { getAssetMetadata },
 ) {
-    const assetCatalog = getAssetCatalog?.();
+    const assetCatalog = getAssetMetadata?.();
     const meshOptions = GetAssetOptions(assetCatalog, "mesh");
     const materialOptions = GetAssetOptions(assetCatalog, "material");
     RenderAssetSelect(
@@ -64,7 +64,7 @@ export function RenderMeshRendererAddFields(
 
 export async function CreateMeshRenderer({
     acquireAssetHandle,
-    getAssetCatalog,
+    getAssetMetadata,
     values,
 }) {
     const meshAssetId = values?.meshAssetId;
@@ -78,7 +78,7 @@ export async function CreateMeshRenderer({
         throw new TypeError("Choose both a mesh asset and a material asset.");
     }
 
-    const assetCatalog = getAssetCatalog?.();
+    const assetCatalog = getAssetMetadata?.();
     if (!assetCatalog || typeof assetCatalog.GetRequired !== "function") {
         throw new Error("Asset catalog is not available.");
     }

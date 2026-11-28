@@ -80,9 +80,16 @@ test("loads version 1 mesh renderers with a default material asset", async () =>
         CreateDefaultMaterialDocument(),
         {
             assetScope: { async Acquire() {} },
-            services: {
-                ResolveMeshHandle: () => meshHandle,
-                ResolveMaterialHandle: () => materialHandle,
+            componentServices: {
+                ResolveAssetHandle: (assetId, expectedTypeId) => {
+                    if (expectedTypeId === "mesh") {
+                        return meshHandle;
+                    }
+                    if (expectedTypeId === "material") {
+                        return materialHandle;
+                    }
+                    throw new Error(`Unexpected asset type: ${expectedTypeId}`);
+                },
             },
         },
     );
@@ -134,4 +141,23 @@ test("rejects the legacy object-shaped version 1 component layout", () => {
         () => new SceneLoader(CreateSceneComponentRegistry()).LoadData(document),
         /Scene entity components must be an array of typed records\./,
     );
+});
+
+test("passes the scene load abort signal to its fetcher", async () => {
+    const controller = new AbortController();
+    let receivedSignal = null;
+    const loader = new SceneLoader(
+        CreateSceneComponentRegistry(),
+        async (_url, options) => {
+            receivedSignal = options.signal;
+            throw new Error("Request stopped.");
+        },
+    );
+
+    await assert.rejects(
+        loader.Load("/scenes/test.json", { signal: controller.signal }),
+        /Scene load failed/,
+    );
+
+    assert.strictEqual(receivedSignal, controller.signal);
 });

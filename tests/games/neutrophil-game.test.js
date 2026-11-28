@@ -48,7 +48,12 @@ test("registers version 1 scene and editor component metadata", () => {
     assert.ok(authoringCatalog.GetByType(PlayerControlled).create() instanceof PlayerControlled);
     assert.equal(authoringCatalog.GetByType(HitPoints).title, "Hit Points");
     assert.ok(authoringCatalog.GetByType(HitPoints).create() instanceof HitPoints);
-    assert.ok(NeutrophilGame.CreateSystems()[0].system instanceof SpriteGameplayInputSystem);
+    assert.ok(
+        NeutrophilGame.CreateSystems({
+            input: { WasActionPressed() {} },
+            QueueSpriteAnimationEvent() {},
+        })[0].system instanceof SpriteGameplayInputSystem,
+    );
 });
 
 test("attack impact changes HitPoints on a real scene entity", () => {

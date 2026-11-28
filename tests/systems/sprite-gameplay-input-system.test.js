@@ -21,9 +21,7 @@ test("queues attack only for active player-controlled sprite animators", () => {
                 .map(([entityId]) => entityId);
         },
     };
-    const system = new SpriteGameplayInputSystem();
-
-    system.Initialize(scene, {
+    const system = new SpriteGameplayInputSystem({
         input: { WasActionPressed: (action) => action === "attack" },
         QueueSpriteAnimationEvent: (...event) => queuedEvents.push(event),
     });

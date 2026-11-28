@@ -7,19 +7,19 @@ export class SceneBuilder {
         this._componentRegistry = componentRegistry;
     }
 
-    Build(data, { systems = [], services = {} } = {}, entityIds) {
+    Build(data, { systems = [], componentServices = {} } = {}, entityIds) {
         const scene = new Scene(data.name);
 
         try {
             this._RegisterSystems(scene, systems);
-            this._LoadEntities(scene, data, services);
+            this._LoadEntities(scene, data, componentServices);
             this._SetActiveCamera(
                 scene,
                 data.activeCameraEntityId,
                 entityIds,
             );
 
-            scene.Initialize(services);
+            scene.Initialize();
             return scene;
         } catch (error) {
             try {

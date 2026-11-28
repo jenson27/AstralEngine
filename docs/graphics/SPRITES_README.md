@@ -148,7 +148,7 @@ The sprite systems load sprite-sheet animation data, advance animation clips, an
 - `src/editor/panels/inspector/components/sprite-renderer-inspector.js`
 - `src/editor/panels/inspector/components/sprite-animator-inspector.js`
 - `src/games/neutrophil-game.js`
-- `src/browser-application.js`
+- `src/browser/browser-application.js`
 - `assets/animations/neutrophil.sprite-animation.json`
 - `assets/asset-manifest.json`
 - `assets/scenes/main.scene.json`

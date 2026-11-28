@@ -17,8 +17,19 @@ const requiredActionNames = [
 const directionEpsilon = 1e-8;
 
 export class CameraControlSystem {
-    constructor() {
-        this._input = null;
+    constructor({ input }) {
+        if (
+            !input ||
+            typeof input.IsActionDown !== "function" ||
+            typeof input.GetPointerDelta !== "function" ||
+            typeof input.IsPointerLocked !== "function"
+        ) {
+            throw new TypeError(
+                "CameraControlSystem requires an input manager.",
+            );
+        }
+
+        this._input = input;
         this._entityChain = [];
         this._cameraWorldMatrix = new Float32Array(16);
         this._parentWorldMatrix = new Float32Array(16);
@@ -27,25 +38,10 @@ export class CameraControlSystem {
         this._forwardDirection = { x: 0, z: 0 };
     }
 
-    Initialize(_scene, services) {
-        const input = services?.input;
-
-        if (
-            !input ||
-            typeof input.IsActionDown !== "function" ||
-            typeof input.GetPointerDelta !== "function" ||
-            typeof input.IsPointerLocked !== "function"
-        ) {
-            throw new TypeError(
-                "CameraControlSystem requires the input service.",
-            );
-        }
-
+    Initialize() {
         for (const actionName of requiredActionNames) {
-            input.IsActionDown(actionName);
+            this._input.IsActionDown(actionName);
         }
-
-        this._input = input;
     }
 
     Shutdown() {

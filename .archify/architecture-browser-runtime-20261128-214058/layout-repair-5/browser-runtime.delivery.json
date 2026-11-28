@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "fcd48544-79d8-49e1-a547-e77b1c12859e",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\candidate.json",
+  "output": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\layout-repair-5\\browser-runtime.html",
+  "specification": {
+    "sha256": "91b8c9bcf065171a799441f1831deb4ad45316e13dc9f1ef2a53e26d0fb0b721",
+    "bytes": 10363
+  },
+  "artifact": {
+    "sha256": "e10d8e6128e4c38d878ab9dc56ed9b5f810cd1a862a331cf355bcf0522091f4a",
+    "bytes": 992866
+  }
+}

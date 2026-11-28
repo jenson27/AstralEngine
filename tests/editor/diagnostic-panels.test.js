@@ -435,7 +435,7 @@ test("profiler panel toggles capture from its toolbar", (context) => {
         ['[data-role="async-span-empty"]'],
     ]);
     const panel = new ProfilerPanel(profiler, root, {
-        GpuTimingSupported: true,
+        IsSupported: () => true,
     });
     context.after(() => panel.Dispose());
     const button = root.querySelector('[data-action="capture"]');

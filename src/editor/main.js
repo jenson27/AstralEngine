@@ -1,6 +1,6 @@
 // Starts the editor shell and mounts its registered panels.
 
-import { StartBrowserApplication } from "../browser-application.js";
+import { StartBrowserEditor } from "../browser/browser-application.js";
 import { AstralLogger } from "../diagnostics/logger.js";
 import { MemoryTracker } from "../diagnostics/profiling/memory-tracker.js";
 import { Profiler } from "../diagnostics/profiling/profiler.js";
@@ -38,12 +38,14 @@ let editorSceneAssetTracker = null;
 let editorSceneWorkspace = null;
 let editorSceneDocumentController = null;
 let isDisposed = false;
+const startupAbortController = new AbortController();
 
 function DisposeEditor() {
     if (isDisposed) {
         return;
     }
     isDisposed = true;
+    startupAbortController.abort();
     editorSceneDocumentController?.Dispose();
     editorSceneDocumentController = null;
     editorSceneAssetTracker?.Dispose();
@@ -75,7 +77,7 @@ async function MountRunningApplication(runningApplication) {
         selection: editorSelection,
         history: editorCommandHistory,
         componentCatalog: editorComponentCatalog,
-        getAssetCatalog: runningApplication.GetAssetCatalog,
+        getAssetMetadata: runningApplication.GetAssetMetadata,
         assetTracker: editorSceneAssetTracker,
     });
     editorSceneWorkspace = new EditorSceneWorkspace({
@@ -106,8 +108,8 @@ async function MountRunningApplication(runningApplication) {
         sceneAuthoringController: editorSceneAuthoringController,
         logger: AstralLogger,
         sceneManager: runningApplication.SceneManager,
-        renderer: runningApplication.Renderer,
-        getAssetCatalog: runningApplication.GetAssetCatalog,
+        gpuTiming: runningApplication.GpuTiming,
+        getAssetMetadata: runningApplication.GetAssetMetadata,
         openScene: (url, relativePath) =>
             void editorSceneDocumentController?.OpenAssetScene(
                 url,
@@ -117,6 +119,10 @@ async function MountRunningApplication(runningApplication) {
 }
 
 function HandleEditorStartupFailure(error) {
+    if (startupAbortController.signal.aborted) {
+        return;
+    }
+
     const message =
         error instanceof Error ? error.message : String(error);
 
@@ -138,12 +144,13 @@ window.addEventListener(
     { once: true },
 );
 
-StartBrowserApplication({
+StartBrowserEditor({
     canvas,
     status,
     profiler,
     memoryTracker,
     game: NeutrophilGame,
+    signal: startupAbortController.signal,
 })
     .then(MountRunningApplication)
     .catch(HandleEditorStartupFailure);

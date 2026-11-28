@@ -1,0 +1,651 @@
+{
+  "schemaVersion": 1,
+  "ok": false,
+  "command": "finalize",
+  "status": "fail",
+  "type": "architecture",
+  "quality": "showcase",
+  "startedAt": "2026-11-28T14:17:38.618Z",
+  "specification": {
+    "path": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\candidate.json",
+    "sha256": "78d0428031396142bc217bb961f5fb88aa9a448944503018e95652991375838d",
+    "bytes": 10375
+  },
+  "artifact": {
+    "path": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\layout-repair-2\\browser-runtime.html"
+  },
+  "stages": {
+    "validate": {
+      "status": "fail",
+      "exitCode": 1,
+      "durationMs": null,
+      "command": [
+        "C:\\Program Files\\nodejs\\node.exe",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.agents\\skills\\archify\\bin\\archify.mjs",
+        "deliver",
+        "architecture",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\candidate.json",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\layout-repair-2\\browser-runtime.html",
+        "--quality",
+        "showcase",
+        "--repo-root",
+        "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine",
+        "--json"
+      ],
+      "receipt": {
+        "schemaVersion": 1,
+        "ok": false,
+        "command": "deliver",
+        "receiptId": "91d0b3d9-227d-412f-8824-8d629ae93fa2",
+        "stage": "render",
+        "type": "architecture",
+        "input": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\candidate.json",
+        "output": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\layout-repair-2\\browser-runtime.html",
+        "error": "Architecture layout validation failed:\n- Label \"starts editor\" overlaps component \"editor-entry\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [478, 199, 72, 14]\n  component \"editor-entry\" rect: [532, 160, 135, 60]\n  Suggested fix: set labelAt [514, 152] or set labelDy -56 (above)\n- [composition/label-route-clearance] showcase architecture label \"starts editor\" on connections[2] id \"editor-start\" \"editor-entry\" -> \"browser-application\" label \"starts editor\" is 0px from connections[3] id \"editor-api\" \"browser-application\" -> \"editor-entry\" label \"returns API\" segment 1 [514, 254] -> [514, 190] (label rect [478, 199, 72, 14]; minimum 4px) — if the authored labelAt are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[16] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 3 [294.5, 605] -> [294.5, 1202] (label rect [207, 682, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[16] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[14] id \"factory-assets\" \"module-factory\" -> \"asset-runtime\" label \"loads manifest + builds loaders\" segment 1 [280, 517] -> [280, 752] (label rect [207, 682, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[16] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[18] id \"scene-setup-systems\" \"scene-setup\" -> \"scene-systems\" label \"registers phases + order\" segment 1 [288, 652] -> [288, 1022] (label rect [207, 682, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.\n- [composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[16] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[19] id \"runtime-loads-scene\" \"browser-runtime\" -> \"scene-manager\" label \"loads start scene\" segment 2 [296.5, 436] -> [296.5, 712] (label rect [207, 682, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+        "diagnostics": [
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"starts editor\" on connections[2] id \"editor-start\" \"editor-entry\" -> \"browser-application\" label \"starts editor\" is 0px from connections[3] id \"editor-api\" \"browser-application\" -> \"editor-entry\" label \"returns API\" segment 1 [514, 254] -> [514, 190] (label rect [478, 199, 72, 14]; minimum 4px) — if the authored labelAt are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 2,
+              "id": "editor-start",
+              "from": "editor-entry",
+              "to": "browser-application"
+            },
+            "evidence": {
+              "label": "starts editor",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 3,
+                "id": "editor-api",
+                "from": "browser-application",
+                "to": "editor-entry"
+              },
+              "segmentIndex": 1,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "editor-start",
+                  "from": "editor-entry",
+                  "to": "browser-application",
+                  "label": "starts editor"
+                },
+                "relationIndex": 2,
+                "label": "starts editor",
+                "x": 477.8,
+                "y": 198.5,
+                "width": 72.4,
+                "height": 14,
+                "lx": 514,
+                "ly": 208.5
+              },
+              "from": [
+                514,
+                254
+              ],
+              "to": [
+                514,
+                190
+              ]
+            },
+            "supportedFixes": [
+              "if the authored labelAt are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[16] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 3 [294.5, 605] -> [294.5, 1202] (label rect [207, 682, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 16,
+              "id": "scene-setup-assets",
+              "from": "scene-setup",
+              "to": "asset-runtime"
+            },
+            "evidence": {
+              "label": "uses manager for scene scopes",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 7,
+                "id": "app-renderer-setup",
+                "from": "browser-application",
+                "to": "webgpu-renderer"
+              },
+              "segmentIndex": 3,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "scene-setup-assets",
+                  "from": "scene-setup",
+                  "to": "asset-runtime",
+                  "label": "uses manager for scene scopes"
+                },
+                "relationIndex": 16,
+                "label": "uses manager for scene scopes",
+                "x": 206.9,
+                "y": 682,
+                "width": 149.2,
+                "height": 14,
+                "lx": 281.5,
+                "ly": 692
+              },
+              "from": [
+                294.5,
+                605
+              ],
+              "to": [
+                294.5,
+                1202
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[16] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[14] id \"factory-assets\" \"module-factory\" -> \"asset-runtime\" label \"loads manifest + builds loaders\" segment 1 [280, 517] -> [280, 752] (label rect [207, 682, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 16,
+              "id": "scene-setup-assets",
+              "from": "scene-setup",
+              "to": "asset-runtime"
+            },
+            "evidence": {
+              "label": "uses manager for scene scopes",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 14,
+                "id": "factory-assets",
+                "from": "module-factory",
+                "to": "asset-runtime"
+              },
+              "segmentIndex": 1,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "scene-setup-assets",
+                  "from": "scene-setup",
+                  "to": "asset-runtime",
+                  "label": "uses manager for scene scopes"
+                },
+                "relationIndex": 16,
+                "label": "uses manager for scene scopes",
+                "x": 206.9,
+                "y": 682,
+                "width": 149.2,
+                "height": 14,
+                "lx": 281.5,
+                "ly": 692
+              },
+              "from": [
+                280,
+                517
+              ],
+              "to": [
+                280,
+                752
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[16] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[18] id \"scene-setup-systems\" \"scene-setup\" -> \"scene-systems\" label \"registers phases + order\" segment 1 [288, 652] -> [288, 1022] (label rect [207, 682, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 16,
+              "id": "scene-setup-assets",
+              "from": "scene-setup",
+              "to": "asset-runtime"
+            },
+            "evidence": {
+              "label": "uses manager for scene scopes",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 18,
+                "id": "scene-setup-systems",
+                "from": "scene-setup",
+                "to": "scene-systems"
+              },
+              "segmentIndex": 1,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "scene-setup-assets",
+                  "from": "scene-setup",
+                  "to": "asset-runtime",
+                  "label": "uses manager for scene scopes"
+                },
+                "relationIndex": 16,
+                "label": "uses manager for scene scopes",
+                "x": 206.9,
+                "y": 682,
+                "width": 149.2,
+                "height": 14,
+                "lx": 281.5,
+                "ly": 692
+              },
+              "from": [
+                288,
+                652
+              ],
+              "to": [
+                288,
+                1022
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "composition/label-route-clearance",
+            "severity": "error",
+            "message": "[composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[16] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[19] id \"runtime-loads-scene\" \"browser-runtime\" -> \"scene-manager\" label \"loads start scene\" segment 2 [296.5, 436] -> [296.5, 712] (label rect [207, 682, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+            "subject": {
+              "diagramType": "architecture",
+              "collection": "connections",
+              "index": 16,
+              "id": "scene-setup-assets",
+              "from": "scene-setup",
+              "to": "asset-runtime"
+            },
+            "evidence": {
+              "label": "uses manager for scene scopes",
+              "otherRelationship": {
+                "diagramType": "architecture",
+                "collection": "connections",
+                "index": 19,
+                "id": "runtime-loads-scene",
+                "from": "browser-runtime",
+                "to": "scene-manager"
+              },
+              "segmentIndex": 2,
+              "clearancePx": 0,
+              "minimumPx": 4,
+              "labelRect": {
+                "relation": {
+                  "id": "scene-setup-assets",
+                  "from": "scene-setup",
+                  "to": "asset-runtime",
+                  "label": "uses manager for scene scopes"
+                },
+                "relationIndex": 16,
+                "label": "uses manager for scene scopes",
+                "x": 206.9,
+                "y": 682,
+                "width": 149.2,
+                "height": 14,
+                "lx": 281.5,
+                "ly": 692
+              },
+              "from": [
+                296.5,
+                436
+              ],
+              "to": [
+                296.5,
+                712
+              ]
+            },
+            "supportedFixes": [
+              "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+            ]
+          },
+          {
+            "code": "layout/constraint",
+            "severity": "error",
+            "message": "Label \"starts editor\" overlaps component \"editor-entry\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [478, 199, 72, 14]\n  component \"editor-entry\" rect: [532, 160, 135, 60]\n  Suggested fix: set labelAt [514, 152] or set labelDy -56 (above)",
+            "subject": {
+              "diagramType": "architecture"
+            },
+            "evidence": {},
+            "supportedFixes": []
+          }
+        ],
+        "provenance": "absent",
+        "update": {
+          "status": "unavailable",
+          "installedVersion": null,
+          "availableVersion": null,
+          "releaseNotes": null,
+          "checkedAt": null,
+          "source": null,
+          "noticeRequired": false,
+          "noticeText": null,
+          "reason": "disabled"
+        }
+      },
+      "execution": "embedded-in-deliver"
+    },
+    "deliver": {
+      "status": "not-run",
+      "execution": "blocked-by-validate"
+    }
+  },
+  "browserCheck": {
+    "requested": true,
+    "ran": false
+  },
+  "diagnostics": [
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"starts editor\" on connections[2] id \"editor-start\" \"editor-entry\" -> \"browser-application\" label \"starts editor\" is 0px from connections[3] id \"editor-api\" \"browser-application\" -> \"editor-entry\" label \"returns API\" segment 1 [514, 254] -> [514, 190] (label rect [478, 199, 72, 14]; minimum 4px) — if the authored labelAt are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 2,
+        "id": "editor-start",
+        "from": "editor-entry",
+        "to": "browser-application"
+      },
+      "evidence": {
+        "label": "starts editor",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 3,
+          "id": "editor-api",
+          "from": "browser-application",
+          "to": "editor-entry"
+        },
+        "segmentIndex": 1,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "editor-start",
+            "from": "editor-entry",
+            "to": "browser-application",
+            "label": "starts editor"
+          },
+          "relationIndex": 2,
+          "label": "starts editor",
+          "x": 477.8,
+          "y": 198.5,
+          "width": 72.4,
+          "height": 14,
+          "lx": 514,
+          "ly": 208.5
+        },
+        "from": [
+          514,
+          254
+        ],
+        "to": [
+          514,
+          190
+        ]
+      },
+      "supportedFixes": [
+        "if the authored labelAt are not required by the user, remove them so the renderer can re-plan; otherwise preserve that intent and adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[16] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[7] id \"app-renderer-setup\" \"browser-application\" -> \"webgpu-renderer\" label \"constructs\" segment 3 [294.5, 605] -> [294.5, 1202] (label rect [207, 682, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 16,
+        "id": "scene-setup-assets",
+        "from": "scene-setup",
+        "to": "asset-runtime"
+      },
+      "evidence": {
+        "label": "uses manager for scene scopes",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 7,
+          "id": "app-renderer-setup",
+          "from": "browser-application",
+          "to": "webgpu-renderer"
+        },
+        "segmentIndex": 3,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "scene-setup-assets",
+            "from": "scene-setup",
+            "to": "asset-runtime",
+            "label": "uses manager for scene scopes"
+          },
+          "relationIndex": 16,
+          "label": "uses manager for scene scopes",
+          "x": 206.9,
+          "y": 682,
+          "width": 149.2,
+          "height": 14,
+          "lx": 281.5,
+          "ly": 692
+        },
+        "from": [
+          294.5,
+          605
+        ],
+        "to": [
+          294.5,
+          1202
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[16] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[14] id \"factory-assets\" \"module-factory\" -> \"asset-runtime\" label \"loads manifest + builds loaders\" segment 1 [280, 517] -> [280, 752] (label rect [207, 682, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 16,
+        "id": "scene-setup-assets",
+        "from": "scene-setup",
+        "to": "asset-runtime"
+      },
+      "evidence": {
+        "label": "uses manager for scene scopes",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 14,
+          "id": "factory-assets",
+          "from": "module-factory",
+          "to": "asset-runtime"
+        },
+        "segmentIndex": 1,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "scene-setup-assets",
+            "from": "scene-setup",
+            "to": "asset-runtime",
+            "label": "uses manager for scene scopes"
+          },
+          "relationIndex": 16,
+          "label": "uses manager for scene scopes",
+          "x": 206.9,
+          "y": 682,
+          "width": 149.2,
+          "height": 14,
+          "lx": 281.5,
+          "ly": 692
+        },
+        "from": [
+          280,
+          517
+        ],
+        "to": [
+          280,
+          752
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[16] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[18] id \"scene-setup-systems\" \"scene-setup\" -> \"scene-systems\" label \"registers phases + order\" segment 1 [288, 652] -> [288, 1022] (label rect [207, 682, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 16,
+        "id": "scene-setup-assets",
+        "from": "scene-setup",
+        "to": "asset-runtime"
+      },
+      "evidence": {
+        "label": "uses manager for scene scopes",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 18,
+          "id": "scene-setup-systems",
+          "from": "scene-setup",
+          "to": "scene-systems"
+        },
+        "segmentIndex": 1,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "scene-setup-assets",
+            "from": "scene-setup",
+            "to": "asset-runtime",
+            "label": "uses manager for scene scopes"
+          },
+          "relationIndex": 16,
+          "label": "uses manager for scene scopes",
+          "x": 206.9,
+          "y": 682,
+          "width": 149.2,
+          "height": 14,
+          "lx": 281.5,
+          "ly": 692
+        },
+        "from": [
+          288,
+          652
+        ],
+        "to": [
+          288,
+          1022
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "composition/label-route-clearance",
+      "severity": "error",
+      "message": "[composition/label-route-clearance] showcase architecture label \"uses manager for scene scopes\" on connections[16] id \"scene-setup-assets\" \"scene-setup\" -> \"asset-runtime\" label \"uses manager for scene scopes\" is 0px from connections[19] id \"runtime-loads-scene\" \"browser-runtime\" -> \"scene-manager\" label \"loads start scene\" segment 2 [296.5, 436] -> [296.5, 712] (label rect [207, 682, 149, 14]; minimum 4px) — adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel.",
+      "subject": {
+        "diagramType": "architecture",
+        "collection": "connections",
+        "index": 16,
+        "id": "scene-setup-assets",
+        "from": "scene-setup",
+        "to": "asset-runtime"
+      },
+      "evidence": {
+        "label": "uses manager for scene scopes",
+        "otherRelationship": {
+          "diagramType": "architecture",
+          "collection": "connections",
+          "index": 19,
+          "id": "runtime-loads-scene",
+          "from": "browser-runtime",
+          "to": "scene-manager"
+        },
+        "segmentIndex": 2,
+        "clearancePx": 0,
+        "minimumPx": 4,
+        "labelRect": {
+          "relation": {
+            "id": "scene-setup-assets",
+            "from": "scene-setup",
+            "to": "asset-runtime",
+            "label": "uses manager for scene scopes"
+          },
+          "relationIndex": 16,
+          "label": "uses manager for scene scopes",
+          "x": 206.9,
+          "y": 682,
+          "width": 149.2,
+          "height": 14,
+          "lx": 281.5,
+          "ly": 692
+        },
+        "from": [
+          296.5,
+          436
+        ],
+        "to": [
+          296.5,
+          712
+        ]
+      },
+      "supportedFixes": [
+        "adjust labelAt, labelDx, labelDy, or labelSegment; otherwise adjust the other relationship route/via/channel"
+      ]
+    },
+    {
+      "code": "layout/constraint",
+      "severity": "error",
+      "message": "Label \"starts editor\" overlaps component \"editor-entry\" — adjust labelDx/labelDy/labelSegment or set labelAt.\n  label rect: [478, 199, 72, 14]\n  component \"editor-entry\" rect: [532, 160, 135, 60]\n  Suggested fix: set labelAt [514, 152] or set labelDy -56 (above)",
+      "subject": {
+        "diagramType": "architecture"
+      },
+      "evidence": {},
+      "supportedFixes": []
+    }
+  ],
+  "evidence": {
+    "receipt": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\layout-repair-2\\browser-runtime.finalize.json",
+    "summaryReceipt": "C:\\Users\\Astral\\Documents\\Astral\\Documents\\Project\\AstralEngine\\.archify\\architecture-browser-runtime-20261128-214058\\layout-repair-2\\browser-runtime.finalize-summary.json"
+  },
+  "visualReview": "not-requested",
+  "failedStage": "validate",
+  "finishedAt": "2026-11-28T14:17:40.795Z",
+  "durationMs": 2176,
+  "update": {
+    "status": "current",
+    "installedVersion": "3.3.2",
+    "availableVersion": "3.3.2",
+    "releaseNotes": null,
+    "checkedAt": "2026-11-28T14:00:33.665Z",
+    "source": "cache",
+    "noticeRequired": false,
+    "noticeText": null
+  }
+}

@@ -18,7 +18,7 @@ export function RegisterEditorPanels(editorShell) {
         create: (contentElement, context) =>
             new AssetBrowserPanel(contentElement, {
                 logger: context.logger,
-                getAssetCatalog: context.getAssetCatalog,
+                getAssetMetadata: context.getAssetMetadata,
                 onOpenScene: context.openScene,
             }),
     });
@@ -35,7 +35,7 @@ export function RegisterEditorPanels(editorShell) {
             new ProfilerPanel(
                 context.profiler,
                 contentElement,
-                context.renderer,
+                context.gpuTiming,
             ),
     });
     editorShell.RegisterPanel("memory-tracker", {
@@ -63,7 +63,7 @@ export function RegisterEditorPanels(editorShell) {
                 context.sceneManager,
                 context.selection,
                 contentElement,
-                context.getAssetCatalog,
+                context.getAssetMetadata,
                 context.commandHistory,
                 context.componentCatalog,
                 context.sceneAuthoringController,

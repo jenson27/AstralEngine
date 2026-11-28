@@ -7,7 +7,7 @@ export class EditorSceneAuthoringController {
         selection,
         history,
         componentCatalog,
-        getAssetCatalog = null,
+        getAssetMetadata = null,
         assetTracker = null,
     }) {
         if (
@@ -16,7 +16,7 @@ export class EditorSceneAuthoringController {
             !history ||
             !componentCatalog ||
             typeof componentCatalog.GetAssetIdsForComponent !== "function" ||
-            (getAssetCatalog !== null && typeof getAssetCatalog !== "function") ||
+            (getAssetMetadata !== null && typeof getAssetMetadata !== "function") ||
             (assetTracker !== null && typeof assetTracker.Refresh !== "function")
         ) {
             throw new TypeError(
@@ -28,7 +28,7 @@ export class EditorSceneAuthoringController {
         this._selection = selection;
         this._history = history;
         this._componentCatalog = componentCatalog;
-        this._getAssetCatalog = getAssetCatalog;
+        this._getAssetMetadata = getAssetMetadata;
         this._assetTracker = assetTracker;
         this._pendingOperations = 0;
     }
@@ -99,7 +99,7 @@ export class EditorSceneAuthoringController {
                 values,
                 acquireAssetHandle: (assetId) =>
                     this._sceneManager.AcquireAssetHandle(assetId),
-                getAssetCatalog: this._getAssetCatalog,
+                getAssetMetadata: this._getAssetMetadata,
             });
             this._RequireCurrentTarget(scene, entityId);
             this._RequireComponentCanBeAdded(

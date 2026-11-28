@@ -346,7 +346,7 @@ test("panel shows catalog status and file IDs", async (context) => {
     const root = new FakeElement();
     const panel = new AssetBrowserPanel(root, {
         fetcher: async () => CreateAssetResponse(entries),
-        getAssetCatalog: () => assetCatalog,
+        getAssetMetadata: () => assetCatalog,
     });
     context.after(() => panel.Dispose());
     const { details, entryList, typeSelect } = GetPanelElements(root);

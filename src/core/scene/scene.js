@@ -201,7 +201,7 @@ export class Scene {
         return rootQueued;
     }
 
-    Initialize(services = {}) {
+    Initialize() {
         if (this._state !== "created") {
             throw new Error("Scene can only be initialized once.");
         }
@@ -211,7 +211,7 @@ export class Scene {
         try {
             for (const system of this._systemScheduler.GetSystems()) {
                 this._initializedSystems.push(system);
-                system.Initialize?.(this, services);
+                system.Initialize?.(this);
             }
 
             this._state = "active";

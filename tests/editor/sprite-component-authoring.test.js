@@ -73,7 +73,7 @@ test("creates a sprite animator from a registered animation asset", async () => 
     };
     const animator = await catalog.Create("spriteAnimator", {
         values: { animationAssetId: ANIMATION_ASSET_ID },
-        getAssetCatalog: () => assetCatalog,
+        getAssetMetadata: () => assetCatalog,
         acquireAssetHandle: async (assetId) => {
             assert.equal(assetId, ANIMATION_ASSET_ID);
             return handle;

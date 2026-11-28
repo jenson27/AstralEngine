@@ -87,11 +87,14 @@ export const NeutrophilGame = Object.freeze({
         });
     },
 
-    CreateSystems() {
+    CreateSystems({ input, QueueSpriteAnimationEvent }) {
         return [
             {
                 phase: SystemPhase.FixedUpdate,
-                system: new SpriteGameplayInputSystem(),
+                system: new SpriteGameplayInputSystem({
+                    input,
+                    QueueSpriteAnimationEvent,
+                }),
             },
         ];
     },

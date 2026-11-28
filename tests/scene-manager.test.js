@@ -36,7 +36,7 @@ test("loads a scene and forwards engine callbacks", async () => {
                 return scene;
             },
         },
-        (url) => ({ services: { requestedUrl: url } }),
+        (url) => ({ componentServices: { requestedUrl: url } }),
     );
 
     const loadedScene = await manager.LoadScene("/scenes/level-one.json");
@@ -47,7 +47,7 @@ test("loads a scene and forwards engine callbacks", async () => {
         {
             url: "/scenes/level-one.json",
             options: {
-                services: {
+                componentServices: {
                     requestedUrl: "/scenes/level-one.json",
                 },
             },

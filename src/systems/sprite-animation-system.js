@@ -2,21 +2,23 @@ import { AstralLogger } from "../diagnostics/logger.js";
 import { SpriteAnimator } from "../components/graphics/sprite-animator.js";
 
 export class SpriteAnimationSystem {
-    Initialize(scene, services) {
-        if (!services.spriteAnimationEvents || typeof services.spriteAnimationEvents.Drain !== "function") {
+    constructor({ eventQueue, actionRegistry }) {
+        if (!eventQueue || typeof eventQueue.Drain !== "function") {
             throw new TypeError("SpriteAnimationSystem requires an event queue.");
         }
         if (
-            !services.spriteActionRegistry ||
-            typeof services.spriteActionRegistry.Invoke !== "function" ||
-            typeof services.spriteActionRegistry.Has !== "function"
+            !actionRegistry ||
+            typeof actionRegistry.Invoke !== "function" ||
+            typeof actionRegistry.Has !== "function"
         ) {
             throw new TypeError("SpriteAnimationSystem requires an action registry.");
         }
-        this._eventQueue = services.spriteAnimationEvents;
-        this._actionRegistry = services.spriteActionRegistry;
+        this._eventQueue = eventQueue;
+        this._actionRegistry = actionRegistry;
         this._validatedAnimationAssets = new WeakSet();
+    }
 
+    Initialize(scene) {
         for (const entityId of scene.EntityManager.Query(SpriteAnimator)) {
             this._ValidateAnimationActions(
                 scene.EntityManager.GetComponent(entityId, SpriteAnimator),

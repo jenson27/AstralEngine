@@ -24,14 +24,12 @@ function AddTransformEntity(scene) {
 test("runs scene systems and disposes them in reverse order", () => {
     const scene = new Scene("lifecycle-test");
     const calls = [];
-    const services = { marker: true };
     const entityId = scene.EntityManager.CreateEntity();
     scene.EntityManager.AddComponent(entityId, Marker, new Marker());
 
     scene.AddSystem(SystemPhase.FixedUpdate, {
-        Initialize(initializedScene, passedServices) {
+        Initialize(initializedScene) {
             assert.strictEqual(initializedScene, scene);
-            assert.strictEqual(passedServices, services);
             calls.push("initialize:update");
 
             initializedScene.EntityManager.RegisterComponentRemovalHandler(
@@ -78,7 +76,7 @@ test("runs scene systems and disposes them in reverse order", () => {
         },
     });
 
-    scene.Initialize(services);
+    scene.Initialize();
     scene.FixedUpdate(1 / 60, 2 / 60);
     scene.PrepareRender(0.5, 16 / 9);
     scene.Dispose();
