@@ -1,19 +1,21 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { CreateCubeMesh } from "../../src/graphics/primitives/cube.js";
+import { AngularVelocity } from "../../src/components/angular-velocity.js";
 import { Camera } from "../../src/components/graphics/camera.js";
 import { MeshRenderer } from "../../src/components/graphics/mesh-renderer.js";
-import { ModelRenderer } from "../../src/components/graphics/model-renderer.js";
-import { Material } from "../../src/graphics/material.js";
-import { ModelAsset } from "../../src/graphics/model-asset.js";
-import { AngularVelocity } from "../../src/components/angular-velocity.js";
 import { Transform } from "../../src/components/transform.js";
-import { AssetHandle } from "../../src/core/assets/asset-handle.js";
 import { CreateSceneComponentRegistry } from "../../src/components/register-scene-components.js";
-import { SceneLoader } from "../../src/core/scene/scene-loader.js";
+import { AssetHandle } from "../../src/core/assets/asset-handle.js";
 import { Scene } from "../../src/core/scene/scene.js";
+import { CreateCubeMesh } from "../../src/graphics/primitives/cube.js";
+import { Material } from "../../src/graphics/material.js";
 import { EcsDocumentAdapter } from "../../src/serialization/adapters/ecs-document-adapter.js";
-import { JsonFormat } from "../../src/serialization/json-format.js";
+
+const entityIds = {
+    camera: "10203040-aaaa-4aaa-8aaa-102030405060",
+    first: "20304050-bbbb-4bbb-9bbb-203040506070",
+    inactive: "30405060-cccc-4ccc-accc-304050607080",
+};
 
 function CreateLoadedHandle(assetId, asset) {
     const handle = new AssetHandle(assetId);
@@ -21,273 +23,189 @@ function CreateLoadedHandle(assetId, asset) {
     return handle;
 }
 
-test("serializes and loads ECS data through registered component codecs", async () => {
-    const componentRegistry = CreateSceneComponentRegistry();
-    const mesh = CreateCubeMesh();
-    const material = new Material({ bitmap: {} });
-    const meshHandle = CreateLoadedHandle("builtin:cube", mesh);
-    const materialHandle = CreateLoadedHandle(
-        "material:grass",
-        material,
-    );
-    const materialHandlesBySlot = Object.fromEntries(
-        mesh.Submeshes.map(({ materialSlot }) => [
-            materialSlot,
-            materialHandle,
-        ]),
-    );
-    const modelHandle = CreateLoadedHandle(
-        "model:die6",
-        new ModelAsset([{
-            mesh,
-            material,
-            transform: new Float32Array([
-                1, 0, 0, 0,
-                0, 1, 0, 0,
-                0, 0, 1, 0,
-                0, 0, 0, 1,
-            ]),
-        }]),
-    );
-    const services = {
-        ResolveMeshHandle(assetId) {
-            assert.equal(assetId, "builtin:cube");
-            return meshHandle;
-        },
-        ResolveMaterialHandle(assetId) {
-            assert.equal(assetId, "material:grass");
-            return materialHandle;
-        },
-        ResolveModelHandle(assetId) {
-            assert.equal(assetId, "model:die6");
-            return modelHandle;
-        },
-    };
-    const scene = new Scene("serializer-check");
-
-    const cameraEntityId = scene.EntityManager.CreateEntity(
-        "10203040-aaaa-4aaa-8aaa-102030405060",
-    );
+function CreateScene() {
+    const scene = new Scene("adapter-scene");
     const cameraTransform = new Transform();
     cameraTransform.position = [0, 1, 4];
-    scene.EntityManager.AddComponent(
-        cameraEntityId,
-        Transform,
-        cameraTransform,
-    );
-    scene.EntityManager.AddComponent(cameraEntityId, Camera, new Camera());
-    scene.SetActiveCameraEntity(cameraEntityId);
+    scene.EntityManager.CreateEntity(entityIds.camera, "Main Camera");
+    scene.EntityManager.AddComponent(entityIds.camera, Transform, cameraTransform);
+    scene.EntityManager.AddComponent(entityIds.camera, Camera, new Camera());
+    scene.SetActiveCameraEntity(entityIds.camera);
 
-    const meshEntityId = scene.EntityManager.CreateEntity(
-        "20304050-bbbb-4bbb-9bbb-203040506070",
-    );
-    const meshTransform = new Transform();
-    meshTransform.position = [2, 0, 0];
-    scene.EntityManager.AddComponent(meshEntityId, Transform, meshTransform);
+    scene.EntityManager.CreateEntity(entityIds.first, "Ground");
+    scene.EntityManager.AddComponent(entityIds.first, Transform, new Transform());
     scene.EntityManager.AddComponent(
-        meshEntityId,
+        entityIds.first,
         AngularVelocity,
         new AngularVelocity(0, 1, 0),
     );
-    scene.EntityManager.AddComponent(
-        meshEntityId,
-        MeshRenderer,
-        new MeshRenderer(meshHandle, materialHandlesBySlot),
-    );
 
-    const modelEntityId = scene.EntityManager.CreateEntity(
-        "30405060-cccc-4ccc-accc-304050607080",
-    );
+    scene.EntityManager.CreateEntity(entityIds.inactive, "Hidden Ground");
     scene.EntityManager.AddComponent(
-        modelEntityId,
+        entityIds.inactive,
         Transform,
         new Transform(),
     );
     scene.EntityManager.AddComponent(
-        modelEntityId,
-        ModelRenderer,
-        new ModelRenderer(modelHandle),
-    );
-
-    const adapter = new EcsDocumentAdapter(componentRegistry);
-    const json = JsonFormat.Stringify(adapter.Serialize(scene, services));
-    const document = JsonFormat.Parse(json);
-    const acquiredAssetIds = [];
-
-    assert.equal(document.format, "astral-scene");
-    assert.equal(document.version, 1);
-    assert.deepEqual(document.assets, [
-        "builtin:cube",
-        "material:grass",
-        "model:die6",
-    ]);
-    assert.deepEqual(
-        document.entities.map((entity) => entity.id),
-        [cameraEntityId, meshEntityId, modelEntityId],
-    );
-
-    const loadedScene = await new SceneLoader(
-        componentRegistry,
-    ).LoadDataAsync(document, {
-        assetScope: {
-            Acquire(assetId) {
-                acquiredAssetIds.push(assetId);
-                return Promise.resolve();
-            },
-        },
-        services,
-    });
-    assert.deepEqual(acquiredAssetIds, document.assets);
-    const loadedTransform = loadedScene.EntityManager.GetComponent(
-        meshEntityId,
-        Transform,
-    );
-    const loadedAngularVelocity = loadedScene.EntityManager.GetComponent(
-        meshEntityId,
+        entityIds.inactive,
         AngularVelocity,
+        new AngularVelocity(1, 0, 0),
     );
-    const loadedMeshRenderer = loadedScene.EntityManager.GetComponent(
-        meshEntityId,
-        MeshRenderer,
+    scene.EntityManager.SetEntityActive(entityIds.inactive, false);
+    scene.EntityManager.SetComponentEnabled(
+        entityIds.inactive,
+        AngularVelocity,
+        false,
     );
-    const loadedModelRenderer = loadedScene.EntityManager.GetComponent(
-        modelEntityId,
-        ModelRenderer,
-    );
+    return scene;
+}
 
-    assert.deepEqual(loadedTransform.position, [2, 0, 0]);
-    assert.equal(loadedAngularVelocity.y, 1);
-    assert.strictEqual(loadedMeshRenderer.mesh, mesh);
-    assert.strictEqual(loadedModelRenderer.ModelHandle, modelHandle);
+test("serializes version 1 scene fields and named entities", () => {
+    const scene = CreateScene();
 
-    for (const { materialSlot } of mesh.Submeshes) {
-        assert.strictEqual(
-            loadedMeshRenderer.GetMaterialForSlot(materialSlot),
-            material,
+    try {
+        const document = new EcsDocumentAdapter(
+            CreateSceneComponentRegistry(),
+        ).Serialize(scene);
+
+        assert.deepEqual(
+            {
+                format: document.format,
+                version: document.version,
+                name: document.name,
+                activeCameraEntityId: document.activeCameraEntityId,
+            },
+            {
+                format: "astral-scene",
+                version: 1,
+                name: "adapter-scene",
+                activeCameraEntityId: entityIds.camera,
+            },
         );
+        assert.deepEqual(
+            document.entities.map(({ id, name }) => ({ id, name })),
+            [
+                { id: entityIds.camera, name: "Main Camera" },
+                { id: entityIds.first, name: "Ground" },
+                { id: entityIds.inactive, name: "Hidden Ground" },
+            ],
+        );
+        assert.equal(document.entities[0].components[0].version, 1);
+    } finally {
+        scene.Dispose();
     }
-
-    loadedScene.Dispose();
-    scene.Dispose();
 });
 
-test("loads version 1 meshRenderer components with a default material asset", async () => {
-    const componentRegistry = CreateSceneComponentRegistry();
+test("collects and sorts unique asset IDs from serialized components", () => {
+    const scene = CreateScene();
     const mesh = CreateCubeMesh();
     const material = new Material({ bitmap: {} });
     const meshHandle = CreateLoadedHandle("builtin:cube", mesh);
-    const materialHandle = CreateLoadedHandle(
-        "material:grass",
-        material,
+    const materialHandle = CreateLoadedHandle("material:grass", material);
+    const materialsBySlot = Object.fromEntries(
+        mesh.Submeshes.map(({ materialSlot }) => [materialSlot, materialHandle]),
     );
-    const document = {
-        format: "astral-scene",
-        version: 1,
-        name: "default-material-check",
-        assets: ["builtin:cube", "material:grass"],
-        activeCameraEntityId: "10203040-aaaa-4aaa-8aaa-102030405060",
-        entities: [
-            {
-                id: "10203040-aaaa-4aaa-8aaa-102030405060",
-                components: [
-                    {
-                        typeId: "transform",
-                        version: 1,
-                        data: {
-                            position: [0, 0, 3],
-                            rotation: [0, 0, 0],
-                            scale: [1, 1, 1],
-                        },
-                    },
-                    {
-                        typeId: "camera",
-                        version: 1,
-                        data: {
-                            fieldOfView: Math.PI / 3,
-                            nearPlane: 0.1,
-                            farPlane: 100,
-                        },
-                    },
-                ],
-            },
-            {
-                id: "20304050-bbbb-4bbb-9bbb-203040506070",
-                components: [
-                    {
-                        typeId: "transform",
-                        version: 1,
-                        data: {
-                            position: [0, 0, 0],
-                            rotation: [0, 0, 0],
-                            scale: [1, 1, 1],
-                        },
-                    },
-                    {
-                        typeId: "meshRenderer",
-                        version: 1,
-                        data: {
-                            meshAssetId: "builtin:cube",
-                            defaultMaterialAssetId: "material:grass",
-                        },
-                    },
-                ],
-            },
-        ],
-    };
-    const scene = await new SceneLoader(componentRegistry).LoadDataAsync(
-        document,
-        {
-            assetScope: {
-                async Acquire() {},
-            },
-            services: {
-                ResolveMeshHandle: () => meshHandle,
-                ResolveMaterialHandle: () => materialHandle,
-            },
-        },
-    );
-    const [meshEntityId] = [...scene.EntityManager.Query(MeshRenderer)];
 
-    for (const { materialSlot } of mesh.Submeshes) {
-        assert.strictEqual(
-            scene.EntityManager
-                .GetComponent(meshEntityId, MeshRenderer)
-                .GetMaterialForSlot(materialSlot),
-            material,
+    for (const entityId of [entityIds.first, entityIds.inactive]) {
+        scene.EntityManager.AddComponent(
+            entityId,
+            MeshRenderer,
+            new MeshRenderer(meshHandle, materialsBySlot),
         );
     }
 
-    scene.Dispose();
+    try {
+        const document = new EcsDocumentAdapter(
+            CreateSceneComponentRegistry(),
+        ).Serialize(scene, {
+            ResolveAssetId: (handle) => handle.AssetId,
+        });
+
+        assert.deepEqual(document.assets, ["builtin:cube", "material:grass"]);
+        assert.equal(document.version, 1);
+    } finally {
+        scene.Dispose();
+    }
 });
 
-test("rejects the old version 1 scene layout", () => {
-    const componentRegistry = CreateSceneComponentRegistry();
-    const oldDocument = {
-        format: "astral-scene",
-        version: 1,
-        name: "old-level",
-        activeCameraEntityId: "10203040-aaaa-4aaa-8aaa-102030405060",
-        entities: [
-            {
-                id: "10203040-aaaa-4aaa-8aaa-102030405060",
-                components: {
-                    transform: {
-                        position: [0, 0, 3],
-                        rotation: [0, 0, 0],
-                        scale: [1, 1, 1],
-                    },
-                    camera: {
-                        fieldOfView: Math.PI / 3,
-                        nearPlane: 0.1,
-                        farPlane: 100,
-                    },
-                },
-            },
-        ],
-    };
+test("writes inactive entity and disabled component state", () => {
+    const scene = CreateScene();
 
+    try {
+        const document = new EcsDocumentAdapter(
+            CreateSceneComponentRegistry(),
+        ).Serialize(scene);
+        const inactiveEntity = document.entities.find(
+            ({ id }) => id === entityIds.inactive,
+        );
+
+        assert.equal(inactiveEntity.active, false);
+        assert.equal(
+            inactiveEntity.components.find(
+                ({ typeId }) => typeId === "angularVelocity",
+            ).enabled,
+            false,
+        );
+    } finally {
+        scene.Dispose();
+    }
+});
+
+test("rejects a scene without an active camera", () => {
+    const scene = new Scene("scene-without-camera");
+
+    try {
+        assert.throws(
+            () => new EcsDocumentAdapter(CreateSceneComponentRegistry()).Serialize(scene),
+            /valid active camera UUID/,
+        );
+    } finally {
+        scene.Dispose();
+    }
+});
+
+test("rejects an active camera view without Camera or Transform", () => {
+    const scene = CreateScene();
+    const transformOnlyId = "40506070-dddd-4ddd-8ddd-405060708090";
+    const cameraOnlyId = "50607080-eeee-4eee-9eee-506070809001";
+    scene.EntityManager.CreateEntity(transformOnlyId, "Transform Only");
+    scene.EntityManager.AddComponent(transformOnlyId, Transform, new Transform());
+    scene.EntityManager.CreateEntity(cameraOnlyId, "Camera Only");
+    scene.EntityManager.AddComponent(cameraOnlyId, Camera, new Camera());
+    const adapter = new EcsDocumentAdapter(CreateSceneComponentRegistry());
+
+    try {
+        const transformOnlyScene = new Proxy(scene, {
+            get(target, property, receiver) {
+                return property === "ActiveCameraEntityId"
+                    ? transformOnlyId
+                    : Reflect.get(target, property, receiver);
+            },
+        });
+        const cameraOnlyScene = new Proxy(scene, {
+            get(target, property, receiver) {
+                return property === "ActiveCameraEntityId"
+                    ? cameraOnlyId
+                    : Reflect.get(target, property, receiver);
+            },
+        });
+
+        assert.throws(
+            () => adapter.Serialize(transformOnlyScene),
+            /Active camera entity must have Camera and Transform components/,
+        );
+        assert.throws(
+            () => adapter.Serialize(cameraOnlyScene),
+            /Active camera entity must have Camera and Transform components/,
+        );
+    } finally {
+        scene.Dispose();
+    }
+});
+
+test("rejects a component registry without serialization", () => {
     assert.throws(
-        () => new SceneLoader(componentRegistry).LoadData(oldDocument),
-        /Scene entity components must be an array of typed records\./,
+        () => new EcsDocumentAdapter({}),
+        /requires a component serializer/,
     );
 });

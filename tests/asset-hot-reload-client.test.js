@@ -1,25 +1,31 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { CreateSceneComponentRegistry } from "../src/components/register-scene-components.js";
 import { AssetCatalog } from "../src/core/assets/asset-catalog.js";
 import { AssetLoaderRegistry } from "../src/core/assets/asset-loader-registry.js";
+import { AssetManager } from "../src/core/assets/asset-manager.js";
 import { HotReloadClient } from "../src/core/hot-reload-client.js";
+import { SceneLoader } from "../src/core/scene/scene-loader.js";
+import { SceneManager } from "../src/core/scene/scene-manager.js";
+
+const sceneUrl = "/assets/scenes/main.scene.json";
 
 class FakeEventSource {
     constructor(url) {
         this.url = url;
         this.closeCount = 0;
-        this._listenersByType = new Map();
+        this.listeners = new Map();
     }
 
     addEventListener(type, listener) {
-        const listeners = this._listenersByType.get(type) ?? [];
+        const listeners = this.listeners.get(type) ?? [];
         listeners.push(listener);
-        this._listenersByType.set(type, listeners);
+        this.listeners.set(type, listeners);
     }
 
-    Emit(type, event) {
-        for (const listener of this._listenersByType.get(type) ?? []) {
-            listener(event);
+    Emit(type, data = {}) {
+        for (const listener of this.listeners.get(type) ?? []) {
+            listener(data);
         }
     }
 
@@ -29,556 +35,301 @@ class FakeEventSource {
 }
 
 function CreateLogger() {
+    return { Error() {}, Info() {}, Warn() {} };
+}
+
+function CreateManifest(assetIds = ["texture:first", "texture:second"]) {
     return {
-        Error() {},
-        Info() {},
-        Warn() {},
+        format: "astral-assets",
+        version: 1,
+        assets: assetIds.map((id) => ({
+            id,
+            typeId: "texture",
+            loaderId: "image:texture",
+            source: {
+                kind: "image",
+                url: `/assets/textures/${id.split(":")[1]}.png`,
+            },
+            version: 1,
+        })),
     };
 }
 
-function CreateCatalog() {
-    const catalog = new AssetCatalog();
-
-    catalog.RegisterManifest({
-        format: "astral-assets",
+function CreateSceneDocument(name = "main") {
+    return {
+        format: "astral-scene",
         version: 1,
-        assets: [
-            {
-                id: "texture:first",
-                typeId: "texture",
-                loaderId: "image:texture",
-                source: {
-                    kind: "image",
-                    url: "/assets/textures/first.jpg",
-                },
-                version: 1,
-            },
-            {
-                id: "texture:second",
-                typeId: "texture",
-                loaderId: "image:texture",
-                source: {
-                    kind: "image",
-                    url: "/assets/textures/second.jpg",
-                },
-                version: 1,
-            },
-        ],
-    });
-
-    return catalog;
+        name,
+        activeCameraEntityId: "00000000-0000-4000-8000-000000000001",
+        entities: [{
+            id: "00000000-0000-4000-8000-000000000001",
+            name: "Main Camera",
+            components: [
+                { typeId: "transform", version: 1, data: {
+                    position: [0, 0, 3], rotation: [0, 0, 0], scale: [1, 1, 1],
+                } },
+                { typeId: "camera", version: 1, data: {
+                    projectionType: "perspective",
+                    fieldOfView: Math.PI / 3,
+                    nearPlane: 0.1,
+                    farPlane: 100,
+                    orthographicSize: 5,
+                } },
+            ],
+        }],
+    };
 }
 
-function WaitForMicrotasks() {
+function WaitForTurn() {
     return new Promise((resolve) => setImmediate(resolve));
 }
 
-test("queues file changes until each staged reload commits", async () => {
-    const stageCalls = [];
-    const cleanupResolvers = [];
+async function WaitUntil(predicate) {
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+        if (predicate()) {
+            return;
+        }
+        await WaitForTurn();
+    }
+    assert.fail("Expected asynchronous engine state was not reached.");
+}
+
+async function CommitWhenReady(client) {
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+        if (client.CommitAtFrameBoundary()) {
+            return;
+        }
+        await WaitForTurn();
+    }
+    assert.fail("The staged asset reload did not become ready to commit.");
+}
+
+async function FlushTurns() {
+    for (let turn = 0; turn < 5; turn += 1) {
+        await WaitForTurn();
+    }
+}
+
+function CreateAssetRuntime(manifest = CreateManifest(), loadAsset) {
+    const catalog = new AssetCatalog();
+    catalog.RegisterManifest(manifest);
+    const loaderRegistry = new AssetLoaderRegistry();
+    let generation = 0;
+    loaderRegistry.Register("image:texture", {
+        async Load(descriptor) {
+            if (loadAsset) {
+                return loadAsset(descriptor);
+            }
+            generation += 1;
+            return { generation, sourceUrl: descriptor.source.url };
+        },
+        Release() {},
+    });
+    return {
+        catalog,
+        loaderRegistry,
+        manager: new AssetManager(catalog, loaderRegistry),
+    };
+}
+
+async function CreateHarness({
+    sceneDocument = CreateSceneDocument(),
+    manifest = CreateManifest(),
+    loadAsset,
+    fetchManifest = async () => manifest,
+} = {}) {
+    let currentDocument = sceneDocument;
+    let sceneFetchCount = 0;
     let source;
-    const sceneManager = {
-        ActiveSceneUrl: "/assets/scenes/main.scene.json",
-        LoadScene() {
-            throw new Error("Asset events must not reload the scene.");
-        },
-    };
-    const manager = {
-        GetLoadedAssetIds() {
-            return ["texture:first", "texture:second"];
-        },
-        GetState(assetId) {
-            return this.GetLoadedAssetIds().includes(assetId)
-                ? "loaded"
-                : "unloaded";
-        },
-        StageReload(assetIds) {
-            stageCalls.push([...assetIds]);
-            return Promise.resolve({ affectedAssetIds: [...assetIds] });
-        },
-        CommitStagedReload() {
-            return new Promise((resolve) => {
-                cleanupResolvers.push(resolve);
-            });
-        },
-    };
-    const assetRuntime = {
-        catalog: CreateCatalog(),
-        loaderRegistry: new AssetLoaderRegistry(),
-        manager,
-    };
-    const client = new HotReloadClient(
-        assetRuntime,
-        sceneManager,
-        {
-            EventSourceClass: class extends FakeEventSource {
-                constructor(url) {
-                    super(url);
-                    source = this;
-                }
-            },
-            logger: CreateLogger(),
+    const assetRuntime = CreateAssetRuntime(manifest, loadAsset);
+    const sceneLoader = new SceneLoader(
+        CreateSceneComponentRegistry(),
+        async (url) => {
+            sceneFetchCount += 1;
+            if (url !== sceneUrl) {
+                return { ok: false, status: 404, text: async () => "" };
+            }
+            return {
+                ok: true,
+                status: 200,
+                text: async () => JSON.stringify(currentDocument),
+            };
         },
     );
-
-    assert.equal(client.Connect(), true);
-    assert.equal(source.url, "/api/hot-reload");
-
-    source.Emit("asset-change", {
-        data: JSON.stringify({
-            paths: ["/assets/textures/first.jpg"],
+    const sceneManager = new SceneManager(sceneLoader);
+    await sceneManager.LoadScene(sceneUrl);
+    const client = new HotReloadClient(assetRuntime, sceneManager, {
+        EventSourceClass: class extends FakeEventSource {
+            constructor(url) {
+                super(url);
+                source = this;
+            }
+        },
+        fetchFunction: async (url, options) => ({
+            ok: true,
+            status: 200,
+            json: async () => fetchManifest(url, options),
         }),
+        logger: CreateLogger(),
     });
+    client.Connect();
+    return {
+        assetRuntime,
+        client,
+        get sceneFetchCount() { return sceneFetchCount; },
+        get source() { return source; },
+        set sceneDocument(value) { currentDocument = value; },
+        sceneManager,
+    };
+}
 
-    assert.deepEqual(stageCalls, [["texture:first"]]);
-    assert.equal(client.CommitAtFrameBoundary(), false);
+test("commits queued asset changes through the real asset manager", async () => {
+    const harness = await CreateHarness();
+    const firstLease = await harness.assetRuntime.manager.Acquire("texture:first");
+    const secondLease = await harness.assetRuntime.manager.Acquire("texture:second");
+    const firstHandle = firstLease.Handle;
+    const secondHandle = secondLease.Handle;
+    const initialFirstVersion = firstHandle.Version;
+    const initialSecondVersion = secondHandle.Version;
 
-    await WaitForMicrotasks();
-    assert.equal(client.CommitAtFrameBoundary(), true);
-
-    source.Emit("asset-change", {
-        data: JSON.stringify({
-            paths: ["/assets/textures/second.jpg"],
-        }),
+    harness.source.Emit("asset-change", {
+        data: JSON.stringify({ paths: ["/assets/textures/first.png"] }),
     });
-    assert.deepEqual(stageCalls, [["texture:first"]]);
+    harness.source.Emit("asset-change", {
+        data: JSON.stringify({ paths: ["/assets/textures/second.png"] }),
+    });
+    await CommitWhenReady(harness.client);
+    await WaitUntil(() => firstHandle.Version === initialFirstVersion + 1);
+    await CommitWhenReady(harness.client);
+    await WaitUntil(() => secondHandle.Version === initialSecondVersion + 1);
 
-    cleanupResolvers[0]({ assetIds: ["texture:first"] });
-    await WaitForMicrotasks();
-
-    assert.deepEqual(stageCalls, [
-        ["texture:first"],
-        ["texture:second"],
-    ]);
-    assert.equal(client.CommitAtFrameBoundary(), true);
-
-    cleanupResolvers[1]({ assetIds: ["texture:second"] });
-    await WaitForMicrotasks();
-
-    client.Dispose();
-    assert.equal(source.closeCount, 1);
+    assert.equal(firstHandle.Current.sourceUrl, "/assets/textures/first.png");
+    assert.equal(secondHandle.Current.sourceUrl, "/assets/textures/second.png");
+    harness.client.Dispose();
+    await firstLease.Release();
+    await secondLease.Release();
+    await harness.sceneManager.Dispose();
 });
 
-test("stages an asset change that arrives while the asset is loading", async () => {
-    const stagedAssetIds = [];
-    let source;
-    const manager = {
-        GetState(assetId) {
-            return assetId === "texture:first" ? "loading" : "unloaded";
+test("stages a source change received while an asset is loading", async () => {
+    let finishLoad;
+    let loadCount = 0;
+    const harness = await CreateHarness({
+        loadAsset: () => {
+            loadCount += 1;
+            return loadCount === 1
+                ? new Promise((resolve) => { finishLoad = resolve; })
+                : Promise.resolve({ generation: loadCount });
         },
-        StageReload(assetIds) {
-            stagedAssetIds.push([...assetIds]);
-            return Promise.resolve({ affectedAssetIds: [...assetIds] });
-        },
-        CommitStagedReload() {
-            return Promise.resolve({ assetIds: ["texture:first"] });
-        },
-    };
-    const assetRuntime = {
-        catalog: CreateCatalog(),
-        loaderRegistry: new AssetLoaderRegistry(),
-        manager,
-    };
-    const client = new HotReloadClient(
-        assetRuntime,
-        {
-            ActiveSceneUrl: "/assets/scenes/main.scene.json",
-            LoadScene() {
-                throw new Error("No scene reload should occur.");
-            },
-        },
-        {
-            EventSourceClass: class extends FakeEventSource {
-                constructor(url) {
-                    super(url);
-                    source = this;
-                }
-            },
-            logger: CreateLogger(),
-        },
-    );
-
-    client.Connect();
-    source.Emit("asset-change", {
-        data: JSON.stringify({
-            paths: ["/assets/textures/first.jpg"],
-        }),
     });
+    const acquiring = harness.assetRuntime.manager.Acquire("texture:first");
+    await WaitUntil(() => typeof finishLoad === "function");
 
-    assert.deepEqual(stagedAssetIds, [["texture:first"]]);
+    harness.source.Emit("asset-change", {
+        data: JSON.stringify({ paths: ["/assets/textures/first.png"] }),
+    });
+    finishLoad({ generation: 1 });
+    const lease = await acquiring;
+    await CommitWhenReady(harness.client);
+    await WaitUntil(() => lease.Handle.Version === 2);
 
-    await WaitForMicrotasks();
-    client.Dispose();
+    assert.equal(lease.Handle.Current.generation, 2);
+    harness.client.Dispose();
+    await lease.Release();
+    await harness.sceneManager.Dispose();
 });
 
 test("reloads the active scene after the event stream reconnects", async () => {
-    let source;
-    let loadSceneCount = 0;
-    const previousScene = { Name: "main" };
-    const sceneManager = {
-        ActiveScene: previousScene,
-        ActiveSceneUrl: "/assets/scenes/main.scene.json",
-        async LoadScene() {
-            loadSceneCount += 1;
-            this.ActiveScene = { Name: "main-reloaded" };
-            return this.ActiveScene;
-        },
-    };
-    const assetRuntime = {
-        catalog: CreateCatalog(),
-        loaderRegistry: new AssetLoaderRegistry(),
-        manager: {
-            GetState() {
-                return "unloaded";
-            },
-            StageReload() {
-                throw new Error("No asset reload should be staged.");
-            },
-            CommitStagedReload() {
-                return null;
-            },
-        },
-    };
-    const client = new HotReloadClient(
-        assetRuntime,
-        sceneManager,
-        {
-            EventSourceClass: class extends FakeEventSource {
-                constructor(url) {
-                    super(url);
-                    source = this;
-                }
-            },
-            fetchFunction: async () => ({
-                ok: true,
-                status: 200,
-                json: async () => ({
-                    format: "astral-assets",
-                    version: 1,
-                    assets: [],
-                }),
-            }),
-            logger: CreateLogger(),
-        },
-    );
+    const harness = await CreateHarness();
+    harness.source.Emit("open");
+    harness.sceneDocument = CreateSceneDocument("reconnected");
+    harness.source.Emit("error");
+    harness.source.Emit("open");
+    await WaitUntil(() => harness.sceneManager.ActiveScene?.Name === "reconnected");
 
-    client.Connect();
-    source.Emit("open");
-    assert.equal(loadSceneCount, 0);
-
-    source.Emit("error");
-    source.Emit("open");
-    await WaitForMicrotasks();
-
-    assert.equal(loadSceneCount, 1);
-    assert.equal(sceneManager.ActiveScene.Name, "main-reloaded");
-    client.Dispose();
+    assert.equal(harness.sceneFetchCount, 2);
+    harness.client.Dispose();
+    await harness.sceneManager.Dispose();
 });
 
-test("reloads only the active scene when its file changes", async () => {
-    const loadedScenes = [];
-    const stagedAssetIds = [];
-    let resolveCleanup;
-    let source;
-    const sceneUrl = "/assets/scenes/main.scene.json";
-    const manager = {
-        GetLoadedAssetIds() {
-            return ["texture:first"];
-        },
-        GetState(assetId) {
-            return this.GetLoadedAssetIds().includes(assetId)
-                ? "loaded"
-                : "unloaded";
-        },
-        StageReload(assetIds) {
-            stagedAssetIds.push([...assetIds]);
-            return Promise.resolve({ affectedAssetIds: [...assetIds] });
-        },
-        CommitStagedReload() {
-            return new Promise((resolve) => {
-                resolveCleanup = resolve;
-            });
-        },
-    };
-    const assetRuntime = {
-        catalog: CreateCatalog(),
-        loaderRegistry: new AssetLoaderRegistry(),
-        manager,
-    };
-    const sceneManager = {
-        ActiveSceneUrl: sceneUrl,
-        async LoadScene(url) {
-            loadedScenes.push(url);
-            return { Name: "main" };
-        },
-    };
-    const client = new HotReloadClient(
-        assetRuntime,
-        sceneManager,
-        {
-            EventSourceClass: class extends FakeEventSource {
-                constructor(url) {
-                    super(url);
-                    source = this;
-                }
-            },
-            logger: CreateLogger(),
-        },
-    );
+test("reloads a changed active scene through the scene manager", async () => {
+    const harness = await CreateHarness();
+    const initialScene = harness.sceneManager.ActiveScene;
+    harness.sceneDocument = CreateSceneDocument("updated-main");
 
-    client.Connect();
-    source.Emit("asset-change", {
-        data: JSON.stringify({
-            paths: [
-                "/assets/scenes/other.scene.json",
-            ],
-        }),
+    harness.source.Emit("asset-change", {
+        data: JSON.stringify({ paths: ["/assets/scenes/other.scene.json"] }),
     });
-    assert.deepEqual(loadedScenes, []);
+    await FlushTurns();
+    assert.strictEqual(harness.sceneManager.ActiveScene, initialScene);
+    assert.equal(harness.sceneFetchCount, 1);
 
-    source.Emit("asset-change", {
-        data: JSON.stringify({
-            paths: ["/assets/textures/first.jpg", sceneUrl],
-        }),
+    harness.source.Emit("asset-change", {
+        data: JSON.stringify({ paths: [sceneUrl] }),
     });
-    assert.deepEqual(stagedAssetIds, [["texture:first"]]);
-    assert.deepEqual(loadedScenes, []);
+    await WaitUntil(() => harness.sceneManager.ActiveScene?.Name === "updated-main");
+    assert.notStrictEqual(harness.sceneManager.ActiveScene, initialScene);
 
-    await WaitForMicrotasks();
-    assert.equal(client.CommitAtFrameBoundary(), true);
-    resolveCleanup({ assetIds: ["texture:first"] });
-    await WaitForMicrotasks();
-
-    assert.deepEqual(stagedAssetIds, [["texture:first"]]);
-    assert.deepEqual(loadedScenes, [sceneUrl]);
-    client.Dispose();
+    harness.client.Dispose();
+    await harness.sceneManager.Dispose();
 });
 
-test("loads the changed manifest and scene with a replacement asset runtime", async () => {
-    let source;
-    const originalManager = {
-        GetLoadedAssetIds() {
-            return [];
-        },
-        GetState() {
-            return "unloaded";
-        },
-        StageReload() {
-            throw new Error("The old manager must not stage this reload.");
-        },
-        CommitStagedReload() {
-            return null;
-        },
-    };
-    const previousScene = { Name: "previous" };
-    const replacementScene = { Name: "replacement" };
-    const sceneUrl = "/assets/scenes/main.scene.json";
-    const assetRuntime = {
-        catalog: CreateCatalog(),
-        loaderRegistry: new AssetLoaderRegistry(),
-        manager: originalManager,
-    };
-    const sceneManager = {
-        ActiveScene: previousScene,
-        ActiveSceneUrl: sceneUrl,
-        async LoadScene(url) {
-            assert.equal(url, sceneUrl);
-            assert.notStrictEqual(assetRuntime.manager, originalManager);
-            this.ActiveScene = replacementScene;
-            return replacementScene;
-        },
-    };
-    const manifest = {
-        format: "astral-assets",
-        version: 1,
-        assets: [
-            {
-                id: "texture:replacement",
-                typeId: "texture",
-                loaderId: "image:texture",
-                source: {
-                    kind: "image",
-                    url: "/assets/textures/replacement.jpg",
-                },
-                version: 1,
-            },
-        ],
-    };
-    const fetchCalls = [];
-    const client = new HotReloadClient(
-        assetRuntime,
-        sceneManager,
-        {
-            EventSourceClass: class extends FakeEventSource {
-                constructor(url) {
-                    super(url);
-                    source = this;
-                }
-            },
-            fetchFunction: async (url, options) => {
-                fetchCalls.push({ url, options });
-                return {
-                    ok: true,
-                    status: 200,
-                    json: async () => manifest,
-                };
-            },
-            logger: CreateLogger(),
-        },
-    );
-
-    client.Connect();
-    source.Emit("asset-change", {
-        data: JSON.stringify({
-            paths: ["/assets/asset-manifest.json"],
-        }),
+test("replaces the asset catalog and active scene after a version 1 manifest update", async () => {
+    const replacementManifest = CreateManifest(["texture:replacement"]);
+    const harness = await CreateHarness({
+        fetchManifest: async () => replacementManifest,
     });
-    await WaitForMicrotasks();
+    const oldCatalog = harness.assetRuntime.catalog;
+    const oldManager = harness.assetRuntime.manager;
+    const oldScene = harness.sceneManager.ActiveScene;
 
-    assert.deepEqual(fetchCalls, [
-        {
-            url: "/assets/asset-manifest.json",
-            options: { cache: "no-store" },
-        },
-    ]);
-    assert.equal(assetRuntime.catalog.Has("texture:replacement"), true);
-    assert.notStrictEqual(assetRuntime.manager, originalManager);
-    assert.strictEqual(sceneManager.ActiveScene, replacementScene);
+    harness.source.Emit("asset-change", {
+        data: JSON.stringify({ paths: ["/assets/asset-manifest.json"] }),
+    });
+    await WaitUntil(() => harness.assetRuntime.catalog.Has("texture:replacement") &&
+        harness.sceneManager.ActiveScene !== oldScene);
 
-    client.Dispose();
+    assert.notStrictEqual(harness.assetRuntime.catalog, oldCatalog);
+    assert.notStrictEqual(harness.assetRuntime.manager, oldManager);
+    assert.equal(harness.assetRuntime.catalog.Has("texture:first"), false);
+    assert.equal(harness.sceneManager.ActiveScene.Name, "main");
+
+    harness.client.Dispose();
+    await harness.sceneManager.Dispose();
 });
 
-test("keeps the current asset runtime when the new manifest is invalid", async () => {
-    let source;
-    let loadSceneCount = 0;
-    const originalManager = {
-        GetLoadedAssetIds() {
-            return [];
-        },
-        GetState() {
-            return "unloaded";
-        },
-        StageReload() {
-            throw new Error("No assets should be staged.");
-        },
-        CommitStagedReload() {
-            return null;
-        },
-    };
-    const previousScene = { Name: "main" };
-    const assetRuntime = {
-        catalog: CreateCatalog(),
-        loaderRegistry: new AssetLoaderRegistry(),
-        manager: originalManager,
-    };
-    const sceneManager = {
-        ActiveScene: previousScene,
-        ActiveSceneUrl: "/assets/scenes/main.scene.json",
-        async LoadScene() {
-            loadSceneCount += 1;
-            throw new Error("Invalid manifests must not load a scene.");
-        },
-    };
-    const originalCatalog = assetRuntime.catalog;
-    const client = new HotReloadClient(
-        assetRuntime,
-        sceneManager,
-        {
-            EventSourceClass: class extends FakeEventSource {
-                constructor(url) {
-                    super(url);
-                    source = this;
-                }
-            },
-            fetchFunction: async () => ({
-                ok: true,
-                status: 200,
-                json: async () => ({ format: "invalid" }),
-            }),
-            logger: CreateLogger(),
-        },
-    );
-
-    client.Connect();
-    source.Emit("asset-change", {
-        data: JSON.stringify({
-            paths: ["/assets/asset-manifest.json"],
-        }),
+test("keeps the current runtime and scene when the replacement manifest is invalid", async () => {
+    const harness = await CreateHarness({
+        fetchManifest: async () => ({ format: "invalid", version: 1, assets: [] }),
     });
-    await WaitForMicrotasks();
+    const originalCatalog = harness.assetRuntime.catalog;
+    const originalManager = harness.assetRuntime.manager;
+    const originalScene = harness.sceneManager.ActiveScene;
 
-    assert.strictEqual(assetRuntime.catalog, originalCatalog);
-    assert.strictEqual(assetRuntime.manager, originalManager);
-    assert.strictEqual(sceneManager.ActiveScene, previousScene);
-    assert.equal(loadSceneCount, 0);
+    harness.source.Emit("asset-change", {
+        data: JSON.stringify({ paths: ["/assets/asset-manifest.json"] }),
+    });
+    await FlushTurns();
 
-    client.Dispose();
+    assert.strictEqual(harness.assetRuntime.catalog, originalCatalog);
+    assert.strictEqual(harness.assetRuntime.manager, originalManager);
+    assert.strictEqual(harness.sceneManager.ActiveScene, originalScene);
+    harness.client.Dispose();
+    await harness.sceneManager.Dispose();
 });
 
-test("restores the current asset runtime when the replacement scene fails", async () => {
-    let source;
-    const originalManager = {
-        GetLoadedAssetIds() {
-            return [];
-        },
-        GetState() {
-            return "unloaded";
-        },
-        StageReload() {
-            throw new Error("No assets should be staged.");
-        },
-        CommitStagedReload() {
-            return null;
-        },
-    };
-    const previousScene = { Name: "main" };
-    const assetRuntime = {
-        catalog: CreateCatalog(),
-        loaderRegistry: new AssetLoaderRegistry(),
-        manager: originalManager,
-    };
-    const sceneManager = {
-        ActiveScene: previousScene,
-        ActiveSceneUrl: "/assets/scenes/main.scene.json",
-        async LoadScene() {
-            throw new Error("Scene loading failed.");
-        },
-    };
-    const originalCatalog = assetRuntime.catalog;
-    const client = new HotReloadClient(
-        assetRuntime,
-        sceneManager,
-        {
-            EventSourceClass: class extends FakeEventSource {
-                constructor(url) {
-                    super(url);
-                    source = this;
-                }
-            },
-            fetchFunction: async () => ({
-                ok: true,
-                status: 200,
-                json: async () => ({
-                    format: "astral-assets",
-                    version: 1,
-                    assets: [],
-                }),
-            }),
-            logger: CreateLogger(),
-        },
-    );
+test("preserves the active scene when a changed scene document is invalid", async () => {
+    const harness = await CreateHarness();
+    const originalScene = harness.sceneManager.ActiveScene;
+    harness.sceneDocument = { format: "astral-scene", version: 1, entities: [] };
 
-    client.Connect();
-    source.Emit("asset-change", {
-        data: JSON.stringify({
-            paths: ["/assets/asset-manifest.json"],
-        }),
+    harness.source.Emit("asset-change", {
+        data: JSON.stringify({ paths: [sceneUrl] }),
     });
-    await WaitForMicrotasks();
+    await WaitUntil(() => harness.sceneFetchCount === 2);
+    await FlushTurns();
 
-    assert.strictEqual(assetRuntime.catalog, originalCatalog);
-    assert.strictEqual(assetRuntime.manager, originalManager);
-    assert.strictEqual(sceneManager.ActiveScene, previousScene);
-
-    client.Dispose();
+    assert.strictEqual(harness.sceneManager.ActiveScene, originalScene);
+    harness.client.Dispose();
+    await harness.sceneManager.Dispose();
 });

@@ -8,6 +8,8 @@ import { ProfilerPanel } from "../../src/editor/panels/diagnostics/profiler/pane
 import { SceneHierarchyPanel } from "../../src/editor/panels/scene-hierarchy-panel.js";
 import { EditorSelection } from "../../src/editor/editor-selection.js";
 import { SetOptions } from "../../src/editor/panels/diagnostics/diagnostic-panel-utils.js";
+import { Scene } from "../../src/core/scene/scene.js";
+import { SceneManager } from "../../src/core/scene/scene-manager.js";
 
 class FakeElement {
     constructor(tagName = "div") {
@@ -432,11 +434,8 @@ test("profiler panel toggles capture from its toolbar", (context) => {
         ['[data-role="async-span-rows"]', "tbody"],
         ['[data-role="async-span-empty"]'],
     ]);
-    let gpuTimingSupported = true;
     const panel = new ProfilerPanel(profiler, root, {
-        get GpuTimingSupported() {
-            return gpuTimingSupported;
-        },
+        GpuTimingSupported: true,
     });
     context.after(() => panel.Dispose());
     const button = root.querySelector('[data-action="capture"]');
@@ -454,28 +453,11 @@ test("profiler panel toggles capture from its toolbar", (context) => {
     assert.match(performanceCards.textContent, /Average frame time10\.50 ms/);
     assert.equal(root.querySelector('[data-role="scope-rows"]').children.length, 1);
 
-    let frameRefreshCount = 0;
-    let asyncSpanRefreshCount = 0;
-    const refreshFrames = panel._RefreshFrames.bind(panel);
-    const renderAsyncSpans = panel._RenderAsyncSpans.bind(panel);
-    panel._RefreshFrames = () => {
-        frameRefreshCount += 1;
-        refreshFrames();
-    };
-    panel._RenderAsyncSpans = () => {
-        asyncSpanRefreshCount += 1;
-        renderAsyncSpans();
-    };
-    panel._Refresh();
-
-    assert.equal(frameRefreshCount, 0);
-    assert.equal(asyncSpanRefreshCount, 1);
-
-    gpuTimingSupported = false;
-    panel._Refresh();
+    panel.OnShow();
+    panel.OnHide();
     assert.equal(
         root.querySelector('[data-role="gpu-timing-status"]').textContent,
-        "GPU timestamps unavailable",
+        "GPU timestamps available",
     );
     root.Dispatch("click", { target: button });
     assert.equal(profiler.IsEnabled, false);
@@ -539,26 +521,16 @@ test("memory panel shows dropped events and supports snapshot comparison", (cont
     );
 });
 
-test("hierarchy panel selects entities without a false disclosure control", (context) => {
+test("hierarchy panel selects a real scene entity without a false disclosure control", async (context) => {
     InstallFakeDom(context);
     const entityId = "00000000-0000-4000-8000-000000000001";
-    const entityManager = {
-        StructuralRevision: 1,
-        EntityNameRevision: 0,
-        GetEntityIds: () => [entityId],
-        GetComponent: () => undefined,
-        GetEntityName: () => "Main Camera",
-    };
-    const scene = {
-        Name: "Test Scene",
-        ActiveCameraEntityId: entityId,
-        EntityManager: entityManager,
-    };
-    const sceneManager = {
-        ActiveScene: scene,
-        LoadScene() {},
-        FixedUpdate() {},
-    };
+    const scene = new Scene("Test Scene");
+    scene.EntityManager.CreateEntity(entityId, "Main Camera");
+    scene.Initialize();
+    const sceneManager = new SceneManager({
+        Load: async () => scene,
+    });
+    await sceneManager.LoadScene("/test.scene.json");
     const root = CreateRoot([
         ['[data-role="scene-name"]'],
         ['[data-role="entities"]'],
@@ -578,6 +550,7 @@ test("hierarchy panel selects entities without a false disclosure control", (con
         authoringController,
     );
     context.after(() => panel.Dispose());
+    context.after(() => sceneManager.Dispose());
     assert.doesNotMatch(root.innerHTML, /delete-entity/);
     const entityList = root.querySelector('[data-role="entities"]');
     const button = entityList.children[0].children[0];

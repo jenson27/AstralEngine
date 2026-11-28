@@ -1,30 +1,23 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { WebGPURenderer } from "../../src/graphics/webgpu-renderer.js";
+import { GpuTimingTracker } from "../../src/graphics/gpu-timing-tracker.js";
 
-function InstallWebGpuGlobals(testContext, adapter) {
+function InstallGpuConstants(context) {
     const previous = new Map(
-        ["navigator", "GPUBufferUsage"].map((name) => [
+        ["GPUBufferUsage", "GPUMapMode"].map((name) => [
             name,
             Object.getOwnPropertyDescriptor(globalThis, name),
         ]),
     );
-
-    Object.defineProperty(globalThis, "navigator", {
-        configurable: true,
-        value: { gpu: { requestAdapter: async () => adapter } },
-    });
     Object.defineProperty(globalThis, "GPUBufferUsage", {
         configurable: true,
-        value: {
-            QUERY_RESOLVE: 1,
-            COPY_SRC: 2,
-            COPY_DST: 4,
-            MAP_READ: 8,
-        },
+        value: { QUERY_RESOLVE: 1, COPY_SRC: 2, COPY_DST: 4, MAP_READ: 8 },
     });
-
-    testContext.after(() => {
+    Object.defineProperty(globalThis, "GPUMapMode", {
+        configurable: true,
+        value: { READ: 1 },
+    });
+    context.after(() => {
         for (const [name, descriptor] of previous) {
             if (descriptor) {
                 Object.defineProperty(globalThis, name, descriptor);
@@ -35,102 +28,113 @@ function InstallWebGpuGlobals(testContext, adapter) {
     });
 }
 
-function CreateFakeDevice(features) {
-    const state = { querySets: [], buffers: [], destroyed: false };
+function CreateTrackerFixture({ features = new Set(["timestamp-query"]), mapAsync } = {}) {
+    const destroyed = [];
+    const resolved = [];
+    const copied = [];
+    const resources = new Set();
+    const records = [];
+    const profiler = {
+        IsEnabled: true,
+        CurrentFrameNumber: 12,
+        RecordGpuFrameTime: (...args) => records.push(args),
+    };
+    const memoryTracker = {
+        TrackResource(resource) {
+            const token = { resource };
+            resources.add(token);
+            return token;
+        },
+        ReleaseResource(token) { resources.delete(token); },
+    };
     const device = {
         features,
-        lost: Promise.resolve({ reason: "destroyed" }),
-        addEventListener() {},
         createQuerySet(descriptor) {
-            const querySet = { descriptor, destroyed: false, destroy() { this.destroyed = true; } };
-            state.querySets.push(querySet);
-            return querySet;
+            return { descriptor, destroy: () => destroyed.push("querySet") };
         },
         createBuffer(descriptor) {
-            const buffer = { descriptor, destroyed: false, destroy() { this.destroyed = true; } };
-            state.buffers.push(buffer);
-            return buffer;
-        },
-        destroy() {
-            state.destroyed = true;
+            const timestamps = new ArrayBuffer(16);
+            const values = new BigUint64Array(timestamps);
+            values[0] = 1_000_000n;
+            values[1] = 4_500_000n;
+            return {
+                descriptor,
+                destroy: () => destroyed.push("buffer"),
+                mapAsync: () => mapAsync?.() ?? Promise.resolve(),
+                getMappedRange: () => timestamps,
+                unmap() {},
+            };
         },
     };
-
-    return { device, state };
+    const tracker = new GpuTimingTracker(profiler, memoryTracker);
+    return { copied, destroyed, device, profiler, records, resolved, resources, tracker };
 }
 
-function CreateMemoryTracker() {
-    let nextId = 1;
-    const tracked = new Set();
-
+function CreateCommandEncoder(resolved, copied) {
     return {
-        tracked,
-        TrackResource() {
-            const id = nextId++;
-            tracked.add(id);
-            return id;
-        },
-        ReleaseResource(id) {
-            tracked.delete(id);
-        },
+        resolveQuerySet(...args) { resolved.push(args); },
+        copyBufferToBuffer(...args) { copied.push(args); },
     };
 }
 
-test("enables GPU timing when the adapter supports timestamp queries", async (context) => {
-    const { device, state } = CreateFakeDevice(new Set(["timestamp-query"]));
-    let requestDescriptor;
-    const adapter = {
-        features: new Set(["timestamp-query"]),
-        requestDevice: async (descriptor) => {
-            requestDescriptor = descriptor;
-            return device;
-        },
-    };
-    InstallWebGpuGlobals(context, adapter);
-    const memoryTracker = CreateMemoryTracker();
-    const profiler = {
-        IsEnabled: true,
-        RecordGpuFrameTime() {},
-    };
-    const renderer = new WebGPURenderer({}, memoryTracker, profiler);
+function WaitForTurn() {
+    return new Promise((resolve) => setImmediate(resolve));
+}
 
-    await renderer._InitializeDevice();
+test("reports whether the device supports timestamp queries", (context) => {
+    InstallGpuConstants(context);
+    const unsupported = CreateTrackerFixture({ features: new Set() });
+    unsupported.tracker.Initialize(unsupported.device);
+    assert.equal(unsupported.tracker.IsSupported, false);
+    assert.equal(unsupported.tracker.BeginFrame(), null);
 
-    assert.deepEqual(requestDescriptor.requiredFeatures, ["timestamp-query"]);
-    assert.equal(renderer.GpuTimingSupported, true);
-    assert.equal(state.querySets[0].descriptor.count, 6);
-    assert.equal(state.buffers.length, 6);
-    assert.equal(memoryTracker.tracked.size, 6);
-
-    renderer.Shutdown();
-    assert.equal(state.querySets[0].destroyed, true);
-    assert.ok(state.buffers.every((buffer) => buffer.destroyed));
-    assert.equal(memoryTracker.tracked.size, 0);
+    const supported = CreateTrackerFixture();
+    supported.tracker.Initialize(supported.device);
+    assert.equal(supported.tracker.IsSupported, true);
+    supported.tracker.Destroy();
 });
 
-test("keeps GPU timing disabled when the adapter lacks timestamp queries", async (context) => {
-    const { device, state } = CreateFakeDevice(new Set());
-    let requestDescriptor = "unset";
-    const adapter = {
-        features: new Set(),
-        requestDevice: async (descriptor) => {
-            requestDescriptor = descriptor;
-            return device;
-        },
-    };
-    InstallWebGpuGlobals(context, adapter);
-    const profiler = {
-        IsEnabled: true,
-        RecordGpuFrameTime() {},
-    };
-    const renderer = new WebGPURenderer({}, null, profiler);
+test("resolves public frame timing and ignores reads after destruction", async (context) => {
+    InstallGpuConstants(context);
+    const active = CreateTrackerFixture();
+    active.tracker.Initialize(active.device);
+    active.tracker.BeginFrame().Read(11);
+    await WaitForTurn();
+    assert.deepEqual(active.records, [[11, 3.5]]);
+    active.tracker.Destroy();
 
-    await renderer._InitializeDevice();
+    let finishMapping;
+    const fixture = CreateTrackerFixture({
+        mapAsync: () => new Promise((resolve) => { finishMapping = resolve; }),
+    });
+    fixture.tracker.Initialize(fixture.device);
 
-    assert.equal(requestDescriptor, undefined);
-    assert.equal(renderer.GpuTimingSupported, false);
-    assert.equal(state.querySets.length, 0);
-    assert.equal(state.buffers.length, 0);
+    const frames = [
+        fixture.tracker.BeginFrame(),
+        fixture.tracker.BeginFrame(),
+        fixture.tracker.BeginFrame(),
+    ];
+    assert.ok(frames.every(Boolean));
+    assert.equal(fixture.tracker.BeginFrame(), null);
+    frames[0].Cancel();
+    const frame = fixture.tracker.BeginFrame();
+    assert.ok(frame);
+    assert.equal(frame.TimestampWrites.beginningOfPassWriteIndex, 0);
+    assert.equal(frame.TimestampWrites.endOfPassWriteIndex, 1);
 
-    renderer.Shutdown();
+    const encoder = CreateCommandEncoder(fixture.resolved, fixture.copied);
+    frame.Resolve(encoder);
+    assert.equal(fixture.resolved.length, 1);
+    assert.equal(fixture.copied.length, 1);
+    frame.Read(12);
+
+    fixture.tracker.Destroy();
+    assert.equal(fixture.tracker.IsSupported, false);
+    assert.equal(fixture.resources.size, 0);
+    finishMapping();
+    await WaitForTurn();
+
+    assert.deepEqual(fixture.records, []);
+    assert.equal(fixture.destroyed.filter((item) => item === "querySet").length, 1);
+    assert.equal(fixture.destroyed.filter((item) => item === "buffer").length, 6);
 });
