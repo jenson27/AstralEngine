@@ -35,6 +35,14 @@ function CloneJson(value) {
     return clone;
 }
 
+function GetSerializedDefinitionBytes(definition) {
+    const serializedDefinition = JSON.stringify(definition);
+    if (typeof serializedDefinition !== "string") {
+        throw new TypeError("Sprite animation definition must be JSON serializable.");
+    }
+    return new TextEncoder().encode(serializedDefinition).byteLength;
+}
+
 function ValidateSteps(clipName, clip, grid) {
     const maximumFrame = grid.columns * grid.rows;
     let steps;
@@ -236,6 +244,8 @@ export class SpriteAnimationAsset {
         this.PixelsPerUnit = definition.pixelsPerUnit;
         this.Pivot = Object.freeze(pivot);
         this.DefaultClip = definition.defaultClip;
+        this.MemoryUsageBytes = GetSerializedDefinitionBytes(definition);
+        this.MemoryUsageEstimated = true;
         this._clips = clips;
         this._eventToClip = eventToClip;
     }

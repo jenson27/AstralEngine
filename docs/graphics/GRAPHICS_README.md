@@ -2,7 +2,7 @@
 
 ## Purpose
 
-The graphics layer defines CPU-side meshes and materials, builds render items from scene components, and renders static PBR-lit geometry through WebGPU. It does not load scene JSON or choose the active scene; the scene and asset systems provide those inputs. See [Directional Light](../components/graphics/DIRECTIONAL_LIGHT_README.md), [Mesh Renderer](../components/graphics/MESH_RENDERER_README.md), [Model Renderer](../components/graphics/MODEL_RENDERER_README.md), [GLB Assets](GLB_ASSETS_README.md), and [Asset Manager](../core/ASSET_MANAGER_README.md) for context.
+The graphics layer defines CPU-side meshes and materials, builds render items from scene components, and renders static PBR-lit geometry and animated billboards through WebGPU. It does not load scene JSON or choose the active scene; the scene and asset systems provide those inputs. See [Directional Light](../components/graphics/DIRECTIONAL_LIGHT_README.md), [Mesh Renderer](../components/graphics/MESH_RENDERER_README.md), [Model Renderer](../components/graphics/MODEL_RENDERER_README.md), [Sprites](SPRITES_README.md), [GLB Assets](GLB_ASSETS_README.md), and [Asset Manager](../core/ASSET_MANAGER_README.md) for context.
 
 ## Main parts and responsibilities
 
@@ -14,6 +14,10 @@ The graphics layer defines CPU-side meshes and materials, builds render items fr
 | `DirectionalLight` | Stores normalized world-space direction, linear RGB color, and intensity |
 | `RenderSystem.PrepareRender()` | Builds camera matrices and render items, then selects scene lighting |
 | `WebGPURenderer` | Uploads mesh, material, and lighting data and submits render commands through WebGPU |
+| `SpriteAnimationAsset` | Validates sprite sheet data and stores clips, events, and frame actions |
+| `SpriteAnimationLoader` | Loads sprite animation JSON and resolves its texture dependency |
+| `WebGpuSpriteRenderer` | Builds and draws camera-facing sprite quads |
+| `CreateWebGpuSpritePipeline()` | Creates the sprite render pipeline and its bind group layouts |
 | `WebGpuResourceCache` | Creates, reuses, prunes, and releases GPU resources, including texture mip chains |
 | `GpuTimingTracker` | Owns timestamp queries, readback buffers, and GPU frame timing |
 | `BuiltinMeshLoader` | Creates a built-in primitive from an asset descriptor |
@@ -68,14 +72,25 @@ The graphics layer defines CPU-side meshes and materials, builds render items fr
 - It selects the first active `DirectionalLight`, or uses default lighting when the scene has none
 - For each entity with `Transform` and `MeshRenderer`, it sends the mesh handle, material handles by slot, and world matrix to the renderer
 - For each entity with `Transform` and `ModelRenderer`, it sends each model primitive with the entity world matrix composed with its primitive transform
+- For each active entity with `Transform`, `SpriteRenderer`, and `SpriteAnimator`, it builds a billboard render item from the current animation frame
 - A missing active camera or camera component causes render preparation to throw
+
+## Sprite rendering
+
+- `RenderSystem` passes sprite render items to `WebGPURenderer.SetRenderItems()` after it prepares mesh and model items
+- `WebGpuSpriteRenderer` calculates UVs from the current frame and creates a quad using the entity's world position and scale
+- Spherical billboards use the camera's right and up axes; cylindrical billboards rotate around world up
+- Sprites sort back-to-front, then by ascending `renderOrder`, then by entity ID
+- The sprite pipeline alpha-blends, depth-tests without writing depth, and uses nearest texture sampling
+- Sprites do not use the scene lighting data
+- The sprite renderer uses the shared texture cache; `WebGPURenderer.Shutdown()` disposes its sprite resources
 
 ## WebGPU setup and frame rendering
 
 | Member | Behaviour |
 | --- | --- |
 | `Initialize()` | Requests a WebGPU adapter and device, configures the canvas, loads WGSL, and creates the pipeline and shared resources |
-| `SetRenderItems(renderItems, viewMatrix, projectionMatrix, lighting)` | Validates input, uploads frame and object uniform data, and sends active resource data to the GPU resource cache |
+| `SetRenderItems(renderItems, viewMatrix, projectionMatrix, lighting, spriteRenderItems)` | Validates input, uploads frame and object uniform data, and prepares mesh and sprite resources |
 | `WebGpuResourceCache.GetMeshResource()` / `GetTextureResource()` / `GetMaterialBindGroup()` | Return cached resources or create and upload a GPU resource on the first request |
 | `WebGpuResourceCache.Prune()` / `Dispose()` | Release GPU resources that are no longer used or when the renderer shuts down |
 | `EnsureDepthTexture()` | Creates or resizes the depth attachment to match the canvas |
@@ -98,6 +113,7 @@ The graphics layer defines CPU-side meshes and materials, builds render items fr
 
 - The shader supports direct Cook-Torrance PBR lighting with one directional light and ACES tone mapping for SDR output; it does not support ambient or image-based lighting, shadows, normal maps, emissive lighting, occlusion, or transparent blending
 - The WebGPU renderer supports the static mesh and PBR material slice described in [GLB Assets](GLB_ASSETS_README.md)
+- The sprite pipeline supports grid-based animated billboards described in [Sprites](SPRITES_README.md)
 - Mesh vertex attributes use `Float32Array`; draw data can be non-indexed or use `Uint16Array` or `Uint32Array` indices
 - The renderer draws the scene's render items and does not perform visibility culling or batching
 - WGSL edits are not part of the asset hot-reload watcher
@@ -113,6 +129,10 @@ The graphics layer defines CPU-side meshes and materials, builds render items fr
 - `src/graphics/gpu-timing-tracker.js`
 - `src/graphics/shaders/triangle.wgsl`
 - `src/graphics/shaders/mipmap.wgsl`
+- `src/graphics/shaders/sprite.wgsl`
+- `src/graphics/webgpu-sprite-renderer.js`
+- `src/graphics/webgpu-sprite-pipeline-builder.js`
+- `src/graphics/sprite-animation-asset.js`
 - `src/graphics/assets/builtin-mesh-loader.js`
 - `src/graphics/assets/image-texture-loader.js`
 - `src/graphics/assets/material-loader.js`
@@ -122,9 +142,13 @@ The graphics layer defines CPU-side meshes and materials, builds render items fr
 - `src/graphics/assets/glb/gltf-scene-builder.js`
 - `src/graphics/assets/glb/glb-image-decoder.js`
 - `src/components/graphics/directional-light.js`
+- `src/components/graphics/sprite-renderer.js`
+- `src/components/graphics/sprite-animator.js`
 - `src/components/register-scene-components.js`
 - `src/editor/component-authoring-catalog.js`
 - `src/editor/panels/inspector/components/directional-light-inspector.js`
+- `src/editor/panels/inspector/components/sprite-renderer-inspector.js`
+- `src/editor/panels/inspector/components/sprite-animator-inspector.js`
 - `src/graphics/primitives/triangle.js`
 - `src/graphics/primitives/cube.js`
 - `src/graphics/primitives/plane.js`
@@ -134,3 +158,8 @@ The graphics layer defines CPU-side meshes and materials, builds render items fr
 - `src/graphics/primitives/capsule.js`
 - `src/graphics/primitives/primitive-utils.js`
 - `src/systems/render-system.js`
+- `src/systems/sprite-animation-system.js`
+- `src/systems/sprite-animation-event-queue.js`
+- `src/systems/sprite-action-registry.js`
+- `src/systems/sprite-gameplay-input-system.js`
+- `src/graphics/assets/sprite-animation-loader.js`

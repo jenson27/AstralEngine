@@ -137,6 +137,7 @@ export class WebGPURenderer {
             format: this._format,
             depthFormat: this._depthFormat,
             resourceCache: this._gpuResourceCache,
+            memoryTracker: this._memoryTracker,
             trackGpuResource: (label, resourceType, bytes) =>
                 this._TrackGpuResource(label, resourceType, bytes),
             destroyGpuResource: (resource, memoryToken) =>

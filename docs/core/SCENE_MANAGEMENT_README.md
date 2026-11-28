@@ -36,6 +36,7 @@
 - Parent links must refer to existing transform entities and must not form a cycle
 - `meshRenderer` asset references are checked against the scene's `assets` list during document validation
 - `modelRenderer.data.modelAssetId` must also be in `assets`; the built-in codec resolves it through `ResolveModelHandle` from the scene asset scope during scene building
+- `spriteAnimator.data.animationAssetId` must be in `assets`; scene asset reference collection and validation handle this reference
 
 ## Loading and switching
 

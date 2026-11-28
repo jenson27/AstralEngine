@@ -16,6 +16,7 @@ export class WebGpuSpriteRenderer {
         format,
         depthFormat,
         resourceCache,
+        memoryTracker = null,
         trackGpuResource,
         destroyGpuResource,
     }) {
@@ -23,6 +24,7 @@ export class WebGpuSpriteRenderer {
         this._format = format;
         this._depthFormat = depthFormat;
         this._resourceCache = resourceCache;
+        this._memoryTracker = memoryTracker;
         this._trackGpuResource = trackGpuResource;
         this._destroyGpuResource = destroyGpuResource;
         this._pipeline = null;
@@ -31,6 +33,7 @@ export class WebGpuSpriteRenderer {
         this._frameBindGroup = null;
         this._spriteBuffer = null;
         this._spriteMemoryToken = null;
+        this._spriteDataMemoryToken = null;
         this._spriteBindGroup = null;
         this._spriteBindGroupLayout = null;
         this._spriteCapacity = 0;
@@ -177,10 +180,20 @@ export class WebGpuSpriteRenderer {
             capacity *= 2;
         }
         this._destroyGpuResource(this._spriteBuffer, this._spriteMemoryToken);
+        this._memoryTracker?.ReleaseResource(this._spriteDataMemoryToken);
+        this._spriteDataMemoryToken = null;
         this._spriteCapacity = capacity;
         this._spriteData = new Float32Array(
             (this._spriteStride / Float32Array.BYTES_PER_ELEMENT) * capacity,
         );
+        this._spriteDataMemoryToken = this._memoryTracker?.TrackResource({
+            label: "Sprite staging buffer",
+            resourceType: "Float32Array",
+            category: "cpu-resource",
+            bytes: this._spriteData.byteLength,
+            owner: "WebGpuSpriteRenderer",
+            estimated: false,
+        }) ?? null;
         this._spriteBuffer = this._device.createBuffer({
             size: this._spriteStride * capacity,
             usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
@@ -260,6 +273,9 @@ export class WebGpuSpriteRenderer {
         this._destroyGpuResource(this._frameBuffer, this._frameMemoryToken);
         this._destroyGpuResource(this._spriteBuffer, this._spriteMemoryToken);
         this._destroyGpuResource(this._vertexBuffer, this._vertexMemoryToken);
+        this._memoryTracker?.ReleaseResource(this._spriteDataMemoryToken);
+        this._spriteDataMemoryToken = null;
+        this._spriteData = new Float32Array(0);
         this._textureBindGroups.clear();
         this._drawItems.length = 0;
         this._activeImages.clear();

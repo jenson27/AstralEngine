@@ -56,6 +56,7 @@ The serialization layer converts registered JavaScript objects to versioned reco
 - The built-in `meshRenderer` codec requires `ResolveMeshHandle` and `ResolveMaterialHandle` services
 - These services resolve scene asset IDs to handles already acquired by the scene asset scope
 - The built-in `modelRenderer` codec requires `ResolveModelHandle`; the browser application resolves the ID through the active scene's asset scope
+- The built-in `spriteAnimator` codec requires `ResolveSpriteAnimationHandle`; the browser application resolves the ID through the active scene's asset scope
 - Callers may pass a `SerializationContext` or a plain object of services
 
 ## Scene document
@@ -64,7 +65,7 @@ The serialization layer converts registered JavaScript objects to versioned reco
 - Each entity record has `name`, `id`, and typed `components`
 - The adapter requires a valid active camera ID that exists and has both `Camera` and `Transform`
 - Component records preserve each registered component's `typeId`, `version`, and `data`
-- The adapter collects mesh and material IDs from `meshRenderer` records and model IDs from `modelRenderer` records, removes duplicates, and sorts the resulting `assets` list
+- The adapter collects mesh and material IDs from `meshRenderer`, model IDs from `modelRenderer`, and animation IDs from `spriteAnimator`; it removes duplicates and sorts the resulting `assets` list
 - Parent relationships serialize through the `parent` component's `parentEntityId`
 - `SceneLoader` validates the document's format, component records, camera, asset references, and parent graph when loading
 
@@ -79,11 +80,14 @@ The serialization layer converts registered JavaScript objects to versioned reco
 - `cameraController` - Movement and look settings
 - `meshRenderer` - Mesh asset ID and material asset IDs keyed by slot
 - `modelRenderer` - Model asset ID
+- `spriteRenderer` - Billboard mode, tint, and render order
+- `spriteAnimator` - Animation asset ID and optional initial clip
 
 - Vectors must contain exactly three finite numbers
 - Camera and controller settings are validated on both serialization and deserialization
 - `meshRenderer` serialization requires non-empty asset IDs on its handles
 - `modelRenderer` serialization requires a non-empty model asset ID on its handle
+- `spriteAnimator` serialization stores its animation asset ID and stores `initialClip` only when it is set
 
 ## JSON format rules
 

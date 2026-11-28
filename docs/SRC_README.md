@@ -26,6 +26,7 @@
 - [Directional Light](components/graphics/DIRECTIONAL_LIGHT_README.md) - Scene light data, editor settings, and render behavior
 - [Mesh Renderer](components/graphics/MESH_RENDERER_README.md) - Mesh and material asset handles
 - [Model Renderer](components/graphics/MODEL_RENDERER_README.md) - Static GLB model asset handles
+- [Sprites](graphics/SPRITES_README.md) - Sprite components, atlas animation, billboards, and frame actions
 - [Angular Velocity](components/ANGULAR_VELOCITY_README.md) - Angular rate data and its update system
 
 ## Other systems

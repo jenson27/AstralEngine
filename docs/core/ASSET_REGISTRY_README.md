@@ -25,6 +25,7 @@
 - Manifest registration validates all descriptors before registering any of them
 - Dependency existence and cycles are checked by `AssetManager` when an asset is acquired or staged for reload
 - A GLB model uses `typeId: "model"`, `loaderId: "gltf:glb"`, and `source: { "kind": "glb", "url": "..." }`; see [GLB Assets](../graphics/GLB_ASSETS_README.md)
+- A sprite animation uses `typeId: "sprite-animation"`, `loaderId: "sprite:animation"`, `source.kind: "sprite-animation"`, and a declared texture dependency; see [Sprites](../graphics/SPRITES_README.md)
 
 ## Asset catalog API
 

@@ -26,6 +26,8 @@
 | `CameraControllerInspector` | Edits camera movement and look settings |
 | `MeshRendererInspector` | Edits mesh and material asset references |
 | `ModelRendererInspector` | Selects a registered model asset and prepares its handle before the edit commits |
+| `SpriteRendererInspector` | Edits sprite billboard mode, tint, and render order |
+| `SpriteAnimatorInspector` | Selects a sprite animation asset and initial clip |
 | `field-controls.js` | Creates inspector inputs, vector groups, read-only fields, and validation messages |
 
 ## Selection and refresh
@@ -49,6 +51,9 @@
 - `MeshRendererInspector` lists mesh and material assets from the asset catalog
 - `ModelRendererInspector` lists model assets; it validates the selected type and acquires its handle before committing the edit
 - If no model asset options are available, `ModelRendererInspector` shows the current model asset ID as read-only
+- `SpriteRendererInspector` edits spherical or cylindrical billboarding, four tint channels, and render order
+- `SpriteAnimatorInspector` lists registered sprite-animation assets and the selected asset's clips; it can use the asset's default clip
+- If no sprite-animation asset options are available, `SpriteAnimatorInspector` shows the current asset ID as read-only
 - The camera component on the active camera entity cannot be disabled or removed
 - `Transform` and `Parent` cannot be disabled or removed
 - A component without a registered inspector definition still has a component section, but no custom fields
@@ -71,6 +76,8 @@
 
 - The component list only offers types that are not already present and whose required components are present
 - Adding `Model Renderer` requires an existing `Transform` and a registered asset with `typeId: "model"`
+- Adding `Sprite Renderer` requires an existing `Transform`
+- Adding `Sprite Animator` requires existing `Transform` and `SpriteRenderer` components plus a registered asset with `typeId: "sprite-animation"`
 - The catalog defines which components can be created or removed
 - Add and remove actions create history entries
 - `Delete Entity` deletes the selected entity and its descendants
@@ -80,9 +87,9 @@
 
 ## Current scope
 
-- Built-in inspector definitions exist for Transform, Parent, Angular Velocity, Camera, Camera Controller, Mesh Renderer, and Model Renderer
+- Built-in inspector definitions exist for Transform, Parent, Angular Velocity, Camera, Camera Controller, Mesh Renderer, Model Renderer, Sprite Renderer, and Sprite Animator
 - Components need a registered inspector definition to display editable fields
-- Asset-bearing components must register `getAssetIds` with `EditorComponentAuthoringCatalog` so the tracker can preserve their handles
+- Asset-bearing components expose references through `GetSceneAssetReferences()` or a catalog `getAssetIds` function so the tracker can retain their handles
 - The inspector does not import or export scene documents; the editor document adapter does that
 - Mesh and material selection requires an available asset catalog
 
@@ -104,6 +111,9 @@
 - `src/editor/panels/inspector/components/mesh-renderer-inspector.js`
 - `src/editor/panels/inspector/components/model-renderer-inspector.js`
 - `src/editor/component-authoring/model-renderer-authoring.js`
+- `src/editor/panels/inspector/components/sprite-renderer-inspector.js`
+- `src/editor/panels/inspector/components/sprite-animator-inspector.js`
+- `src/editor/component-authoring/sprite-animator-authoring.js`
 - `src/editor/editor-selection.js`
 - `src/editor/editor-command-history.js`
 - `src/editor/editor-scene-asset-tracker.js`
